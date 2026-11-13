@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# gitleaks' own rules, and one made-up pairing token the agent-bridge tests
+# use (tests/agentBridge.test.ts), which reads to it as an API key. Allow by
+# the exact string only, so a real token in the same place is still found.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "A made-up agent pairing token in the tests"
+regexes = ['''abcdEFGH_1234-xyz''']

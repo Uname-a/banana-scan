@@ -193,5 +193,6 @@ build has no store. Files go into the bucket through the R2 page of
 the Cloudflare dashboard, `wrangler r2 object put`, or any S3 client with an
 R2 token; `node scripts/e2e-open-link.mjs` tries both forms against a dev
 server (its header says how). The GitHub Actions workflow
-(`.github/workflows/ci.yml`) still runs tests and a build on every push and
-pull request, so a red suite is visible before Cloudflare ships it.
+(`.github/workflows/ci.yml`) runs the tests and a build on every push to
+`main` and by hand (`gh workflow run ci.yml --ref dev`), not on pull requests:
+it costs some 100 runner-minutes a run.

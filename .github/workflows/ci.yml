@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Test-and-build gate. Deployment itself lives on Cloudflare, which runs its
-# own build; this workflow is what keeps a red test suite visible on the PR
-# before that happens.
+# Test-and-build gate. It costs some 100 runner-minutes, so it runs after a
+# merge into main and by hand only (`gh workflow run ci.yml --ref dev`), not on
+# every pull request; run the checks in AGENTS.md locally before one.
 name: CI
 
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
