@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // A copy that finds the port taken connects to what holds it as a peer. A
-// scanruler-mcp answers at once, taking it in or turning it away; what holds
+// banana-scan-mcp answers at once, taking it in or turning it away; what holds
 // the port and never answers, or answers something else, is another program
 // — it must not leave the copy waiting for ever, nor read as a refusal.
 
@@ -35,13 +35,13 @@ test('a first message that is neither welcome nor refused is not a refusal', asy
   const other = await server((ws) => ws.send(JSON.stringify({ hello: 'something else' })))
   try {
     const outcome = await new PeerLink({ port: other.port, token: 't', welcomeMs: 2000 }).connect()
-    assert.deepEqual(outcome, { error: 'It did not answer as a scanruler-mcp.' })
+    assert.deepEqual(outcome, { error: 'It did not answer as a banana-scan-mcp.' })
   } finally {
     await other.close()
   }
 })
 
-test('a scanruler-mcp with another token still turns the copy away by name', async () => {
+test('a banana-scan-mcp with another token still turns the copy away by name', async () => {
   const link = new PageLink({ token: 'right', version: '1.0.0' })
   const http = httpServer({})
   link.attach(http)

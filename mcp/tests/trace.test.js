@@ -2,7 +2,7 @@
 // The call trace: a line per call on every path a call takes — a page tool
 // called directly, the server's own tools, each entry of a batch, a change
 // answered at once and finished later, the compact list's batch of one and
-// scanruler_tools — with the tab's hidden state, and arguments only when
+// bananascan_tools — with the tab's hidden state, and arguments only when
 // asked for.
 import assert from 'node:assert/strict'
 import { mkdtemp, readdir, readFile } from 'node:fs/promises'
@@ -29,7 +29,7 @@ const COMMANDS = [
 ]
 
 async function serve({ tools = 'full', args = false } = {}) {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-trace-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-trace-'))
   const trace = createTrace(dir, { args })
   const link = new PageLink({ token: TOKEN })
   const http = httpServer({})
@@ -87,17 +87,17 @@ const until = async (check, ms = 5_000) => {
 test('every call path gets its line: direct, own, batch entries, queued jobs, the list and the tab hidden', async () => {
   const s = await serve()
   try {
-    await s.call('scanruler_wait', { timeoutSeconds: 5 })
+    await s.call('bananascan_wait', { timeoutSeconds: 5 })
     await s.client.listTools()
     await s.call('demo_read', { q: 'a secret path' })
     await s.call('demo_change', { n: 1 })
     await s.call('demo_change', { fail: true })
     await s.call('view_render')
-    await s.call('scanruler_batch', { calls: [{ tool: 'demo_read', arguments: { q: 'x' } }, { tool: 'demo_change', arguments: { fail: true } }, { tool: 'demo_read' }] })
+    await s.call('bananascan_batch', { calls: [{ tool: 'demo_read', arguments: { q: 'x' } }, { tool: 'demo_change', arguments: { fail: true } }, { tool: 'demo_read' }] })
     const queued = JSON.parse((await s.call('demo_change', { n: 2, ms: 150, wait: false })).text)
     s.page.ws.send(JSON.stringify({ event: 'visibility', hidden: true }))
     await until(() => s.link.page?.hidden === true)
-    await s.call('scanruler_wait', { for: 'job', job: queued.job })
+    await s.call('bananascan_wait', { for: 'job', job: queued.job })
     await s.call('no_such_tool')
 
     const lines = await s.lines()
@@ -112,7 +112,7 @@ test('every call path gets its line: direct, own, batch entries, queued jobs, th
     const calls = lines.filter((l) => l.ev === 'call')
     assert.deepEqual(
       calls.map((l) => l.tool),
-      ['scanruler_wait', 'demo_read', 'demo_change', 'demo_change', 'view_render', 'scanruler_batch', 'demo_change', 'scanruler_wait', 'no_such_tool'],
+      ['bananascan_wait', 'demo_read', 'demo_change', 'demo_change', 'view_render', 'bananascan_batch', 'demo_change', 'bananascan_wait', 'no_such_tool'],
     )
     assert.deepEqual(calls.map((l) => l.call), [1, 2, 3, 4, 5, 6, 7, 8, 9])
     for (const l of calls) {
@@ -158,20 +158,20 @@ test('every call path gets its line: direct, own, batch entries, queued jobs, th
   }
 })
 
-test('compact: a batch of one and scanruler_tools are traced, a queued batch too, arguments kept when asked', async () => {
+test('compact: a batch of one and bananascan_tools are traced, a queued batch too, arguments kept when asked', async () => {
   const s = await serve({ tools: 'compact', args: true })
   try {
-    await s.call('scanruler_wait', { timeoutSeconds: 5 })
-    await s.call('scanruler_tools')
-    await s.call('scanruler_tools', { names: ['demo_change'] })
-    await s.call('scanruler_batch', { calls: [{ tool: 'demo_read', arguments: { q: 'p' } }] })
-    const queued = JSON.parse((await s.call('scanruler_batch', { calls: [{ tool: 'demo_change', arguments: { n: 3, ms: 50 } }], wait: false })).text)
-    await s.call('scanruler_wait', { for: 'job', job: queued.job })
+    await s.call('bananascan_wait', { timeoutSeconds: 5 })
+    await s.call('bananascan_tools')
+    await s.call('bananascan_tools', { names: ['demo_change'] })
+    await s.call('bananascan_batch', { calls: [{ tool: 'demo_read', arguments: { q: 'p' } }] })
+    const queued = JSON.parse((await s.call('bananascan_batch', { calls: [{ tool: 'demo_change', arguments: { n: 3, ms: 50 } }], wait: false })).text)
+    await s.call('bananascan_wait', { for: 'job', job: queued.job })
     const lines = await s.lines()
     assert.equal(lines[0].tools, 'compact')
     assert.equal(lines[0].args, true)
     const calls = lines.filter((l) => l.ev === 'call')
-    assert.deepEqual(calls.map((l) => l.tool), ['scanruler_wait', 'scanruler_tools', 'scanruler_tools', 'scanruler_batch', 'scanruler_batch', 'scanruler_wait'])
+    assert.deepEqual(calls.map((l) => l.tool), ['bananascan_wait', 'bananascan_tools', 'bananascan_tools', 'bananascan_batch', 'bananascan_batch', 'bananascan_wait'])
     assert.deepEqual(calls[2].args, { names: ['demo_change'] })
     const entries = lines.filter((l) => l.ev === 'entry')
     assert.deepEqual(entries.map((l) => [l.call, l.index, l.tool]), [
@@ -181,7 +181,7 @@ test('compact: a batch of one and scanruler_tools are traced, a queued batch too
     assert.deepEqual(entries[0].args, { q: 'p' })
     assert.equal(calls[4].queued, true)
     const job = lines.find((l) => l.ev === 'job')
-    assert.equal(job.tool, 'scanruler_batch')
+    assert.equal(job.tool, 'bananascan_batch')
     assert.equal(job.call, calls[4].call)
   } finally {
     await s.close()
@@ -189,9 +189,9 @@ test('compact: a batch of one and scanruler_tools are traced, a queued batch too
 })
 
 test('the pairing token is not written to a trace, though the help on connecting gives it', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-trace-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-trace-'))
   const trace = createTrace(dir, { args: true, secrets: [TOKEN] })
-  trace.write({ ev: 'call', tool: 'demo_read', args: { q: TOKEN }, head: `unavailable: No ScanRuler page is connected. Enter port 7317 and token ${TOKEN}.` })
+  trace.write({ ev: 'call', tool: 'demo_read', args: { q: TOKEN }, head: `unavailable: No Banana Scan page is connected. Enter port 7317 and token ${TOKEN}.` })
   const written = await readFile(trace.file, 'utf8')
   assert.equal(written.includes(TOKEN), false)
   assert.match(JSON.parse(written).head, /and token \[redacted\]\.$/)

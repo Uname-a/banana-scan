@@ -551,7 +551,7 @@ await page.click('[data-test="save-project"]')
 let project = null
 for (let i = 0; i < 100 && !project; i++) {
   await sleep(200)
-  project = readdirSync(DOWNLOADS).find((f) => f.endsWith('.scanruler'))
+  project = readdirSync(DOWNLOADS).find((f) => f.endsWith('.bananascan'))
 }
 check(Boolean(project), 'the session saves as a project')
 if (project) {

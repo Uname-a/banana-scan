@@ -181,7 +181,7 @@ try {
     drop(new File(['not geometry'], 'broken.obj'))
     await wait(() => !m().busy && !!m().errorText, 'failed import finished')
     record(history.useHistory.getState().past.length === beforeFailedImport, 'failed imports preserve undo history')
-    drop(new File([saved], 'history.scanruler'))
+    drop(new File([saved], 'history.bananascan'))
     await wait(() => !m().busy && m().statusText.includes('Project opened'), 'saved project reopened')
     record(history.useHistory.getState().past.length === 0 && history.useHistory.getState().future.length === 0,
       'reopening a project starts fresh history')

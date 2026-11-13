@@ -40,29 +40,29 @@ export const UI_THEMES: { id: UiTheme; label: string }[] = [
   { id: 'system', label: 'System' },
 ]
 
-const UI_THEME_KEY = 'scanruler.uitheme'
-const COLORMAP_KEY = 'scanruler.colormap'
-const SECTION_LINES_KEY = 'scanruler.sectionlines'
-const SHEET_LINES_KEY = 'scanruler.sheetlines'
-const EDGE_LINES_KEY = 'scanruler.edgelines'
-const MARK_SIZE_KEY = 'scanruler.marksize'
-const PINS_BEHIND_KEY = 'scanruler.pinsbehind'
-const SUPPORT_CARD_KEY = 'scanruler.supportcard'
-const SUPPORT_ASK_KEY = 'scanruler.supportask'
-const SUPPORT_ASK_OFF_UNTIL_KEY = 'scanruler.supportask.offuntil'
-const UNITS_KEY = 'scanruler.units'
-const STL_UNITS_KEY = 'scanruler.stlunits'
-const ASK_STL_UNITS_KEY = 'scanruler.askstlunits'
-const AGENT_LINK_KEY = 'scanruler.agentlink'
-const AGENT_DATA_OK_KEY = 'scanruler.agentdataok'
-const AGENT_PORT_KEY = 'scanruler.agentport'
-const AGENT_TOKEN_KEY = 'scanruler.agenttoken'
-const SPACE_MOUSE_SPEED_KEY = 'scanruler.spacemouse.speed'
-const SPACE_MOUSE_REVERSE_KEY = 'scanruler.spacemouse.reverse'
-const SPACE_MOUSE_SEEN_KEY = 'scanruler.spacemouse.seen'
+const UI_THEME_KEY = 'bananascan.uitheme'
+const COLORMAP_KEY = 'bananascan.colormap'
+const SECTION_LINES_KEY = 'bananascan.sectionlines'
+const SHEET_LINES_KEY = 'bananascan.sheetlines'
+const EDGE_LINES_KEY = 'bananascan.edgelines'
+const MARK_SIZE_KEY = 'bananascan.marksize'
+const PINS_BEHIND_KEY = 'bananascan.pinsbehind'
+const SUPPORT_CARD_KEY = 'bananascan.supportcard'
+const SUPPORT_ASK_KEY = 'bananascan.supportask'
+const SUPPORT_ASK_OFF_UNTIL_KEY = 'bananascan.supportask.offuntil'
+const UNITS_KEY = 'bananascan.units'
+const STL_UNITS_KEY = 'bananascan.stlunits'
+const ASK_STL_UNITS_KEY = 'bananascan.askstlunits'
+const AGENT_LINK_KEY = 'bananascan.agentlink'
+const AGENT_DATA_OK_KEY = 'bananascan.agentdataok'
+const AGENT_PORT_KEY = 'bananascan.agentport'
+const AGENT_TOKEN_KEY = 'bananascan.agenttoken'
+const SPACE_MOUSE_SPEED_KEY = 'bananascan.spacemouse.speed'
+const SPACE_MOUSE_REVERSE_KEY = 'bananascan.spacemouse.reverse'
+const SPACE_MOUSE_SEEN_KEY = 'bananascan.spacemouse.seen'
 
 /** The port the agent's local server listens on unless told otherwise — the
- *  one scanruler-mcp uses by default. */
+ *  one banana-scan-mcp uses by default. */
 const AGENT_PORT_DEFAULT = 7317
 
 /** A port as typed or stored, or the default when it is not one. */

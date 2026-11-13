@@ -98,7 +98,7 @@ export function unpackProject(bytes: Uint8Array, limits = PROJECT_LIMITS): Unpac
     } })
   } catch (error) {
     if (error instanceof ArchiveLimitError) throw error
-    throw new Error('Not a ScanRuler project file.')
+    throw new Error('Not a Banana Scan project file.')
   }
   // The declared sizes are the archive's word only; what came out is checked too.
   let unpacked = 0
@@ -107,7 +107,7 @@ export function unpackProject(bytes: Uint8Array, limits = PROJECT_LIMITS): Unpac
     throw new Error('The project exceeds the supported archive size limits.')
   }
   const raw = files[MANIFEST_NAME]
-  if (!raw) throw new Error('Not a ScanRuler project file.')
+  if (!raw) throw new Error('Not a Banana Scan project file.')
   let parsed: unknown
   try {
     parsed = JSON.parse(strFromU8(raw))

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // "fit" in place of a feature's number: the agent says which number is the
-// scan's to give, ScanRuler fits it and says how well — the value, its
+// scan's to give, Banana Scan fits it and says how well — the value, its
 // sigma, the nominal and how many sigmas off, the points it rests on. A
 // fillet's radius and a chamfer's distance (each edge read across, as
 // reverse.body.fillet_read reads it, the median taken, a spread past two

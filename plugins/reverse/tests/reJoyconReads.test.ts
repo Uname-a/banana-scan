@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The Joy-Con run's two reads on the real scan (round 17, T7 and T8), run
 // only with JOYCON_DIR set to the folder that holds joycon_left.stl and the
-// run's projects (14_joycon_01-datums.scanruler, _04-details): the scan is
+// run's projects (14_joycon_01-datums.bananascan, _04-details): the scan is
 // 128 MB. The projects give the scan's alignment.
 // - T7: the Path outline fitted on y 2.14 with accept (tangent, horizontal,
 //   vertical within 2 sigmas): its fit's rms is some eight times the chain's
@@ -55,7 +55,7 @@ describe.skipIf(!DIR)('the Joy-Con’s reads on the real scan', () => {
     const session = createReverseSession({ sceneRef: { current: null }, kernel: () => new ReClient(localKernel()) })
     const stops = [installReverseSession(session), session.watch()]
     try {
-      const scan = alignedScan('14_joycon_01-datums.scanruler')
+      const scan = alignedScan('14_joycon_01-datums.bananascan')
       await run('scan.open', { bytes: stlBytes(scan.positions), name: 'joycon.stl', discard: true })
       const fit = (name: string, extra: Record<string, unknown>) =>
         run<Fitted>('reverse.feature.add', {
@@ -82,7 +82,7 @@ describe.skipIf(!DIR)('the Joy-Con’s reads on the real scan', () => {
   })
 
   it('reads the D-pad keys’ top rounds at the default reach', async () => {
-    const g = buildMeshGraph(alignedScan('14_joycon_04-details.scanruler'))
+    const g = buildMeshGraph(alignedScan('14_joycon_04-details.bananascan'))
     const section = async (o: Vec3, n: Vec3, minLength: number) => sliceMesh(g.positions, g.indices, o, n, { minLength })
     // The keys' centres in x and z, their tops at y 8.82, each R4.13.
     const keys: [number, number][] = [[1.34, 14.04], [1.34, 31.02], [-6.87, 22.54], [9.54, 22.54]]

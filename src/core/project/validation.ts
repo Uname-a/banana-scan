@@ -17,7 +17,7 @@ export function invalid(path: string): never { throw new Error(`Malformed projec
 
 /** What a project saved by a newer build is refused with: by its
  *  schemaVersion (manifest.ts), or by a name in it this build has none for. */
-export const NEWER_PROJECT = 'This project was saved by a newer version of ScanRuler — please reload the app to open it.'
+export const NEWER_PROJECT = 'This project was saved by a newer version of Banana Scan — please reload the app to open it.'
 
 /** A name this build does not know — an element kind, a way of making an
  *  element, a dimension type — comes from a newer build, not a damaged

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // End-to-end check of the notes the person pins on the part for an agent: an
-// MCP client starts scanruler-mcp, the app in headless Chrome is paired with
+// MCP client starts banana-scan-mcp, the app in headless Chrome is paired with
 // it — which switches the agent connection on — a box-shaped scan is opened
 // and a block modelled inside it through the tools. Then, as the person: the
 // Note key, a click on the block's top face and a sentence typed into the
@@ -68,7 +68,7 @@ function boxStl(lo, hi, n = 12) {
   })
   return buf
 }
-const scanPath = join(mkdtempSync(join(tmpdir(), 'scanruler-notes-')), 'box-scan.stl')
+const scanPath = join(mkdtempSync(join(tmpdir(), 'banana-scan-notes-')), 'box-scan.stl')
 writeFileSync(scanPath, boxStl([-2, -2, 0], [42, 22, 14]))
 
 const { agent } = await launchAgent(startAgent)
@@ -81,11 +81,11 @@ async function ok(name, input, what) {
   return r
 }
 
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('bananascan_status')).json?.howToConnect ?? '')?.[1]
 check(Boolean(link), `the server hands out a pairing link (${link})`)
 const { browser, page, consoleErrors } = await launchApp({ url: link, width: 1500, height: 950, protocolTimeout: 300_000 })
 try {
-  const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+  const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
   check(waited.json?.connected === true, 'the page connected')
   const tools = (await agent.client.listTools()).tools.map((t) => t.name)
   check(tools.includes('reverse_note_list') && tools.includes('reverse_note_resolve'), 'reverse_note_list and reverse_note_resolve are among the tools')
@@ -372,7 +372,7 @@ try {
 
   // ---- two projects of the part --------------------------------------------------------
   // Saved under the scan's name, each in a folder of its own.
-  const saveIn = async () => (await ok('project_save', { path: mkdtempSync(join(tmpdir(), 'scanruler-notes-project-')) })).json?.file?.path
+  const saveIn = async () => (await ok('project_save', { path: mkdtempSync(join(tmpdir(), 'banana-scan-notes-project-')) })).json?.file?.path
   const withNotes = await saveIn()
   await re(() => window.__reNotes.getState().load([]))
   const without = await saveIn()

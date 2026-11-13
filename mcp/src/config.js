@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// What the server keeps between runs: the pairing token the ScanRuler page
+// What the server keeps between runs: the pairing token the Banana Scan page
 // has to present, made on the first run and kept in the user's config
-// folder so it is pasted into ScanRuler's Settings once, not every time —
+// folder so it is pasted into Banana Scan's Settings once, not every time —
 // and the commands the last page that connected had, so an agent that lists
 // the tools once, before a page is back, still sees all of them — and the
 // folders the scans were opened from, where its files go. The command list
@@ -13,13 +13,13 @@ import { existsSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writ
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-/** Where the config lives: SCANRULER_MCP_CONFIG_DIR, or the platform's
+/** Where the config lives: BANANA_SCAN_MCP_CONFIG_DIR, or the platform's
  *  per-user config folder. */
 export function configDir(env = process.env, platform = process.platform) {
-  if (env.SCANRULER_MCP_CONFIG_DIR) return env.SCANRULER_MCP_CONFIG_DIR
-  if (platform === 'win32') return join(env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), 'scanruler-mcp')
-  if (platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'scanruler-mcp')
-  return join(env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'scanruler-mcp')
+  if (env.BANANA_SCAN_MCP_CONFIG_DIR) return env.BANANA_SCAN_MCP_CONFIG_DIR
+  if (platform === 'win32') return join(env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), 'banana-scan-mcp')
+  if (platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'banana-scan-mcp')
+  return join(env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'banana-scan-mcp')
 }
 
 /** A new token: 24 random bytes, URL-safe — it travels in a link. */

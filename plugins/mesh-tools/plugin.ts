@@ -3,7 +3,7 @@
 // what each part of this is to the app.
 
 import type { HintStep } from '../../src/core/hints'
-import { registerBusy, registerCommands, registerStateSection, type ScanRulerPlugin } from '../../src/plugins/api'
+import { registerBusy, registerCommands, registerStateSection, type BananaScanPlugin } from '../../src/plugins/api'
 import { pick, registerHistory } from '../../src/state/historyStore'
 import { registerProjectSection } from '../../src/app/projectSections'
 import { meshSection } from './app/projectSection'
@@ -18,7 +18,7 @@ import './ui/mesh-tools.css'
 
 const REDUCE_STEP: HintStep = { target: 'reduce-mesh', text: 'Part loaded — reduce the mesh' }
 
-const plugin: ScanRulerPlugin = {
+const plugin: BananaScanPlugin = {
   id: 'mesh-tools',
   name: 'Mesh Tools',
   workspace: {

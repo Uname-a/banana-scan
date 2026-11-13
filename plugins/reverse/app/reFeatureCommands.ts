@@ -887,7 +887,7 @@ export const clear: Command = {
 
 /** What a run of suppressing is told: on the last fan four of them, each
  *  rebuilding all that follows, took 135 s to look at one upstream sketch. */
-const SUPPRESS_AGAIN = 'Each suppress rebuilds everything after it. To look upstream, reverse.feature.rollback { after } builds only that far, and moving the bar back is a look-up; several changes built once: scanruler_batch { build: "end" }.'
+const SUPPRESS_AGAIN = 'Each suppress rebuilds everything after it. To look upstream, reverse.feature.rollback { after } builds only that far, and moving the bar back is a look-up; several changes built once: bananascan_batch { build: "end" }.'
 
 /** changesSoFar at the last suppress. */
 let lastSuppress = -Infinity

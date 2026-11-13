@@ -33,7 +33,7 @@ not in this repository.
 
 ## How a plugin is found and used
 
-`plugins/<id>/plugin.ts` default-exports a `ScanRulerPlugin`
+`plugins/<id>/plugin.ts` default-exports a `BananaScanPlugin`
 ([src/plugins/api.ts](../src/plugins/api.ts)). At start-up
 `installPlugins()` asks `pluginEnabled()` of every one found and installs those
 it allows. `?plugins=none` in the address runs the app without any.
@@ -44,7 +44,7 @@ it allows. `?plugins=none` in the address runs the app without any.
 | `usePlugin(host)` | `plugin.ts` | a React hook App runs every render: panel, stage, overlays, a view beside the viewport (`split`), clicks, hover (`hover`, `hovers`), grips, the scan's colouring, start pane, and the view bar — its parts beside the Scan key (`partKeys`, made with `src/ui/PartKey.tsx`), its keys at the side (`viewKeys`), the Scan key's click and Transparent when it holds them, its own rows in the Scan key's menu (`scanKey`), and a note on the stage of the other workspaces (`elsewhere`) |
 | `keyboard` | `plugin.ts` | keys in the workspace, Enter and the middle click |
 | `notices` | `plugin.ts` | what the imprint owes the third-party software the plugin ships, under "Third-party software" |
-| `headless()` | `plugin.ts` | what the plugin's headless commands need when the app runs without a browser (`src/headless/engine.ts`, scanruler-mcp `--engine`): a session over its kernel in-process, say. A command marked `headless: true` is offered there; any other answers `unavailable` |
+| `headless()` | `plugin.ts` | what the plugin's headless commands need when the app runs without a browser (`src/headless/engine.ts`, banana-scan-mcp `--engine`): a session over its kernel in-process, say. A command marked `headless: true` is offered there; any other answers `unavailable` |
 | `install()` | `plugin.ts` | registries, once: |
 | — `registerHistory` | `src/state/historyStore.ts` | undo sections, actions, blocking, an editor's own history |
 | — `registerProjectSection` | `src/app/projectSections.ts` | the plugin's key in the project file, and its archive files |

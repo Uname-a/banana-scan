@@ -933,7 +933,7 @@ sketches today), and the patch network laid out by itself.
 
 ## Agents: modelling through the commands
 
-An AI agent connected through scanruler-mcp (the app README's *Agents*)
+An AI agent connected through banana-scan-mcp (the app README's *Agents*)
 models in the workspace with the commands under `reverse.` — tools
 `reverse_feature_add` and so on — registered from the plugin's `install()`
 (`app/reCommands.ts`, their input shapes `app/reSchemas.ts`):
@@ -1155,8 +1155,8 @@ node plugins/reverse/scripts/e2e-sketch-dims.mjs     # a sketch's dimensions as 
 node plugins/reverse/scripts/e2e-sketch-part-view.mjs # Section / Full part / No part under a sketch, a circle's Ø, the camera in and back, a grown body taken in, the printing thread, a project named and started over
 node plugins/reverse/scripts/e2e-sketch-box.mjs      # the selection box on the sketch sheet: window, crossing, Shift to add
 node plugins/reverse/scripts/e2e-reverse-undo.mjs    # sketch and feature undo, alignment carrying the sketches, undo after saving
-node plugins/reverse/scripts/e2e-agent-reverse.mjs   # an agent models an M3 pin through scanruler-mcp: parameter, sketch, revolve, thread, picture, STEP, undo
-node plugins/reverse/scripts/e2e-reverse-notes.mjs   # notes pinned on a face, two edges and the scan; read, pictured and answered by an agent through scanruler-mcp; the agent's question answered
+node plugins/reverse/scripts/e2e-agent-reverse.mjs   # an agent models an M3 pin through banana-scan-mcp: parameter, sketch, revolve, thread, picture, STEP, undo
+node plugins/reverse/scripts/e2e-reverse-notes.mjs   # notes pinned on a face, two edges and the scan; read, pictured and answered by an agent through banana-scan-mcp; the agent's question answered
 node plugins/reverse/scripts/e2e-torus-body.mjs      # the Curvature switch and a torus element extracted as a ring body
 node plugins/reverse/scripts/e2e-bracket.mjs         # a real bracket scan (local fixture)
 node plugins/reverse/scripts/e2e-fit-chains.mjs      # Fit all chains on a real scan (local fixture)

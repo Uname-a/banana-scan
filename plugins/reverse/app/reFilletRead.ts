@@ -2,7 +2,7 @@
 // reverse.body.fillet_read: the radius of the round the scan has where a
 // body has a sharp edge — read across the edge at a few places along it,
 // as the fillet box reads it for the first edge picked — so the agent says
-// "this edge is rounded" and ScanRuler says by how much.
+// "this edge is rounded" and Banana Scan says by how much.
 
 import { commandHost } from '../../../src/commands/host'
 import { arr, enumOf, int, num, obj } from '../../../src/commands/schema'

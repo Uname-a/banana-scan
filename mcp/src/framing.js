@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// The messages between this server and the ScanRuler page, over one
+// The messages between this server and the Banana Scan page, over one
 // WebSocket. Every message is a JSON text frame. One that carries a file
 // names where in it the bytes belong — `"binary": "input.bytes"` — and the
 // very next frame on the socket is a binary frame holding them. Scans are

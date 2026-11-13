@@ -78,10 +78,10 @@ page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 await page.evaluateOnNewDocument(() => {
   try {
-    localStorage.setItem('scanruler.askstlunits', '0')
-    localStorage.setItem('scanruler.beta', 'all')
-    localStorage.setItem('scanruler.supportask', '0')
-    localStorage.setItem('scanruler.agentdataok', '1')
+    localStorage.setItem('bananascan.askstlunits', '0')
+    localStorage.setItem('bananascan.beta', 'all')
+    localStorage.setItem('bananascan.supportask', '0')
+    localStorage.setItem('bananascan.agentdataok', '1')
   } catch {}
   const P = (window.__perf = { events: [], longtasks: [], loafs: [], seen: [] })
   // Event Timing says nothing about an event under 16 ms; this counts the trusted ones that

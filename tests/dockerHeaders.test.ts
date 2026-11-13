@@ -56,7 +56,7 @@ describe('Docker nginx headers', () => {
     // A location with add_header lines of its own drops the server's.
     const blocks = conf.split(/\n\s*location /).slice(1)
     for (const block of blocks.filter((b) => b.includes('add_header'))) {
-      expect(block).toContain('add_header Content-Security-Policy $scanruler_csp always;')
+      expect(block).toContain('add_header Content-Security-Policy $bananascan_csp always;')
     }
   })
 })

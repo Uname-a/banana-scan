@@ -2,7 +2,7 @@
 // Build the app's headless engine (src/headless/engine.ts) for Node: one
 // module, dist-engine/engine.mjs, exporting startEngine(), with the
 // packages it uses left to Node to find in this checkout's node_modules —
-// which is why it is built here and run from here. scanruler-mcp runs it
+// which is why it is built here and run from here. banana-scan-mcp runs it
 // with --engine <path>, or --headless for this checkout's dist-engine; the
 // plugins the build finds are in it, as they are in the page.
 //

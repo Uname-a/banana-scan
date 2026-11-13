@@ -9,10 +9,10 @@ import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import { runHandOff } from '../src/update.js'
 
-const BIN = fileURLToPath(new URL('../bin/scanruler-mcp.js', import.meta.url))
+const BIN = fileURLToPath(new URL('../bin/banana-scan-mcp.js', import.meta.url))
 
 test('the server exits with code 2 when it refuses its arguments', () => {
-  const ran = spawnSync(process.execPath, [BIN, '--port', 'not-a-port'], { env: { ...process.env, SCANRULER_MCP_NO_UPDATE: '1' }, encoding: 'utf8' })
+  const ran = spawnSync(process.execPath, [BIN, '--port', 'not-a-port'], { env: { ...process.env, BANANA_SCAN_MCP_NO_UPDATE: '1' }, encoding: 'utf8' })
   assert.equal(ran.status, 2, ran.stderr)
   assert.match(ran.stderr, /--port not-a-port is not a port/)
 })

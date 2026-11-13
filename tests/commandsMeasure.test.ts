@@ -586,7 +586,7 @@ describe('session, report, files and history', () => {
       scan: { fileName: string; bounds: { min: Vec3; max: Vec3 } }; elements: El[]; dimensions: { value: number }[]
       hint: unknown; history: { undo: string | null }; open: { element: unknown }
     }>('session.state')
-    expect(s.app).toMatchObject({ name: 'ScanRuler', viewport: false })
+    expect(s.app).toMatchObject({ name: 'Banana Scan', viewport: false })
     expect(s.workspace).toBe('measure')
     expect(s.busy).toBeNull()
     expect(s.scan.fileName).toBe('balls.stl')
@@ -620,7 +620,7 @@ describe('session, report, files and history', () => {
     await run('element.fit', { kind: 'sphere', at: { point: [30, 0, 5] } })
     await run('dimension.add', { refs: ['Sphere 1', 'Sphere 2'], limit: { kind: 'band', nominal: 60, plus: 0.01, minus: 0.01 } })
     const text = (await run<{ text: string }>('report.get', { format: 'text' })).text
-    expect(text).toMatch(/^ScanRuler — balls\.stl\nMethod: Gaussian best-fit/)
+    expect(text).toMatch(/^Banana Scan — balls\.stl\nMethod: Gaussian best-fit/)
     expect(text).toContain('Checked against limits: 1 — 1 pass, 0 fail')
     const json = (await run<{ report: { checks: unknown; scan: { fileName: string }; deviation: unknown; thickness: unknown } }>('report.get', { format: 'json' })).report
     expect(json.checks).toEqual({ checked: 1, passed: 1, failed: 0 })

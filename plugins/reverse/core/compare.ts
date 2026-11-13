@@ -76,7 +76,7 @@ export function mergeMeshes(meshes: readonly Pick<KernelMesh, 'positions' | 'ind
 export function compareReferenceStl(meshes: readonly Pick<KernelMesh, 'positions' | 'indices'>[]): ArrayBuffer | null {
   const merged = mergeMeshes(meshes)
   if (merged.indices.length < 3) return null
-  return buildBinaryStl(merged.positions, merged.indices, null, 'ScanRuler - bodies from Reverse engineer')
+  return buildBinaryStl(merged.positions, merged.indices, null, 'Banana Scan - bodies from Reverse engineer')
 }
 
 export { builtAlignment } from '../../../src/core/deviation/align'

@@ -54,7 +54,7 @@ async function serverWith(kept, options = {}) {
 }
 
 test('the kept list is read back with its page’s version and plugins, and nothing kept reads as nothing', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
   assert.equal(loadRemembered(dir), null)
   saveRemembered({ commands: [extra], version: '0.6.3', plugins: ['demo'] }, dir)
   const kept = loadRemembered(dir)
@@ -83,7 +83,7 @@ test('the newer of the kept list and the server’s own is listed before a page:
   const older = listBeforePage({ commands: old, version: '0.6.0', plugins: ['demo'], saved: '2026-10-17T10:00:00.000Z' }, own, of)
   assert.deepEqual(older.commands.map((c) => c.name), ['demo.thing', 'scan.open', 'scan.outline'])
   assert.equal(older.commands.find((c) => c.name === 'scan.open').old, undefined)
-  assert.match(older.from, /this server’s own list \(ScanRuler 0\.6\.3\), newer than the one kept from the last page \(ScanRuler 0\.6\.0\), and that page’s plugins’ commands \(1\)/)
+  assert.match(older.from, /this server’s own list \(Banana Scan 0\.6\.3\), newer than the one kept from the last page \(Banana Scan 0\.6\.0\), and that page’s plugins’ commands \(1\)/)
   // No version (kept before 0.4.0) is the older; with no plugins named, what
   // the server's own list has no namespace for is a plugin's.
   assert.deepEqual(listBeforePage(old, own, of).commands.map((c) => c.name), ['demo.thing', 'other.thing', 'scan.open', 'scan.outline'])
@@ -137,7 +137,7 @@ test('a list kept from an older page gives way to the server’s own, its plugin
   assert.ok(names.includes(toolOf(SNAPSHOT.at(-1))), 'the server’s own list has what the kept one lacks')
   assert.ok(names.includes('demo_thing'), 'the kept page’s plugin command stays')
   assert.equal(tools.find((t) => t.name === toolOf(SNAPSHOT[0])).inputSchema.properties.old, undefined, 'the command as the server’s list has it')
-  const status = JSON.parse((await client.callTool({ name: 'scanruler_status', arguments: {} })).content[0].text)
+  const status = JSON.parse((await client.callTool({ name: 'bananascan_status', arguments: {} })).content[0].text)
   assert.equal(status.tools, undefined, 'nothing stale with no page')
 })
 

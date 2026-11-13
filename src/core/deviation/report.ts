@@ -65,7 +65,7 @@ export function buildDeviationReport(
 ): string {
   const { len, setting } = reportLengths(units)
   return [
-    'ScanRuler — deviation from nominal',
+    'Banana Scan — deviation from nominal',
     ...unitsHeading(units),
     `Scan:      ${scanName}`,
     `Reference: ${nominalName}`,
@@ -130,7 +130,7 @@ export function buildElementReport(
 ): string {
   const { len, setting } = reportLengths(units)
   return [
-    'ScanRuler — deviation from a fitted element',
+    'Banana Scan — deviation from a fitted element',
     ...unitsHeading(units),
     `Scan:    ${scanName}`,
     `Element: ${elementName} — ${describeTarget(target, units)}`,

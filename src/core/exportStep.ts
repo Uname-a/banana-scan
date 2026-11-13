@@ -344,8 +344,8 @@ export function buildStepFile(
   return [
     'ISO-10303-21;',
     'HEADER;',
-    `FILE_DESCRIPTION(('Measured elements exported from ScanRuler'),'2;1');`,
-    `FILE_NAME('${esc(sourceName)}','${esc(timestamp)}',(''),(''),'ScanRuler','ScanRuler','');`,
+    `FILE_DESCRIPTION(('Measured elements exported from Banana Scan'),'2;1');`,
+    `FILE_NAME('${esc(sourceName)}','${esc(timestamp)}',(''),(''),'Banana Scan','Banana Scan','');`,
     `FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));`,
     'ENDSEC;',
     'DATA;',

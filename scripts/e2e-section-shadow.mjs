@@ -117,7 +117,7 @@ await page.waitForFunction(
 )
 await page.screenshot({ path: shotPath('e2e-shadow-sheet.png') })
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-shadow-dxf-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-shadow-dxf-'))
 await downloadsTo(page, dir)
 await click(page, '[data-test="flat-export-dxf"]')
 const file = await awaitDownload(dir, '.dxf')
@@ -132,7 +132,7 @@ check(count('LINE') === 4 && count('ARC') === 4, 'but four lines and the four ro
 // ---- the block in the STEP file ------------------------------------------------
 await click(page, '[data-test="workspace-elements"]')
 await sleep(300)
-const stepDir = mkdtempSync(join(tmpdir(), 'scanruler-shadow-step-'))
+const stepDir = mkdtempSync(join(tmpdir(), 'banana-scan-shadow-step-'))
 await downloadsTo(page, stepDir)
 await click(page, '[data-test="export-step"]')
 const stepFile = await awaitDownload(stepDir, '.step')

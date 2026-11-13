@@ -348,7 +348,7 @@ describe('a shadow as a section', () => {
       turns: 0,
       mirror: false,
       unit: 'mm' as const,
-      title: 'ScanRuler 2D measurement — Section 1: part.stl shadow onto XY plane',
+      title: 'Banana Scan 2D measurement — Section 1: part.stl shadow onto XY plane',
       scaleNote: 'Scale: millimetres of the 3D scan (a section, not an image)',
     }
     const dxf = buildFlatDxf({ ...input, origin: null, edgeTolerance: 0.01 })

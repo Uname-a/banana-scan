@@ -22,7 +22,7 @@ const tokenFrom = (dir) =>
 
 test('copies started together on a first run share one token', async () => {
   for (let round = 0; round < 5; round++) {
-    const dir = await mkdtemp(join(tmpdir(), 'scanruler-config-'))
+    const dir = await mkdtemp(join(tmpdir(), 'banana-scan-config-'))
     const tokens = await Promise.all(Array.from({ length: 8 }, () => tokenFrom(dir)))
     const kept = JSON.parse(await readFile(join(dir, 'config.json'), 'utf8')).token
     assert.deepEqual(new Set(tokens), new Set([kept]), `round ${round}`)
@@ -30,7 +30,7 @@ test('copies started together on a first run share one token', async () => {
 })
 
 test('a config.json that does not parse is kept aside as config.json.bad', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-config-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-config-'))
   await writeFile(join(dir, 'config.json'), '{"token": "half-writ')
   const config = loadConfig(dir)
   assert.ok(config.token.length >= 16)

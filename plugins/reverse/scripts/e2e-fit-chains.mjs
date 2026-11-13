@@ -34,7 +34,7 @@ const draft = () =>
   })
 
 // ---- one click: a closed profile -------------------------------------------------
-await page.evaluate(() => localStorage.removeItem('scanruler.fitoptions'))
+await page.evaluate(() => localStorage.removeItem('bananascan.fitoptions'))
 await click(page, '[data-test=sketch-fit-all]')
 await sleep(1500)
 const fitted = await draft()
@@ -144,9 +144,9 @@ await typeKeys('[data-test=fit-align-degrees]', '0.5')
 check((await page.$eval('[data-test=fit-align-degrees]', (el) => el.value)) === '0.5', 'the angle within 0.5° can be typed a key at a time')
 await page.keyboard.press('Enter')
 await sleep(1500)
-check((await page.evaluate(() => JSON.parse(localStorage.getItem('scanruler.fitoptions') ?? '{}').alignDegrees)) === 0.5, 'Enter sets it to 0.5°')
+check((await page.evaluate(() => JSON.parse(localStorage.getItem('bananascan.fitoptions') ?? '{}').alignDegrees)) === 0.5, 'Enter sets it to 0.5°')
 await page.keyboard.press('Escape')
 await sleep(200)
 
-await page.evaluate(() => localStorage.removeItem('scanruler.fitoptions'))
+await page.evaluate(() => localStorage.removeItem('bananascan.fitoptions'))
 await finish(browser, consoleErrors)

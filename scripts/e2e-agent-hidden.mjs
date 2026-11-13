@@ -33,18 +33,18 @@ const ROUNDS = Number(process.env.ROUNDS ?? 3)
 mkdirSync(OUT_DIR, { recursive: true })
 const traceDir = join(OUT_DIR, 'hidden-trace')
 rmSync(traceDir, { recursive: true, force: true })
-process.env.SCANRULER_MCP_TRACE = traceDir
+process.env.BANANA_SCAN_MCP_TRACE = traceDir
 
 const STL = ballPairScan({ distance: 148.64 })
 const { agent } = await launchAgent(startAgent)
 const { call } = agent
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('bananascan_status')).json?.howToConnect ?? '')?.[1]
 const { browser, page, consoleErrors } = await launchApp({ url: link, headless: false, protocolTimeout: 900_000 })
 try {
-  check((await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })).json?.connected === true, 'the page connected')
+  check((await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })).json?.connected === true, 'the page connected')
   const opened = await call('scan_open', { path: STL, units: 'mm', discard: true })
   check(!opened.error, `scan_open: ${opened.json?.scan?.vertices} vertices`)
-  await call('scanruler_wait', { for: 'idle', timeoutSeconds: 60 })
+  await call('bananascan_wait', { for: 'idle', timeoutSeconds: 60 })
   const { min, max } = (await call('session_state')).json?.scan?.bounds ?? { min: [0, 0, 0], max: [0, 0, 0] }
   const span = [0, 1, 2].map((k) => max[k] - min[k])
   const axis = span.indexOf(Math.max(...span))
@@ -81,8 +81,8 @@ try {
   await sleep(1500)
   const visibility = await page.evaluate(() => document.visibilityState)
   check(visibility === 'hidden', `the minimised window's tab is ${visibility}`)
-  const status = (await call('scanruler_status')).json
-  check(status?.page?.hidden === true && /hidden/.test(status?.hiddenNote ?? ''), 'scanruler_status says the tab is hidden')
+  const status = (await call('bananascan_status')).json
+  check(status?.page?.hidden === true && /hidden/.test(status?.hiddenNote ?? ''), 'bananascan_status says the tab is hidden')
   if (HIDDEN_WAIT > 0) {
     console.log(`… hidden for ${HIDDEN_WAIT} s, for Chrome's throttling to set in`)
     await sleep(HIDDEN_WAIT * 1000)

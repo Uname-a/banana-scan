@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Sums up scanruler-mcp's call traces (--trace <dir>): how much of a run
-// was ScanRuler working and how much the agent, and per tool the calls,
+// Sums up banana-scan-mcp's call traces (--trace <dir>): how much of a run
+// was Banana Scan working and how much the agent, and per tool the calls,
 // refusals, time and bytes each way.
 //
 //   node scripts/trace-summary.mjs <file.jsonl | dir> … [--json]
 //
-// A directory is every .jsonl in it, each file a session. ScanRuler's time
+// A directory is every .jsonl in it, each file a session. Banana Scan's time
 // is the union of the calls' spans and of the changes that ran after
 // answering at once (wait: false); the agent's is the rest of the run, from
 // the first call's start to the last's end — the model thinking, and the
@@ -56,13 +56,13 @@ export function summarize(lines) {
   const entries = lines.filter((l) => l.ev === 'entry')
   const jobs = lines.filter((l) => l.ev === 'job')
   const lists = lines.filter((l) => l.ev === 'list')
-  if (calls.length === 0) return { start, calls: 0, wallMs: 0, scanrulerMs: 0, agentMs: 0, tools: [], lists: lists.length }
+  if (calls.length === 0) return { start, calls: 0, wallMs: 0, bananaScanMs: 0, agentMs: 0, tools: [], lists: lists.length }
   const first = Math.min(...calls.map((c) => c.t))
   const last = Math.max(...calls.map((c) => c.t + c.ms), ...jobs.map((j) => j.t + j.ms))
   const wallMs = last - first
-  const scanrulerMs = unionMs([...calls.map((c) => [c.t, c.t + c.ms]), ...jobs.map((j) => [j.t, j.t + j.ms])])
+  const bananaScanMs = unionMs([...calls.map((c) => [c.t, c.t + c.ms]), ...jobs.map((j) => [j.t, j.t + j.ms])])
   // The agent's turns: the gaps between one call's end and the next's start,
-  // where nothing of ScanRuler's ran.
+  // where nothing of Banana Scan's ran.
   const sorted = [...calls].sort((a, b) => a.t - b.t)
   const gaps = []
   let busyUntil = sorted[0].t
@@ -112,9 +112,9 @@ export function summarize(lines) {
     })
     .sort((a, b) => b.totalMs - a.totalMs || b.calls + b.batched - (a.calls + a.batched))
 
-  // scanruler_wait with nothing behind it: no job running when it came, for
+  // bananascan_wait with nothing behind it: no job running when it came, for
   // idle or a job — the agent waiting on a change that had already answered.
-  const waits = calls.filter((c) => c.tool === 'scanruler_wait')
+  const waits = calls.filter((c) => c.tool === 'bananascan_wait')
   const hiddenCalls = calls.filter((c) => Array.isArray(c.hidden) && (c.hidden[0] === true || c.hidden[1] === true))
   return {
     start,
@@ -123,8 +123,8 @@ export function summarize(lines) {
     queued: jobs.length,
     errors: calls.filter((c) => c.error).length + entries.filter((e) => e.error).length,
     wallMs,
-    scanrulerMs,
-    agentMs: wallMs - scanrulerMs,
+    bananaScanMs,
+    agentMs: wallMs - bananaScanMs,
     agentTurns: gaps.length,
     agentGapP95Ms: Math.round(percentile([...gaps].sort((a, b) => a - b), 95)),
     longestCall: sorted.reduce((m, c) => (c.ms > (m?.ms ?? -1) ? c : m), null),
@@ -147,14 +147,14 @@ const pct = (a, b) => (b > 0 ? `${Math.round((100 * a) / b)} %` : '—')
 /** A session's summary as text. */
 export function formatSummary(name, s) {
   const out = []
-  out.push(`== ${name}${s.start ? ` — scanruler-mcp ${s.start.version}, ${s.start.backend}, tools ${s.start.tools}, started ${new Date(s.start.t).toISOString()}` : ''}`)
+  out.push(`== ${name}${s.start ? ` — banana-scan-mcp ${s.start.version}, ${s.start.backend}, tools ${s.start.tools}, started ${new Date(s.start.t).toISOString()}` : ''}`)
   if (!s.calls) {
     out.push('   no calls')
     return out.join('\n')
   }
-  out.push(`   run ${min(s.wallMs)}: ScanRuler ${min(s.scanrulerMs)} (${pct(s.scanrulerMs, s.wallMs)}), the agent ${min(s.agentMs)} (${pct(s.agentMs, s.wallMs)}) over ${s.agentTurns} turns between calls (p95 ${(s.agentGapP95Ms / 1000).toFixed(1)} s)`)
+  out.push(`   run ${min(s.wallMs)}: Banana Scan ${min(s.bananaScanMs)} (${pct(s.bananaScanMs, s.wallMs)}), the agent ${min(s.agentMs)} (${pct(s.agentMs, s.wallMs)}) over ${s.agentTurns} turns between calls (p95 ${(s.agentGapP95Ms / 1000).toFixed(1)} s)`)
   out.push(`   ${s.calls} calls, ${s.batchEntries} batched, ${s.queued} answered at once, ${s.errors} refused; ${kb(s.inBytes)} kB in, ${kb(s.outBytes)} kB out, ${s.images} pictures; tool list handed out ${s.lists}× (${kb(s.listBytes)} kB)`)
-  out.push(`   scanruler_wait ${s.waits}× (${s.waitsWithNothingQueued} with nothing queued); calls with the tab hidden ${s.hiddenCalls}`)
+  out.push(`   bananascan_wait ${s.waits}× (${s.waitsWithNothingQueued} with nothing queued); calls with the tab hidden ${s.hiddenCalls}`)
   if (s.longestCall) out.push(`   longest call: ${s.longestCall.tool} ${(s.longestCall.ms / 1000).toFixed(1)} s`)
   out.push('')
   const head = ['tool', 'calls', 'batched', 'refused', 'total s', 'p95 s', 'kB in', 'kB out', 'pics']

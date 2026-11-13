@@ -18,8 +18,8 @@ Needs analyze.py run first (data/faces.pkl). For the axis given:
           feature was cut. A loop made only of such faces is left out (it is that feature's own).
           --keep-foreign keeps them as straight lines between the points seen instead.
 Slabs whose profiles are the same are merged into one extrude. Prints each slab's loops and writes
-<out> with the slabs and "steps": the sketch and extrude features for ScanRuler, in order, ready
-to run (reverse.feature.add each, or one scanruler_batch).
+<out> with the slabs and "steps": the sketch and extrude features for Banana Scan, in order, ready
+to run (reverse.feature.add each, or one bananascan_batch).
 """
 import argparse, json, os, pickle, sys
 import numpy as np

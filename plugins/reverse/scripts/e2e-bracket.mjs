@@ -31,7 +31,7 @@ const MEDIAN_BAR = 0.2
 /** The bracket's wall, from the Thickness workspace's median. */
 const WALL_MM = 1.35
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-bracket-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-bracket-'))
 const { browser, page, consoleErrors } = await launchApp({ width: 1600, height: 1000, protocolTimeout: 600_000 })
 const cdp = await downloadsTo(page, dir)
 

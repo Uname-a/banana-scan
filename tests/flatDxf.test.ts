@@ -57,7 +57,7 @@ function input(over: Partial<FlatDxfInput> = {}): FlatDxfInput {
     turns: 0,
     mirror: false,
     unit: 'mm',
-    title: 'ScanRuler 2D measurement — part.png (1000 × 800 px)',
+    title: 'Banana Scan 2D measurement — part.png (1000 × 800 px)',
     scaleNote: 'Scale: CALIBRATED, 10.0000 px/mm',
     origin: null,
     edgeTolerance: 0,
@@ -112,7 +112,7 @@ describe('buildFlatDxf', () => {
     expect(headerVar(dxf, '$EXTMIN')).toBe('0')
     expect(headerVar(dxf, '$EXTMAX')).toBe('100')
     // The traceability line rides in comments at the top, in plain ASCII.
-    expect(dxf.startsWith('999\nScanRuler 2D measurement - part.png (1000 x 800 px)\n999\nScale: CALIBRATED, 10.0000 px/mm\n')).toBe(true)
+    expect(dxf.startsWith('999\nBanana Scan 2D measurement - part.png (1000 x 800 px)\n999\nScale: CALIBRATED, 10.0000 px/mm\n')).toBe(true)
     expect(dxf).toContain("One unit is one millimetre; y up; the origin is the sheet's own origin")
     expect(dxf.trimEnd().endsWith('  0\nEOF')).toBe(true)
     // Every table a strict reader looks for, and the two block records.
@@ -221,7 +221,7 @@ describe('buildFlatDxf', () => {
   it('keeps a name, note or title with a line break on one line of the file', () => {
     const dxf = buildFlatDxf(
       input({
-        title: 'ScanRuler 2D measurement\r\npart.png',
+        title: 'Banana Scan 2D measurement\r\npart.png',
         notes: [{ text: 'first line\nsecond\tline', at: [20, 30] }],
         elements: [{ fit: flatPoint([5, 5]), color: '#778899', name: 'Point\n1', value: 'X 5.000 · Y 5.000 mm' }],
       }),
@@ -233,7 +233,7 @@ describe('buildFlatDxf', () => {
     const words = ofType(dxf, 'TEXT').map((t) => val(t, 1))
     expect(words).toContain('first line second line')
     expect(words).toContain('Point 1')
-    expect(groups(dxf)[0]).toEqual([999, 'ScanRuler 2D measurement part.png'])
+    expect(groups(dxf)[0]).toEqual([999, 'Banana Scan 2D measurement part.png'])
     expect(dxfText('a \r\n b')).toBe('a b')
   })
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // What the tools' answers cost an agent, measured on a real project: the
-// project in MEASURE_PROJECT (its scan with it) opened through scanruler-mcp
+// project in MEASURE_PROJECT (its scan with it) opened through banana-scan-mcp
 // in the app in Chrome, and each call the skills' reply-cost tables name made
 // as an agent makes it — the answer's text as the client gets it (rounded
 // by the server, as it is), in bytes and in tokens at four bytes a token; a
@@ -15,7 +15,7 @@ import puppeteer from 'puppeteer-core'
 import { APP_URL, CHROME, OUT_DIR, repoFile } from '../../../scripts/e2e-lib.mjs'
 
 const PROJECT = process.env.MEASURE_PROJECT
-if (!PROJECT) throw new Error('MEASURE_PROJECT names the .scanruler file.')
+if (!PROJECT) throw new Error('MEASURE_PROJECT names the .bananascan file.')
 const { startAgent } = await import(`file://${repoFile('mcp/tests/client.js').replace(/\\/g, '/')}`)
 const port = await new Promise((resolve) => {
   const s = createServer().listen(0, () => {
@@ -23,7 +23,7 @@ const port = await new Promise((resolve) => {
     s.close(() => resolve(p))
   })
 })
-const agent = await startAgent({ args: ['--port', String(port), '--out', OUT_DIR, '--app', APP_URL], env: { SCANRULER_MCP_TOKEN: `cost-${Date.now().toString(36)}`, SCANRULER_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'scanruler-mcp-')) }, stderr: 'ignore' })
+const agent = await startAgent({ args: ['--port', String(port), '--out', OUT_DIR, '--app', APP_URL], env: { BANANA_SCAN_MCP_TOKEN: `cost-${Date.now().toString(36)}`, BANANA_SCAN_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'banana-scan-mcp-')) }, stderr: 'ignore' })
 const ok = async (name, input) => {
   const r = await agent.call(name, input)
   if (r.error) throw new Error(`${name}: ${r.text}`)
@@ -47,17 +47,17 @@ const cost = async (row, name, input) => {
   return r
 }
 
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await ok('scanruler_status')).json.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await ok('bananascan_status')).json.howToConnect ?? '')?.[1]
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--window-size=1500,950', '--no-sandbox'], defaultViewport: { width: 1500, height: 950 }, protocolTimeout: 1_800_000 })
 const page = await browser.newPage()
 await page.evaluateOnNewDocument(() => {
-  try { localStorage.setItem('scanruler.askstlunits', '0') } catch { /* no storage */ }
-  try { localStorage.setItem('scanruler.agentdataok', '1') } catch { /* no storage */ }
+  try { localStorage.setItem('bananascan.askstlunits', '0') } catch { /* no storage */ }
+  try { localStorage.setItem('bananascan.agentdataok', '1') } catch { /* no storage */ }
 })
 await page.goto(link, { waitUntil: 'networkidle0' })
-await ok('scanruler_wait', { for: 'page', timeoutSeconds: 120 })
+await ok('bananascan_wait', { for: 'page', timeoutSeconds: 120 })
 await ok('project_load', { path: PROJECT, discard: true })
-await ok('scanruler_wait', { for: 'idle', timeoutSeconds: 1800 })
+await ok('bananascan_wait', { for: 'idle', timeoutSeconds: 1800 })
 await ok('workspace_set', { workspace: 'reverse' })
 await ok('reverse_build', {})
 
@@ -69,7 +69,7 @@ let edge = null
 for (const e of edges) {
   const a = await ok('reverse_feature_add', { feature: { kind: 'fillet', body: body.id, edges: [e.index], radius: 0.4 }, detail: 'none' })
   await ok('history_undo', {})
-  await ok('scanruler_wait', { for: 'idle', timeoutSeconds: 600 })
+  await ok('bananascan_wait', { for: 'idle', timeoutSeconds: 600 })
   if (a.json.status === 'ok') {
     edge = e.index
     break
@@ -105,15 +105,15 @@ const param = params[0] ?? { name: 'costProbe', expression: '3' }
 await cost('reverse_parameter_set', 'reverse_parameter_set', { parameter: param.name, expression: String(param.expression) })
 await cost('session_state mid-model', 'session_state', {})
 const single = await agent.call('reverse_body_check', { body: body.id, audit: false })
-const batched = await cost('scanruler_batch one call', 'scanruler_batch', { calls: [{ tool: 'reverse_body_check', arguments: { body: body.id, audit: false } }] })
-rows.push({ row: 'scanruler_batch overhead per call', bytes: Buffer.byteLength(batched.text) - Buffer.byteLength(single.text), tokens: Math.round((Buffer.byteLength(batched.text) - Buffer.byteLength(single.text)) / 4) })
+const batched = await cost('bananascan_batch one call', 'bananascan_batch', { calls: [{ tool: 'reverse_body_check', arguments: { body: body.id, audit: false } }] })
+rows.push({ row: 'bananascan_batch overhead per call', bytes: Buffer.byteLength(batched.text) - Buffer.byteLength(single.text), tokens: Math.round((Buffer.byteLength(batched.text) - Buffer.byteLength(single.text)) / 4) })
 console.log(JSON.stringify(rows.at(-1)))
 if (process.env.MEASURE_OUT) appendFileSync(process.env.MEASURE_OUT, JSON.stringify(rows.at(-1)) + '\n')
-const plain = await agent.call('scanruler_batch', { calls: [{ tool: 'reverse_feature_add', arguments: { feature: fillet, detail: 'none' } }] })
+const plain = await agent.call('bananascan_batch', { calls: [{ tool: 'reverse_feature_add', arguments: { feature: fillet, detail: 'none' } }] })
 await ok('history_undo', {})
-const timed = await agent.call('scanruler_batch', { calls: [{ tool: 'reverse_feature_add', arguments: { feature: fillet, detail: 'none' } }], timings: true })
+const timed = await agent.call('bananascan_batch', { calls: [{ tool: 'reverse_feature_add', arguments: { feature: fillet, detail: 'none' } }], timings: true })
 await ok('history_undo', {})
-rows.push({ row: 'scanruler_batch timings per change', bytes: Buffer.byteLength(timed.text) - Buffer.byteLength(plain.text), tokens: Math.round((Buffer.byteLength(timed.text) - Buffer.byteLength(plain.text)) / 4) })
+rows.push({ row: 'bananascan_batch timings per change', bytes: Buffer.byteLength(timed.text) - Buffer.byteLength(plain.text), tokens: Math.round((Buffer.byteLength(timed.text) - Buffer.byteLength(plain.text)) / 4) })
 console.log(JSON.stringify(rows.at(-1)))
 if (process.env.MEASURE_OUT) appendFileSync(process.env.MEASURE_OUT, JSON.stringify(rows.at(-1)) + '\n')
 

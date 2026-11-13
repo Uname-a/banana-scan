@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The HTTP side of the server's port. Its WebSocket upgrades are the page
-// link (link.js). GET /scanruler-mcp is what the page asks first: a hosted
+// link (link.js). GET /banana-scan-mcp is what the page asks first: a hosted
 // page reaching for this computer needs the browser's leave to — Chrome's
 // and Edge's Local Network Access asks for it on a fetch, never on a
 // WebSocket — so the page fetches this, with the CORS answer an allowed
 // origin needs, and connects once that went through. With --serve the port
-// also serves a built ScanRuler — the open-source build, a build for
+// also serves a built Banana Scan — the open-source build, a build for
 // working offline, or for Safari, which will not let an https page reach
 // 127.0.0.1 at all — at http://127.0.0.1:<port>/, a page this server always
 // lets in.
@@ -39,7 +39,7 @@ function fileFor(root, urlPath) {
 }
 
 /** The path the page fetches before it connects. */
-export const HELLO_PATH = '/scanruler-mcp'
+export const HELLO_PATH = '/banana-scan-mcp'
 
 /** An HTTP server for the port: the hello the page fetches, answered to the
  *  origins `allowOrigin` lets in; the built app under `serve`, if given — any
@@ -67,7 +67,7 @@ export function httpServer({ serve, allowOrigin = () => false, version = '' }) {
         return
       }
       res.writeHead(200, { ...cors, 'content-type': 'application/json', 'cache-control': 'no-store' })
-      res.end(JSON.stringify({ server: 'scanruler-mcp', version }))
+      res.end(JSON.stringify({ server: 'banana-scan-mcp', version }))
       return
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -76,7 +76,7 @@ export function httpServer({ serve, allowOrigin = () => false, version = '' }) {
     }
     if (!root) {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
-      res.end('scanruler-mcp: waiting for the ScanRuler page. Switch on "Local agent connection" in ScanRuler’s Settings.\n')
+      res.end('banana-scan-mcp: waiting for the Banana Scan page. Switch on "Local agent connection" in Banana Scan’s Settings.\n')
       return
     }
     let file

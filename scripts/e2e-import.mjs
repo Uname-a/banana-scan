@@ -57,7 +57,7 @@ try {
     const confirm = window.confirm
     window.confirm = () => false
     try {
-      drop(new File([packProject(blank, [])], 'cancelled.scanruler'))
+      drop(new File([packProject(blank, [])], 'cancelled.bananascan'))
       await pause(100)
       record(useStore.getState() === beforeCancel, 'cancelling project replacement preserves state and status')
     } finally { window.confirm = confirm }
@@ -67,7 +67,7 @@ try {
     candidate.manifest.scan.fileName = 'replacement.obj'
     candidate.manifest.deviation.reference = { fileName: 'broken.obj', member: 'reference.obj' }
     candidate.members.push({ name: 'reference.obj', bytes: bytes('broken reference') })
-    drop(new File([packProject(candidate.manifest, await readMembers(candidate.members))], 'broken-reference.scanruler'))
+    drop(new File([packProject(candidate.manifest, await readMembers(candidate.members))], 'broken-reference.bananascan'))
     await wait(() => !useStore.getState().busy && !!useStore.getState().errorText)
     record(useStore.getState().elements === beforeElements && useStore.getState().fileName === 'fast-B.obj' && useStore.getState().triangleCount === 2,
       'failure in a project reference does not install its already-prepared scan')
@@ -75,7 +75,7 @@ try {
     candidate.manifest.deviation.reference = null
     candidate.manifest.flat.image = { fileName: 'broken.png', member: 'image.png' }
     candidate.members.push({ name: 'image.png', bytes: bytes('broken image') })
-    drop(new File([packProject(candidate.manifest, await readMembers(candidate.members))], 'broken-image.scanruler'))
+    drop(new File([packProject(candidate.manifest, await readMembers(candidate.members))], 'broken-image.bananascan'))
     await wait(() => !useStore.getState().busy && !!useStore.getState().errorText)
     record(useStore.getState().elements === beforeElements && useStore.getState().fileName === 'fast-B.obj',
       'failure decoding the last project member preserves the current session')
@@ -107,7 +107,7 @@ try {
     // A valid aligned project must still measure and render in the saved frame.
     candidate.manifest.flat.image = null
     candidate.manifest.scan.appliedAlignment = { r: [1,0,0,0,1,0,0,0,1], t: [10,0,0] }
-    drop(new File([packProject(candidate.manifest, await readMembers(candidate.members))], 'aligned.scanruler'))
+    drop(new File([packProject(candidate.manifest, await readMembers(candidate.members))], 'aligned.bananascan'))
     await wait(() => !useStore.getState().busy && useStore.getState().statusText.includes('Project opened'))
     record(useStore.getState().fileName === 'replacement.obj' && useStore.getState().triangleCount === 1 && useStore.getState().modelCenter[0] > 10,
       'a successful project commits its geometry and saved alignment')
@@ -138,8 +138,8 @@ try {
       if (slots.scan === null) workerAfterClear = await this.centroid().then(() => 'still loaded', () => 'empty')
     }
     try {
-      drop(new File([packProject(blank, [])], 'empty.scanruler'))
-      await wait(() => !useStore.getState().busy && useStore.getState().statusText.includes('empty.scanruler'))
+      drop(new File([packProject(blank, [])], 'empty.bananascan'))
+      await wait(() => !useStore.getState().busy && useStore.getState().statusText.includes('empty.bananascan'))
       record(useStore.getState().fileName === null && useStore.getState().triangleCount === 0 && useDeviation.getState().nominalName === null && useFlat.getState().imageName === null && workerAfterClear === 'empty',
         'a project with absent members clears old scan, reference, image and worker geometry')
     } finally { MeshWorkerClient.prototype.commitImport = commit }
@@ -164,8 +164,8 @@ try {
       press('settings-close')
       await wait(() => !document.querySelector('[data-test="settings-modal"]'))
     }
-    const asks = () => localStorage.getItem('scanruler.askstlunits') !== '0'
-    const assumed = () => localStorage.getItem('scanruler.stlunits') ?? 'mm'
+    const asks = () => localStorage.getItem('bananascan.askstlunits') !== '0'
+    const assumed = () => localStorage.getItem('bananascan.stlunits') ?? 'mm'
     const stlBytes = (size) => {
       const buf = new ArrayBuffer(84 + 50)
       const dv = new DataView(buf)
@@ -205,7 +205,7 @@ try {
       // A project remembers the units its scan was read in and asks nothing.
       const inchProject = collectProject({ scan: { name: 'inch.stl', file: new Blob([stlBytes(1)]), units: 'in' }, reference: null, image: null }, null, 'test')
       inchProject.manifest.scan.fileName = 'inch.stl'
-      drop(new File([packProject(inchProject.manifest, await readMembers(inchProject.members))], 'inch.scanruler'))
+      drop(new File([packProject(inchProject.manifest, await readMembers(inchProject.members))], 'inch.bananascan'))
       await wait(() => !useStore.getState().busy && useStore.getState().fileName === 'inch.stl')
       record(!modal() && inInches(), 'a project reads its STL in the units it was saved with, without asking')
     } finally {

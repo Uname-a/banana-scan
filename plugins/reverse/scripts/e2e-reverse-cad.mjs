@@ -28,7 +28,7 @@ import { blockScan } from '../../../scripts/e2e-fixtures.mjs'
 const W = 40, D = 20, H = 12
 
 // ---- the scan: a dense block on the XY plane -------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-reverse-cad-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-reverse-cad-'))
 /** A block from the origin, every face a 1 mm grid of triangles wound
  *  outward — dense enough for a click's patch to grow a plane on. */
 const scan = blockScan(W, D, H)

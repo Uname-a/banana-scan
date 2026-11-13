@@ -30,7 +30,7 @@ export function buildEditedMesh(format: MeshFormat): BuiltFile | null {
   const align = useDeviation.getState().align
   const moved = align !== null || store.appliedAlignment !== null
   const stem = exportStem()
-  const file = buildMeshFile(format, [{ name: `${stem} edited`, positions, indices: parsed.indices }], align?.transform ?? null, `ScanRuler edited mesh - ${stem}`)
+  const file = buildMeshFile(format, [{ name: `${stem} edited`, positions, indices: parsed.indices }], align?.transform ?? null, `Banana Scan edited mesh - ${stem}`)
   if (!file) throw new Error('the copy has no triangles.')
   const name = `${stem}-edited${moved ? '-aligned' : ''}.${file.extension}`
   return {

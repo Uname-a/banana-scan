@@ -74,7 +74,7 @@ function input(over: Partial<FlatDxfInput> = {}): FlatDxfInput {
     turns: 0,
     mirror: false,
     unit: 'mm',
-    title: 'ScanRuler 2D measurement',
+    title: 'Banana Scan 2D measurement',
     scaleNote: 'Scale: CALIBRATED',
     origin: null,
     edgeTolerance: 0,

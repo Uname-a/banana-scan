@@ -70,11 +70,11 @@ async function saveOnce(label) {
   let file = null
   for (let i = 0; i < 300 && !file && !crashed; i++) {
     await sleep(200)
-    const done = readdirSync(DL_DIR).filter((f) => f.endsWith('.scanruler'))
+    const done = readdirSync(DL_DIR).filter((f) => f.endsWith('.bananascan'))
     if (done.length) file = join(DL_DIR, done[0])
   }
   check(!crashed, `${label}: the page survived the save`)
-  check(!!file, `${label}: a .scanruler file was downloaded`)
+  check(!!file, `${label}: a .bananascan file was downloaded`)
   if (file) console.log('saved:', (statSync(file).size / 1e6).toFixed(1), 'MB')
   const err = await page.evaluate(() => document.querySelector('[data-test=error], .error')?.textContent ?? '').catch(() => 'page gone')
   if (err) fail(`${label}: an error is shown after the save: ${err}`)

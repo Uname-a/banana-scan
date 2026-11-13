@@ -14,7 +14,7 @@
 // scan, so there is a map with something in it to play.
 //
 // Prereqs: dev server running (npm run dev), Chrome installed. Reads the
-// camera through the development hook, window.__scanruler.
+// camera through the development hook, window.__bananascan.
 //   node scripts/e2e-sleep.mjs
 // Env: CHROME (chrome.exe path), APP_URL, SHOT_DIR.
 import { mkdtempSync, writeFileSync } from 'node:fs'
@@ -27,7 +27,7 @@ import { check, finish, launchApp, loadScan, pixelDiff, sleep } from './e2e-lib.
 const SIZE = 20
 
 // ---- the pair --------------------------------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-sleep-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-sleep-'))
 const stepText = cubeStep(SIZE)
 const stepPath = join(dir, 'cube.step')
 writeFileSync(stepPath, stepText)
@@ -71,7 +71,7 @@ const clipOf = (sel) =>
 const shot = (clip) => page.screenshot({ clip, encoding: 'base64' })
 const camera = () =>
   page.evaluate(() => {
-    const v = window.__scanruler.scene().viewport
+    const v = window.__bananascan.scene().viewport
     const at = v.camera.position
     return { at: [at.x, at.y, at.z], zoom: v.camera.zoom }
   })

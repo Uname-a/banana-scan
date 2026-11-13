@@ -179,7 +179,7 @@ export function buildSummary(
   // the element's point count rather than once at the top. The unit is said
   // up there when it is not the millimetre every reading is held in, since a
   // position's coordinates are written bare.
-  const lines = [`ScanRuler — ${fileName}`, 'Method: Gaussian best-fit']
+  const lines = [`Banana Scan — ${fileName}`, 'Method: Gaussian best-fit']
   if (units === 'in') lines.push('Lengths and positions in inches')
   lines.push('')
   for (const el of elements) {

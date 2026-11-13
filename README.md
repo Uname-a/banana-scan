@@ -1,14 +1,14 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/scanruler-logo-horizontal-on-dark.svg" />
-  <img src="docs/brand/scanruler-logo-horizontal.svg" alt="ScanRuler by CNC Kitchen" width="420" />
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/banana-scan-logo-horizontal-on-dark.svg" />
+  <img src="docs/brand/banana-scan-logo-horizontal.svg" alt="Banana Scan" width="420" />
 </picture>
 
-# ScanRuler by CNC Kitchen
+# Banana Scan
 
 **Use it live at <https://scanruler.com/>** — nothing to install.
 
 > **Open source under the AGPL, with commercial licenses available.** Want to
-> build ScanRuler into closed-source software, or host a modified version
+> build Banana Scan into closed-source software, or host a modified version
 > without publishing its source? Write to <stefan@cnckitchen.com>, see
 > [COMMERCIAL.md](COMMERCIAL.md).
 
@@ -140,7 +140,7 @@ stage it works like a small parametric CAD tool.
    **Copy summary** puts every result on the clipboard.
 4. Everything stays editable: the **✎** key on any row reopens it, and
    **Undo / Redo** (`Ctrl+Z`, `Ctrl+Shift+Z`) work across all workspaces.
-5. **Save** writes the whole session to one `.scanruler` project file.
+5. **Save** writes the whole session to one `.bananascan` project file.
 
 New here? An amber ring points to the control to press next and retires once
 you have used a workspace twice. You can switch it off under **⚙ Settings**.
@@ -154,7 +154,7 @@ files, projects and agent answers stay in millimetres.
 | **Scan** | STL, PLY, OBJ (with its `.mtl` and texture, in colour), 3MF, STEP |
 | **Reference part** | STL, PLY, OBJ, 3MF, STEP (tessellated in the browser by [meshStep](https://github.com/CNCKitchen/meshStep)) |
 | **Flatbed image** | PNG, JPEG (the file's dpi is read as a working scale) |
-| **Project** | `.scanruler`: a plain zip of the input files and `project.json` |
+| **Project** | `.bananascan`: a plain zip of the input files and `project.json` |
 | **Elements** | STEP (AP214) as analytic geometry: solids and faces, or construction surfaces |
 | **Scan** | STL or 3MF mesh; PLY or XYZ point cloud with normals, in the pose it is aligned to |
 | **2D sheet** | SVG and DXF at 1:1, CSV of elements and dimensions |
@@ -173,7 +173,7 @@ files, projects and agent answers stay in millimetres.
   part back into view. **⚙ Settings → Mouse controls** switches to the mouse
   scheme of your CAD tool. A 3Dconnexion **SpaceMouse** works in Chrome and
   Edge, and touch screens work too. SpaceMouse navigation only affects a
-  visible, focused ScanRuler page; switching to another window stops background
+  visible, focused Banana Scan page; switching to another window stops background
   motion. Save your work and reload existing tabs after updating.
 - **View bar** (bottom left): show or hide the scan, reference and elements,
   make them transparent, show the mesh or the back faces. **Section** cuts
@@ -190,7 +190,7 @@ files, projects and agent answers stay in millimetres.
 
 ## Agents
 
-An AI agent on your computer can drive the ScanRuler tab you have open:
+An AI agent on your computer can drive the Banana Scan tab you have open:
 Claude Code, Codex, Claude Desktop, Cursor or anything else that speaks the
 [Model Context Protocol](https://modelcontextprotocol.io). For example: *"Open
 ballbar.stl, fit both spheres, measure the centre distance and give me the
@@ -203,13 +203,13 @@ You need [Node.js](https://nodejs.org/) 22 or newer and Chrome, Edge or
 Firefox. Add the helper to your agent once:
 
 ```bash
-claude mcp add --scope user scanruler -- npx -y scanruler-mcp@latest   # Claude Code
-codex mcp add scanruler -- npx -y scanruler-mcp@latest                 # Codex
+claude mcp add --scope user banana-scan -- npx -y banana-scan-mcp@latest   # Claude Code
+codex mcp add banana-scan -- npx -y banana-scan-mcp@latest                 # Codex
 ```
 
 For Claude Desktop, Cursor and others, add `"command": "npx", "args": ["-y",
-"scanruler-mcp@latest"]` to their MCP settings. Then say *"Connect to
-ScanRuler"*. It opens the app paired with the agent. The first time, ScanRuler
+"banana-scan-mcp@latest"]` to their MCP settings. Then say *"Connect to
+Banana Scan"*. It opens the app paired with the agent. The first time, Banana Scan
 warns you what connecting means for your data (below) and connects only once
 you accept; then the browser asks whether the site may reach *apps and services
 on this device*; click **Allow**. After that, ask for what you want measured,
@@ -217,7 +217,7 @@ naming files by their full path.
 
 **With an agent connected, your data no longer stays on your computer.** The
 helper runs on your own machine and the tab talks to it on `127.0.0.1`, so
-ScanRuler itself sends nothing anywhere. But what the agent reads (measurements,
+Banana Scan itself sends nothing anywhere. But what the agent reads (measurements,
 reports, pictures of the part, file names, notes and any file it opens itself)
 is processed by the agent and goes to its model's provider, unless the model
 runs on your computer. Setup per agent, troubleshooting and every option are in
@@ -231,7 +231,7 @@ well the two agree. Connect an agent [as above](#agents) and
 ask, for example: *"Reverse engineer C:\parts\bracket.stl into a solid STEP.
 Ask me what you need to know before you start."*
 
-Expect a long working session rather than a button. ScanRuler measures and
+Expect a long working session rather than a button. Banana Scan measures and
 builds; your agent, on your own model subscription, makes the decisions.
 
 ### How it works
@@ -259,7 +259,7 @@ the build in the tab. Following it, the agent:
 5. **Loops on the deviation.** After each group of features it reads the
    deviation map and the volume error, works on the worst place and measures
    again.
-6. **Hands over** a STEP file, a `.scanruler` project with every feature
+6. **Hands over** a STEP file, a `.bananascan` project with every feature
    editable, deviation pictures and a report marking each feature as measured,
    partly supported or inferred. The run ends when the target is met and every
    listed region is built or named as skipped, or when you accept less.
@@ -328,13 +328,13 @@ Work down this list, cheapest first:
 
 Most of the guide was written from runs that went wrong, so a part that fails
 is useful to us. Open a
-[feature request](https://github.com/CNCKitchen/scanruler/issues/new?template=feature_request.yml),
+[feature request](https://github.com/Uname-a/banana-scan/issues/new?template=feature_request.yml),
 and we write what it teaches into the guide, as a refinement or a new part
 type. It helps to include:
 
 - what the part is, how it was made and how you would have modelled it
 - the report and deviation pictures, and where the run went wrong
-- the scan or the `.scanruler` project, if you are allowed to share it. Issues
+- the scan or the `.bananascan` project, if you are allowed to share it. Issues
   are public, so a similar part you can share works too.
 - a trace of the run, written when the helper is started with
   `--trace <dir> --trace-args`. It holds your file paths, so read it first.
@@ -372,10 +372,10 @@ docker compose up -d --build              # the app, on http://localhost:8080
 docker compose --profile mcp build        # the agent helper: built, not started
 
 # add it to the agent once, with the compose file's full path
-claude mcp add --scope user scanruler -- docker compose \
-  -f "$PWD/docker-compose.yml" run --rm -T --service-ports scanruler-mcp
+claude mcp add --scope user banana-scan -- docker compose \
+  -f "$PWD/docker-compose.yml" run --rm -T --service-ports banana-scan-mcp
 
-docker compose run --rm scanruler-mcp --pair   # pair the tab once: open the link
+docker compose run --rm banana-scan-mcp --pair   # pair the tab once: open the link
 ```
 
 Then restart the agent (in Claude Code: `/mcp`, reconnect). From then on the
@@ -384,26 +384,26 @@ agent starts the helper container itself whenever it needs it.
 How it fits together:
 
 ```
- agent ──stdin/stdout (MCP)──▶ scanruler-mcp container
+ agent ──stdin/stdout (MCP)──▶ banana-scan-mcp container
                                    │  WebSocket on :7317, published to 127.0.0.1 only
- ScanRuler tab ──WebSocket + pairing token──┘
+ Banana Scan tab ──WebSocket + pairing token──┘
      │
      └─ loading, measuring and exporting all happen in the browser
 ```
 
-- **The `scanruler` container** is nginx serving the static build. It only
+- **The `banana-scan` container** is nginx serving the static build. It only
   hands out files: scans never reach it, everything runs in the browser.
-- **The `scanruler-mcp` container** is the bridge. The agent starts it
+- **The `banana-scan-mcp` container** is the bridge. The agent starts it
   (`docker compose run` in place of `npx`) and speaks MCP over stdin/stdout,
-  where `-T` keeps a terminal from getting in the way. The ScanRuler tab
+  where `-T` keeps a terminal from getting in the way. The Banana Scan tab
   connects to its WebSocket on port 7317 with the pairing token
   (`#agent=7317:<token>` in the pairing link). An agent's tool call goes to the
   tab, the tab carries it out, and the result goes back to the agent.
 - Inside the container the helper listens on all interfaces
-  (`SCANRULER_MCP_HOST=0.0.0.0`), but the port is published to the host's
+  (`BANANA_SCAN_MCP_HOST=0.0.0.0`), but the port is published to the host's
   `127.0.0.1` only, so only this computer can reach it. The token is kept in
-  the `scanruler-mcp` volume and survives `--rm`. `~/ScanRuler` is mounted at
-  the same path (`SCANRULER_FILES` picks another folder): exports land there,
+  the `banana-scan-mcp` volume and survives `--rm`. `~/BananaScan` is mounted at
+  the same path (`BANANA_SCAN_FILES` picks another folder): exports land there,
   and it is the only place the helper can read files from.
 
 Unlike with `npx`:
@@ -412,9 +412,9 @@ Unlike with `npx`:
   the port. Each container has a network of its own, so a second one gets
   `port is already allocated` and the agent reports *Connection closed*. A
   leftover container causes the same thing: find it with
-  `docker ps --filter name=scanruler-mcp` and `docker stop` it.
-- `scanruler_open` fails, since a container cannot open your browser. Open
-  ScanRuler yourself.
+  `docker ps --filter name=banana-scan-mcp` and `docker stop` it.
+- `bananascan_open` fails, since a container cannot open your browser. Open
+  Banana Scan yourself.
 - The image does not update itself. Run `docker compose --profile mcp build`
   again to get a new version.
 

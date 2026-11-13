@@ -812,7 +812,7 @@ the reading under the cursor.
 
 ## Agents: cleaning a scan up through the commands
 
-An AI agent connected through scanruler-mcp (the app README's *Agents*)
+An AI agent connected through banana-scan-mcp (the app README's *Agents*)
 works in the workspace with the commands under `mesh.` — the workspace's
 id; the plugin's has a hyphen, which a command's name does not take —
 tools `mesh_cut` and so on, registered from the plugin's `install()`

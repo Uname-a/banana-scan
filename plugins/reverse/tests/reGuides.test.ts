@@ -33,7 +33,7 @@ function installed() {
 describe('the Reverse engineer’s guides', () => {
   it('name only tools that exist', () => {
     installed()
-    const known = new Set([...listCommands().map((c) => c.name.split('.').join('_')), ...[...MCP.matchAll(/name: '(scanruler_[a-z_]+)'/g)].map((m) => m[1])])
+    const known = new Set([...listCommands().map((c) => c.name.split('.').join('_')), ...[...MCP.matchAll(/name: '(bananascan_[a-z_]+)'/g)].map((m) => m[1])])
     const spaces = new Set([...known].map((n) => n.split('_')[0]))
     const files = [...guideFiles(), { name: 'SKILL.md', text: textOf(SKILL) }]
     expect(files.length).toBeGreaterThan(3)

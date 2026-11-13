@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
-const BIN = fileURLToPath(new URL('../bin/scanruler-mcp.js', import.meta.url))
+const BIN = fileURLToPath(new URL('../bin/banana-scan-mcp.js', import.meta.url))
 
-/** Start `scanruler-mcp <args>` with `env` added, and connect to it. Returns
+/** Start `banana-scan-mcp <args>` with `env` added, and connect to it. Returns
  *  the client and `call(name, args)`, which gives `{ error, text, json,
  *  images }` — `images` the image blocks, `{ data, mimeType }`, a picture
  *  came back in. */
@@ -20,7 +20,7 @@ export async function startAgent({ args = [], env = {}, stderr = 'inherit' } = {
     env: { ...process.env, ...env },
     stderr,
   })
-  const client = new Client({ name: 'scanruler-e2e', version: '1.0.0' })
+  const client = new Client({ name: 'banana-scan-e2e', version: '1.0.0' })
   await client.connect(transport)
   const call = async (name, input = {}) => {
     const r = await client.callTool({ name, arguments: input }, undefined, { timeout: 300_000 })

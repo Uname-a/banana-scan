@@ -9,14 +9,14 @@
 // their workspaces, their share of the project file, the undo history and
 // the rest. Everything else in the app reads the installed list.
 
-import type { ScanRulerPlugin } from './api'
+import type { BananaScanPlugin } from './api'
 
-const found = import.meta.glob<{ default: ScanRulerPlugin }>('/plugins/*/plugin.ts', { eager: true })
+const found = import.meta.glob<{ default: BananaScanPlugin }>('/plugins/*/plugin.ts', { eager: true })
 
 /** Where the beta workspaces switched on in Settings are remembered: a JSON
  *  list of plugin ids, or `all` — what the browser checks set, so every
  *  workspace in the build is checked whatever it is called. */
-const BETA_KEY = 'scanruler.beta'
+const BETA_KEY = 'bananascan.beta'
 
 const storedBeta = (): string[] | 'all' => {
   try {
@@ -50,7 +50,7 @@ export function setBetaOn(id: string, on: boolean): void {
 
 /** The beta plugins in the build, whether switched on or not — what
  *  Settings offers. */
-export function betaPlugins(): ScanRulerPlugin[] {
+export function betaPlugins(): BananaScanPlugin[] {
   return Object.values(found)
     .map((m) => m.default)
     .filter((p) => p.beta)
@@ -63,17 +63,17 @@ export function betaPlugins(): ScanRulerPlugin[] {
  * sign-in will decide it. For a look at the app without any,
  * `?plugins=none` in the address leaves them all out.
  */
-export function pluginEnabled(plugin: ScanRulerPlugin): boolean {
+export function pluginEnabled(plugin: BananaScanPlugin): boolean {
   const query = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('plugins')
   if (query === 'none') return false
   return !plugin.beta || betaOn(plugin.id)
 }
 
-let installed: readonly ScanRulerPlugin[] | null = null
+let installed: readonly BananaScanPlugin[] | null = null
 
 /** Install every enabled plugin, once, in a fixed order — by id, so what a
  *  plugin registers never depends on the order the bundler found it in. */
-export function installPlugins(): readonly ScanRulerPlugin[] {
+export function installPlugins(): readonly BananaScanPlugin[] {
   if (installed) return installed
   installed = installEnabled(Object.values(found).map((m) => m.default))
   return installed
@@ -84,14 +84,14 @@ export function installPlugins(): readonly ScanRulerPlugin[] {
  *  `?plugins=none` still opens an app whose build has a clash. A plugin
  *  whose install() throws is left out of the list, so nothing — the
  *  headless engine included — takes it for one in use. */
-export function installEnabled(all: readonly ScanRulerPlugin[]): readonly ScanRulerPlugin[] {
+export function installEnabled(all: readonly BananaScanPlugin[]): readonly BananaScanPlugin[] {
   const enabled = all.filter(pluginEnabled).sort((a, b) => a.id.localeCompare(b.id))
   const ids = new Set<string>()
   for (const p of enabled) {
     if (ids.has(p.id)) throw new Error(`Two plugins share the id "${p.id}".`)
     ids.add(p.id)
   }
-  const done: ScanRulerPlugin[] = []
+  const done: BananaScanPlugin[] = []
   for (const p of enabled) {
     try {
       p.install?.()
@@ -104,6 +104,6 @@ export function installEnabled(all: readonly ScanRulerPlugin[]): readonly ScanRu
 }
 
 /** The plugins in use — none until installPlugins() has run. */
-export function plugins(): readonly ScanRulerPlugin[] {
+export function plugins(): readonly BananaScanPlugin[] {
   return installed ?? []
 }

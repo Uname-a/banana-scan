@@ -1,8 +1,8 @@
-# scanruler-mcp
+# banana-scan-mcp
 
 Drive [ScanRuler](https://scanruler.com/), the browser tool for measuring 3D
 scans, from an AI agent. This is a [Model Context Protocol](https://modelcontextprotocol.io)
-server: the agent starts it and calls its tools; the ScanRuler tab open in
+server: the agent starts it and calls its tools; the Banana Scan tab open in
 your browser connects to it over `127.0.0.1` and runs each call there, in
 front of you. Every step the agent takes is one step of the tab's undo
 history, so you can take any of it back.
@@ -23,7 +23,7 @@ Firefox.
 **Claude Code**
 
 ```bash
-claude mcp add --scope user scanruler -- npx -y scanruler-mcp@latest
+claude mcp add --scope user banana-scan -- npx -y banana-scan-mcp@latest
 ```
 
 `--scope user` has it in every project; leave it out for this one only.
@@ -33,7 +33,7 @@ unless the agent names a path.
 **Codex** — the CLI, the IDE extension and the app share one setting:
 
 ```bash
-codex mcp add scanruler -- npx -y scanruler-mcp@latest
+codex mcp add banana-scan -- npx -y banana-scan-mcp@latest
 ```
 
 or, in `~/.codex/config.toml`, with room for the first start (npx fetches the
@@ -41,9 +41,9 @@ package) and for long calls — Codex gives a server 10 seconds to start and a
 call 60 unless told otherwise:
 
 ```toml
-[mcp_servers.scanruler]
+[mcp_servers.banana-scan]
 command = "npx"
-args = ["-y", "scanruler-mcp@latest"]
+args = ["-y", "banana-scan-mcp@latest"]
 startup_timeout_sec = 60
 tool_timeout_sec = 300
 ```
@@ -54,9 +54,9 @@ tool_timeout_sec = 300
 ```json
 {
   "mcpServers": {
-    "scanruler": {
+    "banana-scan": {
       "command": "npx",
-      "args": ["-y", "scanruler-mcp@latest", "--out", "/Users/you/Documents/ScanRuler"]
+      "args": ["-y", "banana-scan-mcp@latest", "--out", "/Users/you/Documents/BananaScan"]
     }
   }
 }
@@ -75,50 +75,50 @@ tab connects to it, and the other sends its calls through that one — see
 ```json
 {
   "mcpServers": {
-    "scanruler": {
+    "banana-scan": {
       "command": "npx",
-      "args": ["-y", "scanruler-mcp@latest"]
+      "args": ["-y", "banana-scan-mcp@latest"]
     }
   }
 }
 ```
 
-**From a clone of the ScanRuler repository**, to try a change: run
+**From a clone of the Banana Scan repository**, to try a change: run
 `npm --prefix mcp ci` once, then use
-`node /path/to/scanruler/mcp/bin/scanruler-mcp.js` where the examples say
-`npx -y scanruler-mcp@latest` — in Claude Code,
-`claude mcp add scanruler -- node /path/to/scanruler/mcp/bin/scanruler-mcp.js`.
+`node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js` where the examples say
+`npx -y banana-scan-mcp@latest` — in Claude Code,
+`claude mcp add banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js`.
 
-### 2. Let the agent open ScanRuler
+### 2. Let the agent open Banana Scan
 
-Ask the agent for something in ScanRuler — or just *"Connect to ScanRuler"*.
-With no tab connected, it calls `scanruler_open`, which opens ScanRuler in
+Ask the agent for something in Banana Scan — or just *"Connect to Banana Scan"*.
+With no tab connected, it calls `bananascan_open`, which opens Banana Scan in
 your default browser with the pairing in its address: the tab switches the
 connection on with this server's port and token, and connects. The first
-time, ScanRuler warns that what the agent reads goes to the agent and its model,
+time, Banana Scan warns that what the agent reads goes to the agent and its model,
 not only this computer, and connects once you accept. Then **Chrome and Edge**
 ask whether scanruler.com may access "apps and services on this device" — allow
 it, that is this server. **Firefox** asks the same. The tab keeps the pairing,
 so this is done once per browser.
 
-When the default browser is not the one you use ScanRuler in, or the agent
+When the default browser is not the one you use Banana Scan in, or the agent
 runs somewhere it cannot open one, pair by hand:
 
 ```bash
-npx -y scanruler-mcp@latest --pair
+npx -y banana-scan-mcp@latest --pair
 ```
 
 prints the port, the pairing token and a link. Open the link once in the
-browser you use ScanRuler in, or in ScanRuler go to ⚙ **Settings → Agents**,
+browser you use Banana Scan in, or in Banana Scan go to ⚙ **Settings → Agents**,
 switch on **Local agent connection**, and enter the port and the token. The
 token is made on the first run and kept in your config folder
-(`%APPDATA%\scanruler-mcp` on Windows,
-`~/Library/Application Support/scanruler-mcp` on macOS,
-`$XDG_CONFIG_HOME/scanruler-mcp` elsewhere, `~/.config/scanruler-mcp`
-without it). `scanruler_status` hands out the same
+(`%APPDATA%\banana-scan-mcp` on Windows,
+`~/Library/Application Support/banana-scan-mcp` on macOS,
+`$XDG_CONFIG_HOME/banana-scan-mcp` elsewhere, `~/.config/banana-scan-mcp`
+without it). `bananascan_status` hands out the same
 link.
 
-A chip in ScanRuler's top bar says where the connection stands: **listening**
+A chip in Banana Scan's top bar says where the connection stands: **listening**
 while the agent's server is not running, **connected**, or **turned away**
 (a wrong token, or another tab connected already — the server takes one tab
 at a time). If you denied the browser's question, allow *Local network
@@ -132,7 +132,7 @@ With `@latest` in the setting, npx asks npm for the newest version at every
 start and fetches it when there is one, so quitting the app and opening it
 again updates the server. Offline, npx starts the copy it has; on a network
 that turns connections away rather than having none, it tries for about a
-minute first. (npm 9.7 and newer treat a bare `scanruler-mcp` the same way.)
+minute first. (npm 9.7 and newer treat a bare `banana-scan-mcp` the same way.)
 
 The server also keeps itself current — for a setting without `@latest` on an
 older npm, or a copy installed with `npm install -g`. Once a day, in the
@@ -140,27 +140,27 @@ background, it asks npm's registry (registry.npmjs.org, or the one npm is set
 to) for its latest version: that one request, given 2 seconds. When there is
 a newer one, npm fetches it into its cache, and the next start runs it in
 place of the old copy, without waiting on the network. What it found is kept
-in `update.json` in the config folder, and `scanruler_status` says it:
+in `update.json` in the config folder, and `bananascan_status` says it:
 `server.version`, `server.latest`, and `server.handedOffFrom` when an older
 copy started this one. A version pinned in the setting
-(`scanruler-mcp@0.4.0`) is left as it is, and so is a copy run from a clone
+(`banana-scan-mcp@0.4.0`) is left as it is, and so is a copy run from a clone
 of the repository. To turn it off: `--no-update`, or
-`SCANRULER_MCP_NO_UPDATE=1`.
+`BANANA_SCAN_MCP_NO_UPDATE=1`.
 
-When ScanRuler shows **Your ScanRuler connector is out of date**, the server
+When Banana Scan shows **Your Banana Scan connector is out of date**, the server
 your app starts is older than the page needs: ask your agent to update it, with
 the sentence the banner gives you to paste, or change the setting to the
 `@latest` line it shows. Then quit the app completely — not just its window —
 and open it again.
 
 When the page is updated while the app runs, the tools the app was given are
-the old page's, and `scanruler_status` says so (`tools.stale`, with what was
+the old page's, and `bananascan_status` says so (`tools.stale`, with what was
 added, removed and changed). A new chat does not bring the new ones: Claude
 Desktop keeps one server for as long as it runs and does not list the tools
 again when told they changed. Quit the app completely — in Claude Desktop,
 **Quit** from its tray or menu-bar icon, not just closing the window — and open
 it again; the server it starts lists the page's current tools. Until then,
-`scanruler_batch` runs any of the page's tools by name, new ones included.
+`bananascan_batch` runs any of the page's tools by name, new ones included.
 
 ### Several agents
 
@@ -169,22 +169,22 @@ holds the port and the tab's connection; one that finds the port taken
 connects to that one, with the same token, and sends its calls through it.
 When the copy holding the port stops, another takes the port over, and the
 tab — which keeps trying — connects to it within ten seconds.
-`scanruler_status` says which this copy is (`server.role`: `holder`,
+`bananascan_status` says which this copy is (`server.role`: `holder`,
 `relay` — with the holding copy's version as `server.holder.version` —, or
 `none` with `server.error` saying why). The page judges the copy holding
 its connection: when that one is out of date, a relaying copy's status says
 so, and quitting the app that started it lets a current copy take over. Copies with different
-tokens cannot share a port: give them the same `SCANRULER_MCP_TOKEN`, or
+tokens cannot share a port: give them the same `BANANA_SCAN_MCP_TOKEN`, or
 each its own `--port`. Changes from several agents run one after another in
 the tab, each one step of the same undo history.
 
 ### Serving the app yourself
 
 ```bash
-npx -y scanruler-mcp@latest --serve /path/to/scanruler/dist
+npx -y banana-scan-mcp@latest --serve /path/to/banana-scan/dist
 ```
 
-serves a built ScanRuler (`npm run build` in a clone) at
+serves a built Banana Scan (`npm run build` in a clone) at
 `http://127.0.0.1:7317/` from the same port the tab connects to — for Safari,
 for working offline, and for your own build. A page from there needs
 no browser permission, and `--pair` then gives a link to it.
@@ -192,27 +192,27 @@ no browser permission, and `--pair` then gives a link to it.
 ### Without a browser (headless)
 
 ```bash
-npm run build:engine                       # in a clone of ScanRuler
-npx -y scanruler-mcp@latest --engine /path/to/scanruler/dist-engine/engine.mjs
+npm run build:engine                       # in a clone of Banana Scan
+npx -y banana-scan-mcp@latest --engine /path/to/banana-scan/dist-engine/engine.mjs
 ```
 
-runs ScanRuler itself inside the server, with no browser and no tab: the
+runs Banana Scan itself inside the server, with no browser and no tab: the
 engine is a build of the app for Node, `dist-engine/engine.mjs`, which the
 server loads from where it is and names nothing in. `--headless` takes the
-engine built in the checkout the server is part of; `SCANRULER_ENGINE` gives
+engine built in the checkout the server is part of; `BANANA_SCAN_ENGINE` gives
 a path as `--engine` does. There is no scan, no viewport and nobody
 watching, so only the commands that run without a page are tools —
 `session_state` and `history_undo`/`history_redo` in the app itself, and
-whatever a build of ScanRuler marks to run so; a tool that needs the page
+whatever a build of Banana Scan marks to run so; a tool that needs the page
 (`view_render`, `scan_open` …) answers `unavailable`, naming the page mode.
 Files still go by `path`. The server's instructions say it runs headless,
-`scanruler_status` says `backend: "headless"` and where the engine is, and
-`scanruler_open` has nothing to open. Each server is a session of its own —
+`bananascan_status` says `backend: "headless"` and where the engine is, and
+`bananascan_open` has nothing to open. Each server is a session of its own —
 an agent's subagents can each start one and work side by side, sharing
 nothing — and what the app logs goes to stderr with the server's own lines.
 `--tools compact` works headless too: the server's own tools are listed, and
-the engine's are read through `scanruler_tools` and run through
-`scanruler_batch` (see *Small local models*).
+the engine's are read through `bananascan_tools` and run through
+`bananascan_batch` (see *Small local models*).
 ### Small local models
 
 Listed in full, every command the tab offers is a tool of its own: over a
@@ -220,22 +220,22 @@ hundred tools and 50k tokens of schema, all read before the conversation starts.
 frontier model takes that in its stride. A local model with a 128k window
 runs out of room within a few tool rounds, and picks less reliably among so
 many. For such a model, start the server with `--tools compact` (or set
-`SCANRULER_MCP_TOOLS=compact`). It then lists about a dozen tools, a few
-thousand tokens: the server's six, `scanruler_tools`, and the tab's tools
+`BANANA_SCAN_MCP_TOOLS=compact`). It then lists about a dozen tools, a few
+thousand tokens: the server's six, `bananascan_tools`, and the tab's tools
 that return a picture — `view_render`, `section_render`, `flat_render` and
 `scan_heightmap`.
 
-- `scanruler_tools` with no arguments lists the tab's tools, a name and a
+- `bananascan_tools` with no arguments lists the tab's tools, a name and a
   line each, about 1.5k tokens for a hundred. With `names` it gives those
   tools' full definitions, as the full list has them, up to 20 at a time.
   Names it does not know come back in `unknown`.
-- The model runs the tools through `scanruler_batch`, one call as a batch of
+- The model runs the tools through `bananascan_batch`, one call as a batch of
   one. A refused call comes back with the tab's error code and what was
   wrong, so the model can try again with corrected arguments. A client that
   lets the model call a tool it was not given can call them directly too.
 - The tools that return a picture are listed so the model calls them
   directly and sees the picture. In a batch a picture is not shown: it is
-  written to a file, the call's `path` or a new file in `scanruler-work` in
+  written to a file, the call's `path` or a new file in `banana-scan-work` in
   the open scan's folder (the output folder, `--out`, while no scan or
   project was opened from one), and the call's result names it and the
   folder. A tab that connects with
@@ -247,9 +247,9 @@ separate entries. In `mcp.json`:
 ```json
 {
   "mcpServers": {
-    "scanruler": {
+    "banana-scan": {
       "command": "npx",
-      "args": ["-y", "scanruler-mcp@latest", "--tools", "compact"]
+      "args": ["-y", "banana-scan-mcp@latest", "--tools", "compact"]
     }
   }
 }
@@ -258,10 +258,10 @@ separate entries. In `mcp.json`:
 **Codex** with a local model:
 
 ```bash
-codex mcp add scanruler -- npx -y scanruler-mcp@latest --tools compact
+codex mcp add banana-scan -- npx -y banana-scan-mcp@latest --tools compact
 ```
 
-or `args = ["-y", "scanruler-mcp@latest", "--tools", "compact"]` in
+or `args = ["-y", "banana-scan-mcp@latest", "--tools", "compact"]` in
 `~/.codex/config.toml`.
 
 ### Fewer tools
@@ -276,11 +276,11 @@ to leave out: `--tools=-flat,-thickness,-dimension` (with the `=`: a value
 starting with a dash is refused otherwise) lists everything but the
 2D sheet, the wall thickness and the dimension tools. Written plain, they are
 the namespaces to list: `--tools scan,element,view,session,guide` and nothing
-else. The two forms do not mix, and the server's own tools (`scanruler_*`)
+else. The two forms do not mix, and the server's own tools (`bananascan_*`)
 are listed either way, every listed command a tool of its own as in `full`.
 The list is fixed when the server starts and never changes mid-chat, so
 give it to the agent whose work is known — in the agent's config, or
-`SCANRULER_MCP_TOOLS=-flat,-thickness,-dimension`. A tool left out is
+`BANANA_SCAN_MCP_TOOLS=-flat,-thickness,-dimension`. A tool left out is
 unknown to the client: it is not listed, and a call to it by name answers
 `unknown_command`. A namespace the tab does not have is accepted — a tab
 may add one — and the server says so on its stderr when a tab connects.
@@ -289,28 +289,28 @@ may add one — and the server says so on its stderr when a tab connects.
 
 | Option | |
 |---|---|
-| `--port <n>` | The port the tab connects to; 7317 unless given. Also `SCANRULER_MCP_PORT`. |
+| `--port <n>` | The port the tab connects to; 7317 unless given. Also `BANANA_SCAN_MCP_PORT`. |
 | `--out <dir>` | Where exports go when a tool call names no path; the folder the server was started in otherwise. |
-| `--serve <dir>` | Also serve a built ScanRuler from `<dir>`. |
+| `--serve <dir>` | Also serve a built Banana Scan from `<dir>`. |
 | `--allow-origin <url>` | Let a ScanRuler tab from another address connect — a self-hosted copy. Repeatable. scanruler.com and any page on this computer are always allowed. |
-| `--app <url>` | The ScanRuler address the pairing link opens. |
-| `--engine <file>` | Run ScanRuler headless in the server, from an engine built with `npm run build:engine` — no tab. Also `SCANRULER_ENGINE`. |
+| `--app <url>` | The Banana Scan address the pairing link opens. |
+| `--engine <file>` | Run Banana Scan headless in the server, from an engine built with `npm run build:engine` — no tab. Also `BANANA_SCAN_ENGINE`. |
 | `--headless` | The same, with the engine built in the checkout the server is part of. |
-| `--tools <mode>` | `full`, the default: every command the tab offers is a tool. `compact`: the server's own and the tab's tools that return a picture; the rest are read through `scanruler_tools` and run through `scanruler_batch` — see *Small local models*. Or namespaces, comma-separated — the part of a tool's name before its first underscore: `scan,element,view` lists those alone, `-flat,-thickness,-dimension` all but those, the server's own tools either way — see *Fewer tools*. Also `SCANRULER_MCP_TOOLS`. |
-| `--trace <dir>` | Write a line per tool call — tool, ms, bytes each way, error, whether the tab was hidden — into a new file in `<dir>`, for measuring a run; off unless given. `scripts/trace-summary.mjs` in the ScanRuler repository sums a run up. Also `SCANRULER_MCP_TRACE`. |
+| `--tools <mode>` | `full`, the default: every command the tab offers is a tool. `compact`: the server's own and the tab's tools that return a picture; the rest are read through `bananascan_tools` and run through `bananascan_batch` — see *Small local models*. Or namespaces, comma-separated — the part of a tool's name before its first underscore: `scan,element,view` lists those alone, `-flat,-thickness,-dimension` all but those, the server's own tools either way — see *Fewer tools*. Also `BANANA_SCAN_MCP_TOOLS`. |
+| `--trace <dir>` | Write a line per tool call — tool, ms, bytes each way, error, whether the tab was hidden — into a new file in `<dir>`, for measuring a run; off unless given. `scripts/trace-summary.mjs` in the Banana Scan repository sums a run up. Also `BANANA_SCAN_MCP_TRACE`. |
 | `--trace-args` | With `--trace`, each call's arguments too; otherwise only their size. |
-| `--answer-within <s>` | Hold a call at most this many seconds, 45 unless given: a change, a batch or a long read still running then answers `{ queued: true, job, after }` and runs on, and `scanruler_wait` waits no longer either. A client, or a bridge between it and this computer, may cut a call at a minute; a cut call says nothing. `0` holds every call to its end. Also `SCANRULER_MCP_ANSWER_WITHIN`. |
-| `--no-update` | Do not keep the server current (see *Staying current*). Also `SCANRULER_MCP_NO_UPDATE=1`. |
+| `--answer-within <s>` | Hold a call at most this many seconds, 45 unless given: a change, a batch or a long read still running then answers `{ queued: true, job, after }` and runs on, and `bananascan_wait` waits no longer either. A client, or a bridge between it and this computer, may cut a call at a minute; a cut call says nothing. `0` holds every call to its end. Also `BANANA_SCAN_MCP_ANSWER_WITHIN`. |
+| `--no-update` | Do not keep the server current (see *Staying current*). Also `BANANA_SCAN_MCP_NO_UPDATE=1`. |
 | `--pair` | Print the port, the token and the pairing link, and exit. |
 | `--version` | Print the server's version, and exit. |
 | `--help` | The options. |
 
-`SCANRULER_MCP_TOKEN` overrides the stored token; `SCANRULER_MCP_CONFIG_DIR`
+`BANANA_SCAN_MCP_TOKEN` overrides the stored token; `BANANA_SCAN_MCP_CONFIG_DIR`
 moves the config folder.
 
 ## Tools
 
-Every command the ScanRuler tab offers is a tool, its name with dots turned
+Every command the Banana Scan tab offers is a tool, its name with dots turned
 into underscores — `scan_open`, `element_fit`, `dimension_add`,
 `report_get`, `history_undo` and the rest; their descriptions say what each
 needs and returns. The list is the tab's while one is connected — a build
@@ -318,27 +318,27 @@ with more commands lists more. Before a tab is there it is the list of the
 last tab that connected, which the server keeps in its config folder
 (`tools.json`), or, the first time, the app's own; a client that lists the
 tools once, when it starts, sees them all that way, and one that listens is
-told when the list changes. Seven more are the server's: `scanruler_status`
+told when the list changes. Seven more are the server's: `bananascan_status`
 (is a tab connected, which version, how to pair one, what the tab's
 session holds — its scan, project, unsaved changes and work counted — the
 time on this computer with its offset from UTC (`server.now`), and,
 when the client's list is out of date, which tools were added, removed or
 changed since and which page it came from),
-`scanruler_open` (open ScanRuler in the default browser, paired, and wait
-for it), `scanruler_wait` (until a tab is connected, or also idle),
-`scanruler_batch` (several of the tab's tools in one call, in order — a run
+`bananascan_open` (open Banana Scan in the default browser, paired, and wait
+for it), `bananascan_wait` (until a tab is connected, or also idle),
+`bananascan_batch` (several of the tab's tools in one call, in order — a run
 of `scan_nearest` or `element_fit` calls — each answer in its place, stopped
-at the first refused unless told to go on), `scanruler_write` (a text
+at the first refused unless told to go on), `bananascan_write` (a text
 file — `.md`, `.txt`, `.csv` or `.json`, a report say — written in the folder
 the server last opened a scan or a project from, and nowhere else: not into
 hidden folders, and not as a file agents and tools take instructions or
 settings from, such as `CLAUDE.md`, `AGENTS.md` or `package.json`) and
-`scanruler_files` (that folder's files — name, size, kind — newest first), `scanruler_read` (a text file there, or an answer too long to carry wherever it was written, in parts: `{ text, offset, nextOffset, size }`, in bytes).
+`bananascan_files` (that folder's files — name, size, kind — newest first), `bananascan_read` (a text file there, or an answer too long to carry wherever it was written, in parts: `{ text, offset, nextOffset, size }`, in bytes).
 The folders are kept beside `tools.json` (`folders.json`), so a server
-started afresh still writes and lists there, and `scanruler_status` lists
+started afresh still writes and lists there, and `bananascan_status` lists
 them. With `--tools compact` only the tab's tools that return a picture are
 listed; the rest are read through an eighth of the server's own,
-`scanruler_tools` — see *Small local models*. With `--tools` and a list of
+`bananascan_tools` — see *Small local models*. With `--tools` and a list of
 namespaces, only the tab's tools of those namespaces, or all but those — see
 *Fewer tools*.
 
@@ -351,9 +351,9 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
   `flat_open_image` and `project_load` take `path`, a file on this computer;
   the server reads it and streams it to the tab. The exports and
   `project_save` take an optional `path` — a file, or a folder for the name
-  ScanRuler gives it — and the server writes the file there and returns where.
+  Banana Scan gives it — and the server writes the file there and returns where.
   `scan_open` and `project_load` take a folder too, and open the one mesh,
-  or the one `.scanruler`, in it; with none or several the answer lists what
+  or the one `.bananascan`, in it; with none or several the answer lists what
   is there.
   A tool that replaces the session (`scan_open`, `project_load`,
   `session_reset`) takes `saveTo`: the session is saved as a project file
@@ -371,13 +371,13 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
   A file already there is replaced.
 - **Relative paths** — a batch's `file`, `$file`, a call's `to`, a file to
   open, an output's `path` — are taken from the open scan's folder, or from the folder
-  the server was started in while no scan is open; `scanruler_status` gives
+  the server was started in while no scan is open; `bananascan_status` gives
   both (`server.relativeTo`, `server.cwd`). A picture or file written into a
   folder is numbered past one already there (`-2`, `-3`), never written over.
 - **Long answers.** An answer past what one carries (40 k characters; a
   guide 70 k — several guides asked for together come while they fit about
   60 k, the rest named in `next`) is written whole to a JSON file in
-  `scanruler-work` in the open scan's folder — the server's own files, apart
+  `banana-scan-work` in the open scan's folder — the server's own files, apart
   from the person's, where an agent that may only read there can open it —
   in the output folder (`--out`) while the scan open now was not opened from
   a folder through this server. The answer says
@@ -393,7 +393,7 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
   tab that held work comes back as another — reloaded by the person, by the
   dev server after an edit, or unloaded by the browser — the next answer
   says so (`pageReloaded`), with the project file last opened or saved here,
-  which `scanruler_status` gives too (`lastProject`, kept in
+  which `bananascan_status` gives too (`lastProject`, kept in
   `folders.json`). A tab older than the app it came from, which could not
   load a part of it, answers `stale_page`, and the status says so from then
   on (`page.stale`): save the project before the tab is reloaded.
@@ -419,7 +419,7 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
   pick answers where it snapped. `flat_objects` finds the separate parts on
   an image and measures them; `flat_profile` reads an outline round a centre
   or along an axis and counts its peaks — a knurl's teeth, say.
-- **Batches stand or fall whole.** `scanruler_batch` stops at the first
+- **Batches stand or fall whole.** `bananascan_batch` stops at the first
   refused call — the answer names `failed: { index, tool, error }`. When
   that call is a change, `rollback` (the default) undoes what the calls
   before it changed, once the tab is idle: `undone` lists the steps taken
@@ -437,18 +437,18 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
 - **Long changes.** Every tool that changes the session takes `wait`, and
   so does a read the tab marks long (a comparison over whole bodies, say);
   `wait: false` answers at once with `{ queued: true, job }` while the call
-  runs on, a batch too, and `scanruler_wait { for: "job", job }` gives its
+  runs on, a batch too, and `bananascan_wait { for: "job", job }` gives its
   answer when it is done. Still running at the answer limit
   (`--answer-within`, 45 s), a call answers the same way with `after`, its
-  seconds; `scanruler_wait` waits no longer than that either and answers
+  seconds; `bananascan_wait` waits no longer than that either and answers
   `state: "running"` — call it again. The server keeps every change as a
   job, so a call the client stopped waiting for keeps running and keeps its
-  answer: `scanruler_status` lists the latest jobs, running, done or failed.
+  answer: `bananascan_status` lists the latest jobs, running, done or failed.
   The tab keeps a record of the commands run under each job too
   (`session_recent`, the last hundred), so a server started afresh — whose
-  own jobs are gone — still answers `scanruler_wait` for a job of the copy
+  own jobs are gone — still answers `bananascan_wait` for a job of the copy
   before it, from that record (`from` says so).
-  `scanruler_wait { for: "idle" }` waits for the changes still running too,
+  `bananascan_wait { for: "idle" }` waits for the changes still running too,
   and answers `finished`: every change done or failed since it last said —
   a failed one with its error, a batch with the call it stopped at — each
   once, so a run of `wait: false` changes is read back in one call, and
@@ -461,7 +461,7 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
   and slows timers to once a minute. Changes still run, and the waits a
   command makes — for the session to settle, for the screen to follow —
   look again on every change the session's stores see and draw their own
-  frames, so pictures still come. `scanruler_status` says `page.hidden`,
+  frames, so pictures still come. `bananascan_status` says `page.hidden`,
   with a note: a browser that unloads background tabs (Chrome's Memory
   Saver) may close it — keep the site among those always kept active.
 - **Results** are the session as the tab holds it afterwards, as JSON, in
@@ -471,7 +471,7 @@ namespaces, only the tab's tools of those namespaces, or all but those — see
   `no_scan`, `busy`, `invalid_input`, `invalid_state` (something open in a
   panel is in the way), `not_found`, `failed`, `unavailable`.
 
-A session might go: `scanruler_status`, `scanruler_open` if no tab is
+A session might go: `bananascan_status`, `bananascan_open` if no tab is
 connected, `scan_open`, `session_state` (the scan's bounding box says where
 the part lies), `element_fit` twice, `dimension_add`, `report_get`,
 `view_render`.
@@ -479,7 +479,7 @@ the part lies), `element_fit` twice, `dimension_add`, `report_get`,
 ## How it works
 
 The tab connects to `ws://127.0.0.1:<port>/`. Before that, a tab from the web
-fetches `http://127.0.0.1:<port>/scanruler-mcp`, which is what has Chrome and
+fetches `http://127.0.0.1:<port>/banana-scan-mcp`, which is what has Chrome and
 Edge ask for the permission a WebSocket alone never asks for. The server lets
 in a tab from scanruler.com, from this computer, or from an `--allow-origin`
 address, that presents the pairing token — one tab at a time — and, beside
@@ -505,4 +505,4 @@ for listing the tools before a tab connects; the app's test
 
 ## Licence
 
-AGPL-3.0-only, as ScanRuler — see [LICENSE](LICENSE).
+AGPL-3.0-only, as Banana Scan — see [LICENSE](LICENSE).

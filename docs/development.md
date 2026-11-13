@@ -122,7 +122,7 @@ is the new kernel's and meant, write the goldens anew with
 `RE_FUZZ_BLESS="occt-wasm x.y.z → a.b.c: what changed" npx vitest run plugins/reverse/tests/reFuzz.test.ts`
 and commit them — the build benchmark on saved projects for times and
 outcomes
-(`RE_BENCH="a.scanruler;b.scanruler" npx vitest run plugins/reverse/tests/reBench.test.ts`),
+(`RE_BENCH="a.bananascan;b.bananascan" npx vitest run plugins/reverse/tests/reBench.test.ts`),
 a Reverse engineer browser check, and an entry in `CHANGELOG.md` naming both
 versions and what the new one changed for us, the goldens' note with it. A new
 binding (a kernel operation we lacked) goes in
@@ -131,8 +131,8 @@ binding (a kernel operation we lacked) goes in
 ## Releases
 
 The version is the `version` field in `package.json` and nowhere else. The
-build reads it into the app, which shows it in the caption under the ScanRuler
-name in the top bar and in the imprint, and writes it into every `.scanruler`
+build reads it into the app, which shows it in the caption under the Banana Scan
+name in the top bar and in the imprint, and writes it into every `.bananascan`
 project it saves as `appVersion`. Whether an older build can open a project is
 decided by the file's own `schemaVersion` and the names in it, not by this
 number: a build refuses a higher `schemaVersion`, and an element kind, way of
@@ -149,7 +149,7 @@ UPDATE_MCP_COMMANDS=1 npx vitest run tests/mcpCommands.test.ts   # the server's 
 # describe it at the top of CHANGELOG.md
 git add package.json package-lock.json CHANGELOG.md mcp/src/commands.json
 git commit -m "chore: release v0.3.0"
-git tag -a v0.3.0 -m "ScanRuler 0.3.0"
+git tag -a v0.3.0 -m "Banana Scan 0.3.0"
 git push --follow-tags
 ```
 

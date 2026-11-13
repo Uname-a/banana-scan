@@ -38,7 +38,7 @@ export function AgentDataWarning() {
           terms.
         </p>
         <p>
-          ScanRuler itself sends nothing anywhere: the connection only reaches the agent’s helper on
+          Banana Scan itself sends nothing anywhere: the connection only reaches the agent’s helper on
           this computer. Don’t connect an agent while you work on parts you may not share with its
           provider.
         </p>

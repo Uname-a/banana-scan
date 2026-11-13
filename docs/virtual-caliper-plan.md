@@ -3,7 +3,7 @@
 Status: not built (2026-10-11).
 
 Written 2026-09-23. Research into what other scan-inspection tools call a
-virtual caliper, whether ScanRuler's Elements (3D measure) workspace wants
+virtual caliper, whether Banana Scan's Elements (3D measure) workspace wants
 one, and how it would be built on what is already there. Nothing here is
 built yet.
 
@@ -60,10 +60,10 @@ A caliper reading is a **local, directional, two-point, maximum-material
 measurement**: two flat jaws of finite width pressed square onto the part
 at one spot, reading the extreme points under the jaws. ISO 14405-1 calls
 the two-point size the default size specification for exactly this reason.
-Everything ScanRuler measures today is the opposite: a Gaussian fit over a
+Everything Banana Scan measures today is the opposite: a Gaussian fit over a
 whole patch, averaged, with the form read as a separate number.
 
-## 3. Where ScanRuler already stands
+## 3. Where Banana Scan already stands
 
 - **Surface-to-surface range** on Point – Plane, Axis – Plane and
   Plane – Plane (`core/dimensions.ts`, `range`) is a *global* bracket: the
@@ -99,7 +99,7 @@ Yes, at moderate cost, for these uses:
    does is hold a caliper to the part and ask why the scan disagrees. Today
    the honest answer is "the scan reports a mean, the caliper a local
    maximum" — the tool should read the local maximum too, at the spot the
-   caliper was put. ScanRuler is aimed at ball bars and artefacts; a
+   caliper was put. Banana Scan is aimed at ball bars and artefacts; a
    virtual caliper against a gauge block or a certified pin is the
    plainest scanner check there is.
 2. **3D prints** (the audience): outside width over layer ridges (wide

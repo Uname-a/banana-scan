@@ -42,7 +42,7 @@ export function buildReducedMesh(scene: SceneManager | null, format: MeshFormat,
     [{ name: `${stem} reduced`, positions, indices: index }],
     align?.transform ?? null,
     // units-ok: the title written into the file, in the file's own unit.
-    `ScanRuler reduced mesh - ${stem} - tolerance ${tolerance} mm`,
+    `Banana Scan reduced mesh - ${stem} - tolerance ${tolerance} mm`,
   )
   if (!file) return null
   const name = `${stem}-reduced${moved ? '-aligned' : ''}.${file.extension}`

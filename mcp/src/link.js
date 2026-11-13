@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// The link to the ScanRuler page: a WebSocket server on 127.0.0.1 that the
+// The link to the Banana Scan page: a WebSocket server on 127.0.0.1 that the
 // page connects to when its "Local agent connection" is on. A page is
 // accepted from an allowed origin, with the pairing token, one at a time.
 // Once in, the page says which commands it has; this side sends it commands
@@ -117,7 +117,7 @@ export class Asker extends EventEmitter {
    *  heartbeat, so its link stays up while nothing it is asked comes back. */
   request(message, binaryPath, onProgress, timeoutMs) {
     const ws = this.socket
-    if (!ws || ws.readyState !== ws.OPEN) return Promise.reject({ code: 'unavailable', message: 'No ScanRuler page is connected.' })
+    if (!ws || ws.readyState !== ws.OPEN) return Promise.reject({ code: 'unavailable', message: 'No Banana Scan page is connected.' })
     const id = this.nextId++
     const asked = new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject, onProgress })
@@ -133,7 +133,7 @@ export class Asker extends EventEmitter {
     const late = new Promise((_, reject) => {
       timer = setTimeout(() => {
         this.pending.delete(id)
-        reject({ code: 'timeout', message: `The ScanRuler page did not answer within ${Math.round(timeoutMs / 100) / 10} s; its tab may be frozen, or busy with something long.` })
+        reject({ code: 'timeout', message: `The Banana Scan page did not answer within ${Math.round(timeoutMs / 100) / 10} s; its tab may be frozen, or busy with something long.` })
       }, Math.max(0, timeoutMs))
     })
     return Promise.race([asked, late]).finally(() => clearTimeout(timer))
@@ -246,7 +246,7 @@ export class PageLink extends Asker {
       try {
         read(frameOf(data, isBinary))
       } catch (e) {
-        this.log(`A broken message ${this.peers.has(ws) ? 'from another scanruler-mcp' : 'from the page'}: ${e.message}`)
+        this.log(`A broken message ${this.peers.has(ws) ? 'from another banana-scan-mcp' : 'from the page'}: ${e.message}`)
         ws.close(1003, 'Broken message')
       }
     })
@@ -257,8 +257,8 @@ export class PageLink extends Asker {
       if (this.socket !== ws) return
       this.socket = null
       this.page = null
-      this.dropPending('The ScanRuler page closed the connection before it answered.')
-      this.log('The ScanRuler page disconnected.')
+      this.dropPending('The Banana Scan page closed the connection before it answered.')
+      this.log('The Banana Scan page disconnected.')
       this.#tellPeers()
       this.emit('disconnected')
     })
@@ -270,33 +270,33 @@ export class PageLink extends Asker {
     const refuse = (code, reason) => {
       ws.send(JSON.stringify({ refused: reason }))
       ws.close(code, reason.slice(0, 100))
-      this.log(`Refused ${message.peer ? 'another scanruler-mcp' : 'a page'}: ${reason}`)
+      this.log(`Refused ${message.peer ? 'another banana-scan-mcp' : 'a page'}: ${reason}`)
       return false
     }
     if (message.peer && typeof message.peer === 'object') {
       if (message.peer.token !== this.token) return refuse(CLOSE.badToken, 'Its pairing token is not this one’s.')
       this.peers.add(ws)
-      ws.send(JSON.stringify({ welcome: { server: 'scanruler-mcp', page: this.page, ...(this.version ? { version: this.version } : {}) } }))
-      this.log(`Another scanruler-mcp${message.peer.version ? ` ${message.peer.version}` : ''} sends its calls through this one.`)
+      ws.send(JSON.stringify({ welcome: { server: 'banana-scan-mcp', page: this.page, ...(this.version ? { version: this.version } : {}) } }))
+      this.log(`Another banana-scan-mcp${message.peer.version ? ` ${message.peer.version}` : ''} sends its calls through this one.`)
       return true
     }
     const hello = message.hello
     if (!hello || typeof hello !== 'object') return refuse(CLOSE.noHello, 'The page did not say hello.')
     if (hello.token !== this.token) {
-      return refuse(CLOSE.badToken, 'The pairing token does not match — copy it again from `npx -y scanruler-mcp@latest --pair` into ScanRuler’s Settings.')
+      return refuse(CLOSE.badToken, 'The pairing token does not match — copy it again from `npx -y banana-scan-mcp@latest --pair` into Banana Scan’s Settings.')
     }
     if (this.socket && this.socket.readyState === this.socket.OPEN) {
-      return refuse(CLOSE.taken, 'Another ScanRuler tab is connected to this agent already — close the connection there first.')
+      return refuse(CLOSE.taken, 'Another Banana Scan tab is connected to this agent already — close the connection there first.')
     }
     // A page still closing is replaced; its close comes after and is then
     // not this link's, so what it was asked is turned down here, or it would
     // wait for an answer that never comes.
-    if (this.socket) this.dropPending('The ScanRuler page closed the connection before it answered.')
+    if (this.socket) this.dropPending('The Banana Scan page closed the connection before it answered.')
     this.socket = ws
     const { token: _token, ...page } = hello
     this.page = { ...page, origin: origin ?? null, commands: Array.isArray(hello.commands) ? hello.commands : [] }
-    ws.send(JSON.stringify({ welcome: { server: 'scanruler-mcp', ...(this.version ? { version: this.version } : {}) } }))
-    this.log(`ScanRuler ${page.version ?? ''} connected${origin ? ` from ${origin}` : ''}, with ${this.page.commands.length} commands.`)
+    ws.send(JSON.stringify({ welcome: { server: 'banana-scan-mcp', ...(this.version ? { version: this.version } : {}) } }))
+    this.log(`Banana Scan ${page.version ?? ''} connected${origin ? ` from ${origin}` : ''}, with ${this.page.commands.length} commands.`)
     this.#tellPeers()
     this.emit('connected', this.page)
     return true

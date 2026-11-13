@@ -1,11 +1,11 @@
 ---
 name: cad-stl-reverse-engineering
-description: "Rebuild the exact CAD model and a STEP in ScanRuler from an STL that was exported from CAD software: a model downloaded from Printables, Thingiverse or GrabCAD, an old STL whose source file is lost, a part exported from an assembly, a print-in-place assembly, a threaded cap or bottle neck. Use it whenever someone wants the original design back from such an STL ('recreate the CAD from this STL', 'convert this STL to STEP exactly', 'make this STL editable / parametric again', 'get the design dimensions out of this STL'), and also when they just say 'reverse engineer this STL' and the mesh turns out to be a clean CAD tessellation: vertices exactly on the surfaces, flat faces made of long slivers with no interior vertices, few distinct heights. Catches STLs that were scaled after export and parts left at an angle. If the mesh is a real 3D scan (noisy, bowed faces, rounded edges), use scan-reverse-engineering instead."
+description: "Rebuild the exact CAD model and a STEP in Banana Scan from an STL that was exported from CAD software: a model downloaded from Printables, Thingiverse or GrabCAD, an old STL whose source file is lost, a part exported from an assembly, a print-in-place assembly, a threaded cap or bottle neck. Use it whenever someone wants the original design back from such an STL ('recreate the CAD from this STL', 'convert this STL to STEP exactly', 'make this STL editable / parametric again', 'get the design dimensions out of this STL'), and also when they just say 'reverse engineer this STL' and the mesh turns out to be a clean CAD tessellation: vertices exactly on the surfaces, flat faces made of long slivers with no interior vertices, few distinct heights. Catches STLs that were scaled after export and parts left at an angle. If the mesh is a real 3D scan (noisy, bowed faces, rounded edges), use scan-reverse-engineering instead."
 ---
 
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 
-# CAD-exported STL → exact CAD (ScanRuler)
+# CAD-exported STL → exact CAD (Banana Scan)
 
 **Read, don't fit.** A CAD export is not a measurement: every vertex lies on the true surface
 (float32, ~1e-5 mm; on a face's edges sometimes up to ~5e-3 mm where the exporter held the edge
@@ -29,9 +29,9 @@ cavities, several build directions) need the trims of §4.
 
 - Work folder next to the STL: `<part>_work/`, scripts copied from this skill's `scripts/` (or run
   them from here). Python 3 with numpy, scipy, matplotlib. Keep paths short on Windows (260 chars).
-- ScanRuler: `scanruler_status` (or `scanruler_open`), `session_state`. Open the STL with
+- Banana Scan: `bananascan_status` (or `bananascan_open`), `session_state`. Open the STL with
   `scan_open` so the person sees it; the scripts read the STL file itself.
-- Never modify the original STL. Deliver `<part>_CAD.step`, `<part>_CAD.scanruler`, a short report.
+- Never modify the original STL. Deliver `<part>_CAD.step`, `<part>_CAD.bananascan`, a short report.
 
 ## 1. Analyze — is it a CAD export, and how is it built?
 
@@ -110,7 +110,7 @@ Fits under 0.15 mm radius are blends, not holes, and are left out.
 
 ## 4. Build, compare, trim and fill
 
-Run the generated steps without pasting them: `scanruler_batch { "file": "<abs>/data/slabs_z.json" }`
+Run the generated steps without pasting them: `bananascan_batch { "file": "<abs>/data/slabs_z.json" }`
 (then `holes.json`, trims, blends). The scripts ask for terse answers (`detail: "none"`); read the
 batch's `failed` list. The first slab names the body: `Z slab 0` (or `Turned body`).
 
@@ -168,7 +168,7 @@ chamfer on a slab edge that differs from the design's edge.
 1. `compare.py`: the difference as % of the part, and every cluster over ~1 mm³ either fixed or
    explained (a B-spline face approximated, a blend the kernel would not do). Report the number.
 2. `reverse_body_check`: closed, valid, one solid per piece; list tiny faces it reports.
-3. `reverse_export_step { verify: true }` → `<part>_CAD.step`; `project_save` → `<part>_CAD.scanruler`.
+3. `reverse_export_step { verify: true }` → `<part>_CAD.step`; `project_save` → `<part>_CAD.bananascan`.
 4. Optional, if the person wants the design numbers: `reverse_parameter_add` with the recognised
    values (radii, levels, chamfer sizes) and rename features after what they make.
 5. Report: files; input (triangles, pieces, frame, scale); how the model was built (main body by
@@ -204,7 +204,7 @@ Still in `scripts/`, for checking a number or a case the pipeline does not cover
 `slice.py`/`vslice.py` (pictures). `references/worked-example.md` (a Z-scaled clamp) and
 `references/worked-example-lid.md` (threads, a bead) show them in use.
 
-## ScanRuler quirks that cost time
+## Banana Scan quirks that cost time
 
 - The kernel cannot chamfer or round across a shallow crease (two faces a degree apart) — those
   chains are what `skipFailing` leaves out.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The Reverse engineer workspace driven by an agent, end to end: an MCP
 // client — the SDK's own, as Claude Code and the others use it — starts the
-// scanruler-mcp server, the app in headless Chrome is paired with it, and a
+// banana-scan-mcp server, the app in headless Chrome is paired with it, and a
 // pin is modelled through the tools alone: a parameter l1 = 12 mm, a sketch
 // dimensioned by it, a revolve, an M3 thread on the round face; then l1 = 20
 // and the part is 8 mm longer. The person's side is checked too — the
@@ -9,8 +9,8 @@
 // agent's step — and what only the browser gives: a picture of the view as
 // a PNG (view_render) and the body as STEP. history_undo puts l1 back.
 //
-// With --headless the same pin is modelled through scanruler-mcp running
-// ScanRuler itself, headless (--engine, built here first): no browser, no
+// With --headless the same pin is modelled through banana-scan-mcp running
+// Banana Scan itself, headless (--engine, built here first): no browser, no
 // page. What only the page gives answers unavailable, naming the page mode;
 // a second headless server started beside the first shares nothing with it.
 //
@@ -75,11 +75,11 @@ const { agent } = await launchAgent(startAgent)
 const { call } = agent
 const ok = okOn(call)
 
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('bananascan_status')).json?.howToConnect ?? '')?.[1]
 check(Boolean(link), `the server hands out a pairing link (${link})`)
 const { browser, page, consoleErrors } = await launchApp({ url: link, protocolTimeout: 300_000 })
 try {
-  const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+  const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
   check(waited.json?.connected === true && waited.json.page.plugins.includes('reverse'), `the page connected with its plugins (${waited.json?.page?.plugins})`)
   const tools = (await agent.client.listTools()).tools
   const names = tools.map((t) => t.name)
@@ -176,8 +176,8 @@ try {
     document.dispatchEvent(new Event('visibilitychange'))
   })
   await sleep(200)
-  const hiddenStatus = (await ok('scanruler_status')).json
-  check(hiddenStatus?.page?.hidden === true && /hidden/.test(hiddenStatus.hiddenNote ?? ''), `scanruler_status: page.hidden ${hiddenStatus?.page?.hidden}, with a note`)
+  const hiddenStatus = (await ok('bananascan_status')).json
+  check(hiddenStatus?.page?.hidden === true && /hidden/.test(hiddenStatus.hiddenNote ?? ''), `bananascan_status: page.hidden ${hiddenStatus?.page?.hidden}, with a note`)
   const hiddenPicture = await ok('view_render', { view: 'iso', fit: true, width: 400, height: 300 })
   check(hiddenPicture.images?.[0]?.mimeType === 'image/png', 'view_render answers while the tab is hidden')
   await page.evaluate(() => {
@@ -185,7 +185,7 @@ try {
     document.dispatchEvent(new Event('visibilitychange'))
   })
   await sleep(200)
-  check((await ok('scanruler_status')).json?.page?.hidden === false, 'and page.hidden false once shown again')
+  check((await ok('bananascan_status')).json?.page?.hidden === false, 'and page.hidden false once shown again')
 
   await page.screenshot({ path: join(OUT_DIR, 'e2e-agent-reverse.png') })
 } catch (e) {
@@ -212,19 +212,19 @@ async function batchChecks(call, ok) {
   check(upright.length === 20, `a 20-sided prism: ${upright.length} upright edges`)
   const before = (await listed()).length
   const started = Date.now()
-  const queued = await ok('scanruler_batch', { calls: upright.map((e) => ({ tool: 'reverse_feature_add', arguments: { feature: { kind: 'fillet', body: prismBody, edges: [e.fingerprint], radius: 0.6 }, detail: 'none' } })), wait: false })
+  const queued = await ok('bananascan_batch', { calls: upright.map((e) => ({ tool: 'reverse_feature_add', arguments: { feature: { kind: 'fillet', body: prismBody, edges: [e.fingerprint], radius: 0.6 }, detail: 'none' } })), wait: false })
   const answeredMs = Date.now() - started
-  check(queued.json?.queued === true && typeof queued.json.job === 'string' && answeredMs < 3000, `scanruler_batch with twenty fillets and wait: false answers at once (${answeredMs} ms): job ${queued.json?.job}`)
+  check(queued.json?.queued === true && typeof queued.json.job === 'string' && answeredMs < 3000, `bananascan_batch with twenty fillets and wait: false answers at once (${answeredMs} ms): job ${queued.json?.job}`)
   const state = await ok('session_state')
   check(state.json && typeof state.json === 'object', `session_state answers while the batch runs (running: ${state.json?.running?.name ?? 'nothing'})`)
-  const waited = await ok('scanruler_wait', { for: 'job', job: queued.json?.job, timeoutSeconds: 600 })
+  const waited = await ok('bananascan_wait', { for: 'job', job: queued.json?.job, timeoutSeconds: 600 })
   const results = waited.json?.result?.results ?? []
-  check(waited.json?.state === 'done' && results.length === 20 && results.every((r) => r.ok && r.result?.status === 'ok'), `scanruler_wait { for: "job" }: the batch done in ${waited.json?.ms} ms, ${results.filter((r) => r.result?.status === 'ok').length} of 20 fillets built`)
+  check(waited.json?.state === 'done' && results.length === 20 && results.every((r) => r.ok && r.result?.status === 'ok'), `bananascan_wait { for: "job" }: the batch done in ${waited.json?.ms} ms, ${results.filter((r) => r.result?.status === 'ok').length} of 20 fillets built`)
   const rows = await listed()
   check(rows.length === before + 20 && rows.slice(-20).every((r) => r.kind === 'fillet' && r.status === 'ok'), `the feature list: ${rows.length - before} fillets added, all ok`)
 
   // Refused part way: what went before is undone.
-  const rolled = await ok('scanruler_batch', {
+  const rolled = await ok('bananascan_batch', {
     calls: [
       { tool: 'reverse_parameter_add', arguments: { name: 'zz', expression: '2' } },
       { tool: 'reverse_feature_add', arguments: { feature: { kind: 'chamfer', body: prismBody, edges: [0], distance: 0.3 }, detail: 'none' } },
@@ -238,24 +238,24 @@ async function batchChecks(call, ok) {
   check(after.length === rows.length && !params.some((p) => p.name === 'zz'), `the features and parameters as they were: ${after.length} features, no zz`)
 
   // Timed: each call, the batch, and the steps the build played.
-  const timed = await ok('scanruler_batch', { calls: [{ tool: 'reverse_feature_update', arguments: { feature: rows.at(-1).id, set: { radius: 0.7 }, detail: 'none' } }, { tool: 'reverse_feature_list', arguments: {} }], timings: true })
+  const timed = await ok('bananascan_batch', { calls: [{ tool: 'reverse_feature_update', arguments: { feature: rows.at(-1).id, set: { radius: 0.7 }, detail: 'none' } }, { tool: 'reverse_feature_list', arguments: {} }], timings: true })
   const played = timed.json?.results?.[0]?.result?.steps?.played ?? []
   check(typeof timed.json?.total_ms === 'number' && typeof timed.json.results[0].ms === 'number' && played.length >= 1 && played.every((p) => typeof p.ms === 'number'), `timings: ${timed.json?.results?.[0]?.ms} ms and ${timed.json?.total_ms} ms in all; the build played ${played.map((p) => `${p.feature} ${p.ms} ms`).join(', ')}`)
   const plain = await ok('reverse_feature_update', { feature: rows.at(-1).id, set: { radius: 0.6 }, detail: 'none' })
   check(plain.json?.steps?.recomputed >= 0 && plain.json.steps.played === undefined, `without timings a change says how many steps it played, not which (${JSON.stringify(plain.json?.steps)})`)
 }
 
-/** The pin modelled through a server running ScanRuler headless — and a
+/** The pin modelled through a server running Banana Scan headless — and a
  *  second such server beside it, sharing nothing. */
 async function headless() {
   execFileSync(process.execPath, [repoFile('scripts/build-engine.mjs')], { stdio: 'inherit' })
   const engine = repoFile('dist-engine/engine.mjs')
-  const start = () => startAgent({ args: ['--engine', engine, '--out', OUT_DIR], env: { SCANRULER_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'scanruler-mcp-')) } })
+  const start = () => startAgent({ args: ['--engine', engine, '--out', OUT_DIR], env: { BANANA_SCAN_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'banana-scan-mcp-')) } })
   const first = await start()
   const ok = okOn(first.call)
   try {
-    const status = (await ok('scanruler_status')).json
-    check(status?.backend === 'headless' && status.connected === true && status.server?.engine === engine && !status.howToConnect, `scanruler_status: backend headless, ScanRuler ${status?.page?.version} with ${status?.page?.plugins} (${status?.page?.commands} commands)`)
+    const status = (await ok('bananascan_status')).json
+    check(status?.backend === 'headless' && status.connected === true && status.server?.engine === engine && !status.howToConnect, `bananascan_status: backend headless, Banana Scan ${status?.page?.version} with ${status?.page?.plugins} (${status?.page?.commands} commands)`)
     const instructions = first.client.getInstructions() ?? ''
     check(/headless/.test(instructions) && !/browser tab the user has open/.test(instructions), 'the server’s instructions say it runs headless')
     const names = (await first.client.listTools()).tools.map((t) => t.name)

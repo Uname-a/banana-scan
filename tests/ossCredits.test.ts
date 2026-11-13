@@ -72,7 +72,7 @@ describe('a publish', () => {
     commit(dev, ANA, 'b.txt')
     commit(dev, BO, 'c.txt')
     git(dev, 'tag', 'v1.0.0')
-    commit(pub, `Bot <41898282+github-actions[bot]@users.noreply.github.com>`, 'a.txt', 'ScanRuler 1.0.0')
+    commit(pub, `Bot <41898282+github-actions[bot]@users.noreply.github.com>`, 'a.txt', 'Banana Scan 1.0.0')
     git(pub, 'tag', 'v1.0.0')
 
     // Never credited, though from before the last version: made good.
@@ -86,7 +86,7 @@ describe('a publish', () => {
     commit(dev, ANA, 'e.txt')
     git(pub, 'tag', 'v1.1.0')
     expect(credits(dev, pub, 'v1.1.0')).toEqual([`Co-authored-by: ${ANA}`])
-    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'c.txt', `ScanRuler 1.2.0\n\nCo-authored-by: ${ANA}`)
+    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'c.txt', `Banana Scan 1.2.0\n\nCo-authored-by: ${ANA}`)
     expect(credits(dev, pub, 'v1.1.0')).toEqual([])
   })
 
@@ -94,7 +94,7 @@ describe('a publish', () => {
     const { dev, pub } = start()
     commit(dev, ANA, 'a.txt')
     git(dev, 'tag', 'v1.0.0')
-    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'a.txt', 'ScanRuler 1.0.0')
+    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'a.txt', 'Banana Scan 1.0.0')
     git(pub, 'tag', 'v1.0.0')
     // Ana's older work, published between versions and credited there.
     commit(dev, ANA, 'b.txt')
@@ -109,7 +109,7 @@ describe('a publish', () => {
     // Counted by commit since the last publish, it is credited.
     expect(credits(dev, pub, 'v1.0.0', 'oss-published')).toEqual([`Co-authored-by: ${ANA}`])
     // Once published and marked, nothing is owed.
-    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'c.txt', `ScanRuler 1.2.0\n\nCo-authored-by: ${ANA}`)
+    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'c.txt', `Banana Scan 1.2.0\n\nCo-authored-by: ${ANA}`)
     git(dev, 'tag', '-f', 'oss-published')
     expect(credits(dev, pub, 'v1.0.0', 'oss-published')).toEqual([])
   })
@@ -119,7 +119,7 @@ describe('a publish', () => {
     commit(dev, `Owner <${OWNER}>`, 'a.txt')
     commit(dev, 'Closed <closed@example.com>', 'plugins/closed/x.ts')
     commit(dev, ANA, 'b.txt', `pair\n\nCo-authored-by: ${BO}`)
-    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'a.txt', 'ScanRuler 1.0.0')
+    commit(pub, 'Bot <1+x[bot]@users.noreply.github.com>', 'a.txt', 'Banana Scan 1.0.0')
     // A version with no tag yet says nothing of a release, and no harm comes.
     expect(credits(dev, pub, 'v9.9.9')).toEqual([`Co-authored-by: ${ANA}`, `Co-authored-by: ${BO}`])
   })

@@ -34,7 +34,7 @@ import type { ImportQueue } from './importQueue'
 import { prepareScan, prepareNominal, prepareImage, runImport, type PreparedScan, type PreparedNominal, type PreparedImage } from './imports'
 import { bundleFiles } from './scanFiles'
 
-/** A project by its name: `.scanruler`, or that with a count a browser
+/** A project by its name: `.bananascan`, or that with a count a browser
  *  put after it (isProjectName). */
 export const isProjectFile = (name: string) => isProjectName(name)
 

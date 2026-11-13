@@ -126,7 +126,7 @@ describe('project input validation', () => {
   it('bounds a stored member that declares no uncompressed size', () => {
     // A stored member yields its compressed bytes whatever size it declares,
     // so an archive saying 0 must not slip past the limits.
-    const manifest = strToU8(JSON.stringify({ app: 'ScanRuler', schemaVersion: 1, pad: 'x'.repeat(200_000) }))
+    const manifest = strToU8(JSON.stringify({ app: 'Banana Scan', schemaVersion: 1, pad: 'x'.repeat(200_000) }))
     const zip = zipSync({ 'project.json': [manifest, { level: 0 }] })
     const dv = new DataView(zip.buffer, zip.byteOffset, zip.byteLength)
     for (let i = 0; i + 4 <= zip.byteLength; i++) {

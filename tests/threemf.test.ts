@@ -116,7 +116,7 @@ describe('3MF import', () => {
     // the triangle at the bottom 2^30 times.
     const objects = [`<object id="1" type="model">${TRIANGLE}</object>`]
     for (let id = 2; id <= 30; id++) objects.push(`<object id="${id}" type="model"><components><component objectid="${id - 1}"/><component objectid="${id - 1}"/></components></object>`)
-    expect(() => parse3MF(pack({ '3D/3dmodel.model': model(`<resources>${objects.join('')}</resources><build><item objectid="30"/></build>`) }))).toThrow(/more objects than ScanRuler can open/)
+    expect(() => parse3MF(pack({ '3D/3dmodel.model': model(`<resources>${objects.join('')}</resources><build><item objectid="30"/></build>`) }))).toThrow(/more objects than Banana Scan can open/)
   })
 
   it('refuses archives whose expanded contents exceed the supported limits', async () => {

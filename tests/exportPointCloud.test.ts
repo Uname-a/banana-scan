@@ -31,11 +31,11 @@ const pose = () => {
 
 describe('point-cloud PLY', () => {
   it('writes a vertex-only binary header and the floats after it', () => {
-    const { lines, floats, bodyBytes } = readPly(buildPointCloudPly(XYZ, NRM, null, 'ScanRuler test'))
+    const { lines, floats, bodyBytes } = readPly(buildPointCloudPly(XYZ, NRM, null, 'Banana Scan test'))
     expect(lines).toEqual([
       'ply',
       'format binary_little_endian 1.0',
-      'comment ScanRuler test',
+      'comment Banana Scan test',
       'element vertex 3',
       'property float x',
       'property float y',

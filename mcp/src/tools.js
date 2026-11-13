@@ -22,10 +22,10 @@ export function bytesProperty(command) {
 
 /** Where a relative path is taken from, as every path field says it: the
  *  folder a scan or a project was last opened from or saved into — as
- *  scanruler_write and scanruler_files take it — else the folder the
+ *  bananascan_write and bananascan_files take it — else the folder the
  *  server started in (mcp.js, pathBase). */
 export const relativeFrom = (cwd) =>
-  `A relative path is taken from the folder of the scan or project last opened or saved (scanruler_status: server.relativeTo) — before any, from ${cwd ?? 'the folder this server started in'}.`
+  `A relative path is taken from the folder of the scan or project last opened or saved (bananascan_status: server.relativeTo) — before any, from ${cwd ?? 'the folder this server started in'}.`
 
 const inPath = (cwd) => ({
   type: 'string',
@@ -36,13 +36,13 @@ const inPath = (cwd) => ({
 const outPath = (outDir, cwd) => ({
   type: 'string',
   minLength: 1,
-  description: `Where to write the file: a file path — one there already is replaced — or a folder (one there, or a path ending in /) to write it into under the name ScanRuler gives it, numbered past a file of that name there (-2, -3 …). Without it, it goes into ${outDir} the same way. ${relativeFrom(cwd)}`,
+  description: `Where to write the file: a file path — one there already is replaced — or a folder (one there, or a path ending in /) to write it into under the name Banana Scan gives it, numbered past a file of that name there (-2, -3 …). Without it, it goes into ${outDir} the same way. ${relativeFrom(cwd)}`,
 })
 
 const imagePath = (outDir, cwd) => ({
   type: 'string',
   minLength: 1,
-  description: `Also write the picture to a file: a file path — one there already is replaced — or a folder (one there, or a path ending in /) to write it into under the name ScanRuler gives it, numbered past a picture of that name there (-2, -3 …). Without it, it is only shown — but in scanruler_batch, which shows no picture, it is written under a new name into the folder of the scan or project last opened or saved (the latest of scanruler_status folders), before any into ${outDir}. ${relativeFrom(cwd)}`,
+  description: `Also write the picture to a file: a file path — one there already is replaced — or a folder (one there, or a path ending in /) to write it into under the name Banana Scan gives it, numbered past a picture of that name there (-2, -3 …). Without it, it is only shown — but in bananascan_batch, which shows no picture, it is written under a new name into the folder of the scan or project last opened or saved (the latest of bananascan_status folders), before any into ${outDir}. ${relativeFrom(cwd)}`,
 })
 
 /** The `saveTo` a command that replaces the session takes — one with
@@ -50,7 +50,7 @@ const imagePath = (outDir, cwd) => ({
 const saveToIn = (cwd) => ({
   type: 'string',
   minLength: 1,
-  description: `Save the session as a .scanruler project file here first — a file path, or a folder to save it into under its own name — then go on as with discard: true. If the save fails nothing is replaced. The answer says where it went (savedTo). ${relativeFrom(cwd)}`,
+  description: `Save the session as a .bananascan project file here first — a file path, or a folder to save it into under its own name — then go on as with discard: true. If the save fails nothing is replaced. The answer says where it went (savedTo). ${relativeFrom(cwd)}`,
 })
 
 /** Whether a command replaces the session, refusing to over work unless
@@ -96,7 +96,7 @@ export const agentJson = (value, exact = false) =>
  *  false answers with the job at once. */
 export const waitIn = {
   type: 'boolean',
-  description: 'false: answer { queued: true, job } at once and run on; scanruler_wait { for: "job", job } gives the answer. true, the default: answer when done — or queued all the same past the server’s answer limit.',
+  description: 'false: answer { queued: true, job } at once and run on; bananascan_wait { for: "job", job } gives the answer. true, the default: answer when done — or queued all the same past the server’s answer limit.',
 }
 
 /** The `timings` a tool that changes the session takes: the server keeps
@@ -161,7 +161,7 @@ export const absolute = (path, base) => (isAbsolute(path) ? path : resolve(base,
  *  of its kind in it. Other commands take a file only. */
 const FOLDER_PICKS = {
   'scan.open': { what: 'mesh', kinds: ['.stl', '.ply', '.obj', '.3mf'] },
-  'project.load': { what: 'project', kinds: ['.scanruler'] },
+  'project.load': { what: 'project', kinds: ['.bananascan'] },
 }
 
 /** The file a path names: itself, or — for a folder, where the command
@@ -315,16 +315,16 @@ function pickAt(data, at, path) {
   return v
 }
 
-/** A file's kind by its extension, as scanruler_files lists it. */
+/** A file's kind by its extension, as bananascan_files lists it. */
 const KINDS = {
   mesh: ['.stl', '.ply', '.obj', '.3mf', '.off'],
-  project: ['.scanruler'],
+  project: ['.bananascan'],
   step: ['.step', '.stp'],
   picture: ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'],
   drawing: ['.dxf', '.svg', '.pdf'],
   text: ['.md', '.txt', '.csv', '.json', '.jsonl'],
 }
-/** The extensions of the files scanruler_read reads. */
+/** The extensions of the files bananascan_read reads. */
 export const TEXT_FILES = KINDS.text
 export const fileKind = (name) => {
   const ext = extname(name).toLowerCase()
@@ -416,7 +416,7 @@ export const safeFileName = (name) => {
 /** Write a returned file where the call asked, or into `outDir`; the result
  *  then says where, in place of the bytes. A file path given is written,
  *  over one there; a folder — one there, or a path ending in a separator —
- *  or `outDir` takes the name ScanRuler gave the file, numbered past one
+ *  or `outDir` takes the name Banana Scan gave the file, numbered past one
  *  already there (writeNew). */
 export async function saveFileResult(result, args, { cwd, outDir }) {
   const file = result?.file

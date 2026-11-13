@@ -22,11 +22,11 @@ const freePort = () =>
 test('--out ../x is reported as a resolved folder', { timeout: 30_000 }, async () => {
   const agent = await startAgent({
     args: ['--port', String(await freePort()), '--out', '../reports'],
-    env: { SCANRULER_MCP_TOKEN: 'a-test-token-long-enough', SCANRULER_MCP_CONFIG_DIR: await mkdtemp(join(tmpdir(), 'scanruler-mcp-')), SCANRULER_MCP_NO_UPDATE: '1' },
+    env: { BANANA_SCAN_MCP_TOKEN: 'a-test-token-long-enough', BANANA_SCAN_MCP_CONFIG_DIR: await mkdtemp(join(tmpdir(), 'banana-scan-mcp-')), BANANA_SCAN_MCP_NO_UPDATE: '1' },
     stderr: 'pipe',
   })
   try {
-    const status = (await agent.call('scanruler_status')).json
+    const status = (await agent.call('bananascan_status')).json
     assert.equal(status.server.outDir, resolve(process.cwd(), '../reports'))
   } finally {
     await agent.close()

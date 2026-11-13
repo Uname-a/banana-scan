@@ -517,11 +517,11 @@ export function SettingsModal() {
           />
           <span>
             <b>Local agent connection</b> — let an AI agent on this computer (Claude Code, Claude
-            Desktop, Cursor …) drive this tab through its ScanRuler tools, the scanruler-mcp server.
+            Desktop, Cursor …) drive this tab through its Banana Scan tools, the banana-scan-mcp server.
             You watch every step here and can undo it. <b>Your data no longer stays on this
             computer:</b> what the agent reads — measurements, reports, pictures of the part, file
             names, notes — is processed by the agent and goes to its model’s provider, unless the
-            model runs on this computer. ScanRuler itself sends nothing anywhere; the connection is
+            model runs on this computer. Banana Scan itself sends nothing anywhere; the connection is
             to 127.0.0.1.
           </span>
         </label>
@@ -553,12 +553,12 @@ export function SettingsModal() {
             {agentLink ? (
               <b>
                 {AGENT_STATUS[link.status]}
-                {link.status === 'connected' && link.server?.version ? ` (scanruler-mcp ${link.server.version})` : ''}.
+                {link.status === 'connected' && link.server?.version ? ` (banana-scan-mcp ${link.server.version})` : ''}.
               </b>
             ) : null}{' '}
             {link.detail ?? (
               <>
-                <code>npx -y scanruler-mcp@latest --pair</code> prints the port and the token, and a link
+                <code>npx -y banana-scan-mcp@latest --pair</code> prints the port and the token, and a link
                 that fills them in.
               </>
             )}

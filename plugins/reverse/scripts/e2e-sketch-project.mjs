@@ -24,7 +24,7 @@ const W = 40, D = 20, H = 12
 const IN = 0.1
 
 // ---- the scan: a dense block on the XY plane -------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-sketch-project-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-sketch-project-'))
 /** A block from the origin, every face a 1 mm grid of triangles wound
  *  outward. */
 const scanPath = join(dir, 'block-scan.stl')

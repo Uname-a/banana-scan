@@ -97,19 +97,19 @@ describe('the agent bridge', () => {
     expect(socket.url).toBe('ws://127.0.0.1:7400/')
     expect(socket.binaryType).toBe('arraybuffer')
     const hello = socket.messages()[0].hello as { app: string; token: string; commands: { name: string }[]; viewport: boolean }
-    expect(hello).toMatchObject({ app: 'ScanRuler', token: 'the-token', viewport: false })
+    expect(hello).toMatchObject({ app: 'Banana Scan', token: 'the-token', viewport: false })
     expect(hello.commands.map((c) => c.name)).toContain('element.fit')
     // The page's own name, kept while it lives, and when it loaded.
     const { pageId, since } = hello as unknown as { pageId: string; since: string }
     expect(pageId).toMatch(/\S{8,}/)
     expect(Number.isFinite(Date.parse(since))).toBe(true)
     expect(useAgentLink.getState().status).toBe('waiting')
-    socket.say({ welcome: { server: 'scanruler-mcp', version: '0.4.0' } })
+    socket.say({ welcome: { server: 'banana-scan-mcp', version: '0.4.0' } })
     expect(useAgentLink.getState().status).toBe('connected')
     expect(useAgentLink.getState().server).toEqual({ version: '0.4.0' })
   })
 
-  it('tells an out of date server by its welcome: older than wanted, or a scanruler-mcp that gives no version', async () => {
+  it('tells an out of date server by its welcome: older than wanted, or a banana-scan-mcp that gives no version', async () => {
     const welcomed = async (welcome: Record<string, unknown>) => {
       const socket = await connect()
       socket.say({ welcome })
@@ -122,17 +122,17 @@ describe('the agent bridge', () => {
       return { server, tooOld, inState: state.serverTooOld }
     }
     // Before 0.4.0 the welcome said what it was, but no version.
-    const old = await welcomed({ server: 'scanruler-mcp' })
+    const old = await welcomed({ server: 'banana-scan-mcp' })
     expect(old.server).toEqual({ version: null })
-    expect(old.tooOld).toMatch(/^Your ScanRuler connector is out of date: .*older than 0\.4\.0/)
-    expect(old.tooOld).toContain('npx -y scanruler-mcp@latest')
+    expect(old.tooOld).toMatch(/^Your Banana Scan connector is out of date: .*older than 0\.4\.0/)
+    expect(old.tooOld).toContain('npx -y banana-scan-mcp@latest')
     expect(old.tooOld).toContain('ask the agent to')
     expect(old.tooOld).toContain('quit the app completely and open it again')
     expect(old.inState).toBe(old.tooOld)
-    const older = await welcomed({ server: 'scanruler-mcp', version: '0.3.9' })
-    expect(older.tooOld).toMatch(/version 0\.3\.9, and this ScanRuler needs 0\.4\.0 or newer/)
+    const older = await welcomed({ server: 'banana-scan-mcp', version: '0.3.9' })
+    expect(older.tooOld).toMatch(/version 0\.3\.9, and this Banana Scan needs 0\.4\.0 or newer/)
     // Current and newer servers, and a welcome from something else, are not.
-    for (const welcome of [{ server: 'scanruler-mcp', version: WANTS_SERVER }, { server: 'scanruler-mcp', version: '1.0.0' }, {}]) {
+    for (const welcome of [{ server: 'banana-scan-mcp', version: WANTS_SERVER }, { server: 'banana-scan-mcp', version: '1.0.0' }, {}]) {
       const ok = await welcomed(welcome)
       expect(ok.tooOld).toBeNull()
       expect(ok.inState).toBeUndefined()
@@ -252,7 +252,7 @@ describe('the agent bridge', () => {
     const socket = await until(() => FakeSocket.made[0], 'the socket')
     expect(useAgentLink.getState().detail).toBeNull()
     socket.open()
-    socket.say({ welcome: { server: 'scanruler-mcp', version: '1.0.0' } })
+    socket.say({ welcome: { server: 'banana-scan-mcp', version: '1.0.0' } })
     expect(useAgentLink.getState()).toMatchObject({ status: 'connected', detail: null })
   })
 
@@ -298,14 +298,14 @@ describe('the agent bridge', () => {
       run: () => new Promise((resolve) => (finish = () => resolve({ done: true }))),
     } as never])
     const first = await connect()
-    first.say({ welcome: { server: 'scanruler-mcp', version: '0.5.0' } })
+    first.say({ welcome: { server: 'banana-scan-mcp', version: '0.5.0' } })
     first.say({ id: 3, method: 'run', name: 'test.wait', input: {} })
     await until(() => finish, 'the command to start')
     // The server stops; a new one — counting its ids from 1 again — takes the port.
     first.close(1006)
     const second = await until(() => FakeSocket.made[1], 'the page to reconnect')
     second.open()
-    second.say({ welcome: { server: 'scanruler-mcp', version: '0.5.0' } })
+    second.say({ welcome: { server: 'banana-scan-mcp', version: '0.5.0' } })
     finish()
     await new Promise((r) => setTimeout(r, 20))
     expect(answerTo(second, 3)).toBeUndefined()

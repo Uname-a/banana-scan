@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // One port, any number of copies of this server. An agent may start several —
 // Claude Desktop starts one for its chats and one for its other sessions,
-// and two agents may run side by side — while the ScanRuler tab connects to
+// and two agents may run side by side — while the Banana Scan tab connects to
 // one port. The copy that gets the port holds the page link (link.js); a
 // copy that finds it taken connects to that one as a peer, with the same
 // token, and sends its calls through it. When the holder stops, a peer takes
@@ -15,7 +15,7 @@ import { Asker, frameOf, MAX_PAYLOAD, PageLink, waitForPage } from './link.js'
 /** How long a copy waits before trying a port it could not use again. */
 const RETRY_MS = 5_000
 /** How long a copy waits, once connected, for the holding copy to take it
- *  in or turn it away. A scanruler-mcp answers at once; what holds the port
+ *  in or turn it away. A banana-scan-mcp answers at once; what holds the port
  *  and never answers is taken for another program, as one that does not
  *  speak WebSocket is. */
 export const WELCOME_MS = 5_000
@@ -37,7 +37,7 @@ export class PeerLink extends Asker {
 
   /** Connect to the copy on the port. Resolves `{ ok: true }` once it took
    *  this one in, `{ refused }` when it turned it away, `{ error }` when
-   *  what holds the port is not a scanruler-mcp: it does not speak
+   *  what holds the port is not a banana-scan-mcp: it does not speak
    *  WebSocket, says something else first, or says nothing in welcomeMs. */
   connect() {
     return new Promise((resolve) => {
@@ -54,8 +54,8 @@ export class PeerLink extends Asker {
           greeted = true
           clearTimeout(silent)
           if (!message.welcome && message.refused === undefined) {
-            resolve({ error: 'It did not answer as a scanruler-mcp.' })
-            ws.close(1002, 'Not a scanruler-mcp')
+            resolve({ error: 'It did not answer as a banana-scan-mcp.' })
+            ws.close(1002, 'Not a banana-scan-mcp')
           } else if (message.welcome) {
             accepted = true
             this.socket = ws
@@ -73,7 +73,7 @@ export class PeerLink extends Asker {
         try {
           read(frameOf(data, isBinary))
         } catch (e) {
-          this.log(`A broken message from the scanruler-mcp on port ${this.port}: ${e.message}`)
+          this.log(`A broken message from the banana-scan-mcp on port ${this.port}: ${e.message}`)
           ws.close(1003, 'Broken message')
         }
       })
@@ -89,7 +89,7 @@ export class PeerLink extends Asker {
         const had = this.page !== null
         this.socket = null
         this.page = null
-        this.dropPending('The scanruler-mcp this one sent its calls through has stopped.')
+        this.dropPending('The banana-scan-mcp this one sent its calls through has stopped.')
         if (had) this.emit('disconnected')
         this.emit('closed')
       })
@@ -170,7 +170,7 @@ export class SharedLink extends EventEmitter {
 
   run(name, input, binaryKey, onProgress, job, deferred = false, timeoutMs) {
     const link = this.current
-    if (!link) return Promise.reject({ code: 'unavailable', message: 'No ScanRuler page is connected.' })
+    if (!link) return Promise.reject({ code: 'unavailable', message: 'No Banana Scan page is connected.' })
     return link.run(name, input, binaryKey, onProgress, job, deferred, timeoutMs)
   }
 
@@ -179,12 +179,12 @@ export class SharedLink extends EventEmitter {
   }
 
   /** Take the port, or the relay through the copy that has it. On this
-   *  computer only — SCANRULER_MCP_HOST widens it for a container, whose
+   *  computer only — BANANA_SCAN_MCP_HOST widens it for a container, whose
    *  port is published to the host's loopback instead (mcp/Dockerfile). */
   start() {
     if (this.closed) return
     clearTimeout(this.timer)
-    this.http.listen(this.port, process.env.SCANRULER_MCP_HOST || '127.0.0.1')
+    this.http.listen(this.port, process.env.BANANA_SCAN_MCP_HOST || '127.0.0.1')
   }
 
   /** Pass on a link's page events while `active()` says it is the one in use. */
@@ -207,8 +207,8 @@ export class SharedLink extends EventEmitter {
     if (!outcome.ok) {
       this.#fail(
         outcome.refused
-          ? `Port ${this.port} is held by another scanruler-mcp, which turned this one away: ${outcome.refused} Give both the same pairing token (SCANRULER_MCP_TOKEN), or start this one with --port and enter that port in ScanRuler.`
-          : `Port ${this.port} is taken by another program. Stop it, or start this one with --port and enter that port in ScanRuler.`,
+          ? `Port ${this.port} is held by another banana-scan-mcp, which turned this one away: ${outcome.refused} Give both the same pairing token (BANANA_SCAN_MCP_TOKEN), or start this one with --port and enter that port in Banana Scan.`
+          : `Port ${this.port} is taken by another program. Stop it, or start this one with --port and enter that port in Banana Scan.`,
       )
       return
     }
@@ -220,7 +220,7 @@ export class SharedLink extends EventEmitter {
       if (this.peer !== peer) return
       this.peer = null
       this.role = 'none'
-      this.log(`The scanruler-mcp holding port ${this.port} has stopped; taking the port over.`)
+      this.log(`The banana-scan-mcp holding port ${this.port} has stopped; taking the port over.`)
       this.start()
     })
     this.emit('role', 'relay')

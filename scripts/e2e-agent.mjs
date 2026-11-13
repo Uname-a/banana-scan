@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The agent connection end to end: an MCP client — the SDK's own, as Claude
-// Code and the others use it — starts the scanruler-mcp server (mcp/), the
+// Code and the others use it — starts the banana-scan-mcp server (mcp/), the
 // app in headless Chrome is paired with it through the pairing link the
 // server hands out, and the ball bar is measured through the tools alone:
 // open the scan, read where it lies, fit a sphere in each end, measure the
@@ -42,15 +42,15 @@ const { call } = agent
 // ---- before the page -------------------------------------------------------
 const { tools } = await agent.client.listTools()
 const names = tools.map((t) => t.name)
-check(['scanruler_status', 'scan_open', 'element_fit', 'dimension_add', 'report_get', 'history_undo'].every((n) => names.includes(n)), `tools listed before a page connects (${tools.length})`)
-const before = await call('scanruler_status')
+check(['bananascan_status', 'scan_open', 'element_fit', 'dimension_add', 'report_get', 'history_undo'].every((n) => names.includes(n)), `tools listed before a page connects (${tools.length})`)
+const before = await call('bananascan_status')
 check(before.json?.connected === false, 'status: no page yet')
 const link = /(\S+#agent=\d+:[\w-]+)/.exec(before.json?.howToConnect ?? '')?.[1]
 check(Boolean(link) && link.includes(`#agent=${port}:${token}`), `status hands out the pairing link (${link})`)
 
 // ---- pairing ------------------------------------------------------------------
 const { browser, page, consoleErrors } = await launchApp({ url: link })
-const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
 check(waited.json?.connected === true, `the page connected (${waited.json?.page?.version}, ${waited.json?.page?.commands} commands)`)
 check(!(await page.evaluate(() => location.hash)), 'the pairing link is taken out of the address')
 const chip = await page.$eval('[data-test=agent-chip]', (e) => e.textContent.trim()).catch(() => '')
@@ -91,7 +91,7 @@ check(undoTitle.startsWith('Undo: Agent: add dimension'), `the undo key names th
 const json = await call('report_get', { format: 'json' })
 check(json.json?.report?.dimensions?.[0]?.value === value, 'report_get json: the same value')
 const text = await call('report_get', { format: 'text' })
-check(text.json?.text?.includes('Center distance: ') && text.json.text.startsWith('ScanRuler — '), 'report_get text: the clipboard report')
+check(text.json?.text?.includes('Center distance: ') && text.json.text.startsWith('Banana Scan — '), 'report_get text: the clipboard report')
 console.log(text.json?.text ?? text.text)
 
 // A second copy of the server on the same port, as Claude Desktop starts one
@@ -101,7 +101,7 @@ const second = await startAgent({ ...serverOptions, stderr: 'ignore' })
 let relayStatus = null
 for (let i = 0; i < 100 && !(relayStatus?.server?.role === 'relay' && relayStatus.connected); i++) {
   await sleep(100)
-  relayStatus = (await second.call('scanruler_status')).json
+  relayStatus = (await second.call('bananascan_status')).json
 }
 check(relayStatus?.server?.role === 'relay' && relayStatus.connected, `a second copy on the port relays through the first (role ${relayStatus?.server?.role})`)
 const relayed = await second.call('report_get', { format: 'json' })

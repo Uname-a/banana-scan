@@ -36,7 +36,7 @@ const STL = process.env.STL ?? repoFile('block-marius.stl')
  *  than observations. */
 const ROD_R = 20
 const ROD_H = 40
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-extend-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-extend-'))
 const ROD = join(dir, 'rod.stl')
 writeFileSync(
   ROD,

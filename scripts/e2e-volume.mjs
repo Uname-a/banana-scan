@@ -6,12 +6,12 @@
 // its region and a click frames it.
 //
 // Prereqs: dev server running (npm run dev), Chrome installed.
-//   PROJECT=path/to/part.scanruler node scripts/e2e-volume.mjs
+//   PROJECT=path/to/part.bananascan node scripts/e2e-volume.mjs
 // Env: CHROME, APP_URL, PROJECT, SHOT_DIR.
 import { click, fail, finish, launchApp, pixelDiff, requireFixture, shotPath, sleep } from './e2e-lib.mjs'
 
 const PROJECT = process.env.PROJECT
-if (!PROJECT) fail('set PROJECT to a .scanruler with a scan and an aligned reference')
+if (!PROJECT) fail('set PROJECT to a .bananascan with a scan and an aligned reference')
 requireFixture(PROJECT)
 
 const { browser, page, consoleErrors } = await launchApp({ width: 1600, height: 1000, protocolTimeout: 900_000 })

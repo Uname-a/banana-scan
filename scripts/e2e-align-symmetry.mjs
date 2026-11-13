@@ -18,7 +18,7 @@ import { turnedBlockScan } from './e2e-fixtures.mjs'
 
 // ---- the scan: a gridded block, turned and moved -----------------------------
 const { bytes: stl, turn, pose } = turnedBlockScan()
-const scanPath = join(mkdtempSync(join(tmpdir(), 'scanruler-align-symmetry-')), 'block.stl')
+const scanPath = join(mkdtempSync(join(tmpdir(), 'banana-scan-align-symmetry-')), 'block.stl')
 writeFileSync(scanPath, stl)
 
 const { browser, page, consoleErrors } = await launchApp()
@@ -27,7 +27,7 @@ await loadScan(page, scanPath)
 /** The scan's extent along each axis, as the viewport holds it. */
 const bounds = () =>
   page.evaluate(() => {
-    const p = window.__scanruler.scene().scanPositions()
+    const p = window.__bananascan.scene().scanPositions()
     const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
     for (let i = 0; i < p.length; i += 3) for (let a = 0; a < 3; a++) {
       if (p[i + a] < min[a]) min[a] = p[i + a]
@@ -53,7 +53,7 @@ async function useSymmetry(label) {
   if (!named) return null
   await page.waitForSelector('[data-test="apply-alignment"]:not([disabled])', { timeout: 10_000 })
   await click(page, '[data-test="apply-alignment"]')
-  await page.waitForFunction(() => window.__scanruler.measure.getState().alignDraft === null && !window.__scanruler.measure.getState().busy, { timeout: 60_000 })
+  await page.waitForFunction(() => window.__bananascan.measure.getState().alignDraft === null && !window.__bananascan.measure.getState().busy, { timeout: 60_000 })
   await sleep(500)
   const b = await bounds()
   const axis = 'XYZ'.indexOf(named[2])
@@ -77,7 +77,7 @@ const along = (p, d, t) => p.map((v, i) => v + d[i] * t)
 const down = Z.map((v) => -v)
 await click(page, '[data-test="start-alignment"]')
 await page.evaluate(
-  (proposal) => window.__scanruler.measure.getState().proposeAlignment(proposal, 'A pose set up by hand, askew.'),
+  (proposal) => window.__bananascan.measure.getState().proposeAlignment(proposal, 'A pose set up by hand, askew.'),
   {
     primary: [0, 120, 240].map((deg) => along(along(origin, X, 12 * Math.cos((deg * Math.PI) / 180)), Y, 12 * Math.sin((deg * Math.PI) / 180))),
     primaryNormals: [down, down, down],
@@ -97,7 +97,7 @@ if (first) {
 
 // ---- with nothing set up yet --------------------------------------------------------------------------
 await click(page, '[data-test="reset-alignment"]')
-await page.waitForFunction(() => window.__scanruler.measure.getState().appliedAlignment === null && !window.__scanruler.measure.getState().busy, { timeout: 60_000 })
+await page.waitForFunction(() => window.__bananascan.measure.getState().appliedAlignment === null && !window.__bananascan.measure.getState().busy, { timeout: 60_000 })
 await sleep(500)
 await click(page, '[data-test="start-alignment"]')
 await page.waitForSelector('[data-test="align-symmetry"]')

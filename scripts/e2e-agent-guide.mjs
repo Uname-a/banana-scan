@@ -63,10 +63,10 @@ writeFileSync(STL, platedHoleStl(3, 30, 6))
 
 const { agent } = await launchAgent(startAgent)
 const { call } = agent
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('bananascan_status')).json?.howToConnect ?? '')?.[1]
 const { browser, page, consoleErrors } = await launchApp({ url: link })
 try {
-  check((await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })).json?.connected === true, 'the page connected')
+  check((await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })).json?.connected === true, 'the page connected')
   const opened = await call('scan_open', { path: STL, units: 'mm' })
   check(opened.json?.scan?.vertices > 1000, `the plate is open (${opened.json?.scan?.vertices} vertices)${opened.error ? ` — ${opened.text}` : ''}`)
 

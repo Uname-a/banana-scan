@@ -189,7 +189,7 @@ export function useRecovery(capture: () => Snapshot, blocked: () => boolean, ope
       const { manifest, members } = await db.read(id)
       worker = new ProjectClient()
       const bytes = await worker.pack(manifest, members)
-      await callbacks.current.open(new File([bytes as BlobPart], 'recovered.scanruler'))
+      await callbacks.current.open(new File([bytes as BlobPart], 'recovered.bananascan'))
       // The work is this page's now, checkpointed in this page's own slot.
       await db.remove(id).catch(() => {})
     } catch (error) {

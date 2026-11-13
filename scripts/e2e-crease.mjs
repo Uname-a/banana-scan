@@ -70,7 +70,7 @@ const startMode = await page.$eval('[data-test="crease-mode"]', (el) => el.value
 await page.keyboard.press('Escape')
 await page.waitForFunction(() => !document.querySelector('[data-test="settings-modal"]'))
 check(startMode === 'on', `the sharp edges start as Always sharp (${startMode})`)
-const startCopies = await page.evaluate(() => window.__scanruler.scene().copyOf.length)
+const startCopies = await page.evaluate(() => window.__bananascan.scene().copyOf.length)
 check(startCopies > 0, `and the block is loaded with its edges split (${startCopies} copies)`)
 
 await setCrease('off')

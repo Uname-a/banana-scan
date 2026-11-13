@@ -5,7 +5,7 @@ each loop into lines and arcs read exactly from the vertices.
     python profile.py --plane z --at 13 [--pieces 0,1] [--box u0,v0,u1,v1] [--tol 1e-4] [--data data]
     python profile.py --plane z --at 0 --edges ...     (at a face level or a vertex ring: exact vertices)
 
-Sheet coordinates follow ScanRuler's world planes: z -> (u, v) = (X, Y); x -> (Y, Z); y -> (Z, X).
+Sheet coordinates follow Banana Scan's world planes: z -> (u, v) = (X, Y); x -> (Y, Z); y -> (Z, X).
 Writes <data>/profile_<plane><at>.json (full precision, arcs in radians) and prints each loop.
 
 Why it works only where the walls are square to the plane: a CAD vertex sits exactly on the true

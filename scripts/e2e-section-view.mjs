@@ -22,7 +22,7 @@ import { check, click, fail, finish, launchApp, loadScan, shotPath, sleep } from
 
 // A 20 mm cube, closed; and the same cube with a hole in it, open.
 const cube = importStep(cubeStep(20), { surfaceDeviation: 0.02, maxEdge: 2 }).mesh
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-section-view-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-section-view-'))
 const CLOSED = join(dir, 'closed-cube.stl')
 const OPEN = join(dir, 'open-cube.stl')
 const REFERENCE = join(dir, 'cube.step')
@@ -38,7 +38,7 @@ page.on('dialog', (d) => void d.accept())
  *  clay a closed part's cut face is filled with. The surfaces are grey. */
 const capShare = () =>
   page.evaluate(async () => {
-    const bytes = await window.__scanruler.scene().capture(480, 320)
+    const bytes = await window.__bananascan.scene().capture(480, 320)
     const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
     const g = canvas.getContext('2d')
@@ -55,7 +55,7 @@ const pickAtMiddle = () =>
   page.evaluate(() => {
     const canvas = document.querySelector('.viewport canvas')
     const r = canvas.getBoundingClientRect()
-    const hit = window.__scanruler.scene().pick(r.left + r.width / 2, r.top + r.height / 2)
+    const hit = window.__bananascan.scene().pick(r.left + r.width / 2, r.top + r.height / 2)
     return hit ? hit.point : null
   })
 
@@ -114,7 +114,7 @@ await click(page, '[data-test="section-view-flip"]')
 await sleep(400)
 check((await capShare()) < 0.002, 'flipped, the half toward the camera stands in front of the cut')
 await page.evaluate(() => {
-  const scene = window.__scanruler.scene()
+  const scene = window.__bananascan.scene()
   const v = scene.viewDirection()
   const a = [0, 1, 2].reduce((best, k) => (Math.abs(v[k]) > Math.abs(v[best]) ? k : best), 0)
   const views = [['left', 'right'], ['front', 'rear'], ['bottom', 'top']]
@@ -199,7 +199,7 @@ const warmIn = async (selector) => {
 await click(page, '[data-test="toggle-section-view"]')
 await sleep(500)
 check(await sectionOn(), 'the section view opens in the deviation workspace')
-const referenceCut = await page.evaluate(() => window.__scanruler.scene().sectionClip() !== null)
+const referenceCut = await page.evaluate(() => window.__bananascan.scene().sectionClip() !== null)
 check(referenceCut, 'the scan and the reference are cut')
 check((await capShare()) > 0.02, `the closed scan is filled where it is cut (${((await capShare()) * 100).toFixed(2)}%)`)
 await page.screenshot({ path: shotPath('section-view-deviation.png') })

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The Joy-Con run's saved project (RE_JOYCON: the path to its
-// 14_joycon_04-details.scanruler; skipped without): the −X end's bottom
+// 14_joycon_04-details.bananascan; skipped without): the −X end's bottom
 // inset — a rectangle swept along the Path, cut at z 9.8 into two end
 // pieces the same size, then cut at x −50 — answers which piece kept the
 // id and, cut on the empty side, that the cut takes all of it, naming the

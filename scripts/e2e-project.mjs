@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // End-to-end project round trip: load ballbar.stl, fit both balls, dimension
-// them, save the session as a .scanruler through the top bar, reload the page
+// them, save the session as a .bananascan through the top bar, reload the page
 // and open that file again — the rows, the dimension value and the file name
 // have to come back exactly, and the archive has to be smaller than the STL.
 //
@@ -63,12 +63,12 @@ await click(page, '[data-test="save-project"]')
 let file = null
 for (let i = 0; i < 100 && !file; i++) {
   await sleep(200)
-  const done = readdirSync(DL_DIR).filter((f) => f.endsWith('.scanruler'))
+  const done = readdirSync(DL_DIR).filter((f) => f.endsWith('.bananascan'))
   if (done.length) file = join(DL_DIR, done[0])
 }
-check(!!file, 'a .scanruler file was downloaded')
+check(!!file, 'a .bananascan file was downloaded')
 if (!file) await finish(browser, consoleErrors)
-check(file.endsWith('ballbar.scanruler'), `named after the scan: ${file}`)
+check(file.endsWith('ballbar.bananascan'), `named after the scan: ${file}`)
 const saved = statSync(file).size
 const stl = statSync(STL).size
 console.log(`sizes: stl ${stl} → project ${saved}`)

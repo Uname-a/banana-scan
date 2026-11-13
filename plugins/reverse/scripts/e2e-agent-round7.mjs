@@ -79,15 +79,15 @@ const ok = async (name, input, what) => {
   return r
 }
 
-const status = await call('scanruler_status')
+const status = await call('bananascan_status')
 const link = /(\S+#agent=\d+:[\w-]+)/.exec(status.json?.howToConnect ?? '')?.[1]
 const { browser, page, consoleErrors } = await launchApp({ url: link, protocolTimeout: 300_000 })
 try {
-  const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+  const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
   check(waited.json?.connected === true, 'the page connected')
   await ok('scan_open', { path: scanPath, discard: true })
   await ok('workspace_set', { workspace: 'reverse' })
-  await call('scanruler_wait', { for: 'idle', timeoutSeconds: 120 })
+  await call('bananascan_wait', { for: 'idle', timeoutSeconds: 120 })
 
   // ---- the model: the block, and a stud the scan has not --------------------------
   await ok('reverse_feature_add', { feature: { kind: 'sketch', name: 'Base', plane: { kind: 'world', axis: 'z', offset: -20 }, sketch: { shapes: [{ kind: 'rectangle', id: 1, center: [0, 0], size: [40, 40], fixed: true }] } }, detail: 'none' })

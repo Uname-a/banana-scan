@@ -35,9 +35,9 @@ const QUAD_INDEX = new Uint32Array([0, 1, 2, 0, 2, 3])
 
 describe('binary STL export', () => {
   it('writes the exact byte layout of an indexed mesh', () => {
-    const buffer = buildBinaryStl(QUAD, QUAD_INDEX, null, 'ScanRuler test')
+    const buffer = buildBinaryStl(QUAD, QUAD_INDEX, null, 'Banana Scan test')
     expect(buffer.byteLength).toBe(HEADER_BYTES + 4 + 2 * TRIANGLE_BYTES)
-    expect(header(buffer)).toBe('ScanRuler test')
+    expect(header(buffer)).toBe('Banana Scan test')
     // Never "solid": readers sniff that word and would parse the file as ASCII.
     expect(header(buffer).startsWith('solid')).toBe(false)
 

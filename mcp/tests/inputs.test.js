@@ -42,7 +42,7 @@ let page
 let state = { busy: null, running: null, scan: null, project: { holds: {} } }
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-inputs-'))
+  dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-inputs-'))
   store = join(dir, 'config')
   link = new PageLink({ token: TOKEN })
   http = httpServer({})
@@ -90,7 +90,7 @@ async function connect(hello) {
       if (name === 'demo.scan') throw { code: 'no_scan', message: 'Open a scan first.' }
       if (name === 'guide.read') throw { code: 'stale_page', message: STALE }
       if (name === 'project.load') return { project: input.name }
-      if (name === 'project.save') return { file: { name: 'joycon.scanruler', mimeType: 'application/octet-stream', bytes: new Uint8Array([1, 2, 3]) } }
+      if (name === 'project.save') return { file: { name: 'joycon.bananascan', mimeType: 'application/octet-stream', bytes: new Uint8Array([1, 2, 3]) } }
       throw { code: 'unknown_command', message: name }
     },
   })
@@ -104,32 +104,32 @@ const call = async (name, args = {}) => {
 }
 
 test('a batch’s calls given as a string of JSON run; a string that is not JSON says so, not “give at least one call”', async () => {
-  const ran = await call('scanruler_batch', { calls: JSON.stringify([{ tool: 'demo_points', arguments: { n: 2 } }, { tool: 'demo_points', arguments: { n: 3 } }]) })
+  const ran = await call('bananascan_batch', { calls: JSON.stringify([{ tool: 'demo_points', arguments: { n: 2 } }, { tool: 'demo_points', arguments: { n: 3 } }]) })
   assert.equal(ran.error, false, ran.text)
   assert.deepEqual(ran.json.results.map((r) => r.result.matched), [2, 3])
   // Under "calls", as a file holds them, too.
-  const under = await call('scanruler_batch', { calls: JSON.stringify({ calls: [{ tool: 'demo_points', arguments: { n: 4 } }] }) })
+  const under = await call('bananascan_batch', { calls: JSON.stringify({ calls: [{ tool: 'demo_points', arguments: { n: 4 } }] }) })
   assert.equal(under.json.results[0].result.matched, 4)
-  const broken = await call('scanruler_batch', { calls: '[{ "tool": "demo_points", "arguments": { "n": 2 } }' })
+  const broken = await call('bananascan_batch', { calls: '[{ "tool": "demo_points", "arguments": { "n": 2 } }' })
   assert.equal(broken.error, true)
   assert.match(broken.text, /^invalid_input: calls came as a string that is not JSON \(/)
   assert.doesNotMatch(broken.text, /give at least one call/)
-  const notAList = await call('scanruler_batch', { calls: '"demo_points"' })
+  const notAList = await call('bananascan_batch', { calls: '"demo_points"' })
   assert.match(notAList.text, /^invalid_input: calls came as a string whose JSON is not a list of calls/)
   // As before: no calls at all, or something that is no list.
-  assert.match((await call('scanruler_batch', { calls: [] })).text, /give at least one call/)
+  assert.match((await call('bananascan_batch', { calls: [] })).text, /give at least one call/)
 })
 
 test('a call’s arguments, or a call, given as a string of JSON are read as that JSON; one that is not JSON refuses the batch with nothing run', async () => {
-  const ran = await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: '{ "n": 7 }' }, JSON.stringify({ tool: 'demo_points', arguments: { n: 8 } }), { tool: 'demo_points', arguments: '' }] })
+  const ran = await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: '{ "n": 7 }' }, JSON.stringify({ tool: 'demo_points', arguments: { n: 8 } }), { tool: 'demo_points', arguments: '' }] })
   assert.equal(ran.error, false, ran.text)
   assert.deepEqual(ran.json.results.map((r) => r.result.matched), [7, 8, undefined])
   const before = page.runs.length
-  const broken = await call('scanruler_batch', { calls: [{ tool: 'demo_change', arguments: { n: 1 } }, { tool: 'demo_change', arguments: '{ n: 2 }' }] })
+  const broken = await call('bananascan_batch', { calls: [{ tool: 'demo_change', arguments: { n: 1 } }, { tool: 'demo_change', arguments: '{ n: 2 }' }] })
   assert.equal(broken.error, true)
   assert.match(broken.text, /^invalid_input: calls\[1\]\.arguments \(demo_change\) came as a string that is not JSON \(.*\) — give them as an object, \{\} for none\. Nothing was run\.$/)
   assert.equal(page.runs.length, before)
-  assert.match((await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: '[1, 2]' }] })).text, /calls\[0\]\.arguments \(demo_points\) came as a string whose JSON is not an object/)
+  assert.match((await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: '[1, 2]' }] })).text, /calls\[0\]\.arguments \(demo_points\) came as a string whose JSON is not an object/)
   // The function on its own: a list as it was, anything else no calls.
   assert.deepEqual(callsGiven([{ tool: 'a' }]), { calls: [{ tool: 'a' }] })
   assert.deepEqual(callsGiven(undefined), { calls: [] })
@@ -142,7 +142,7 @@ test('a long answer’s spill says what the command itself says to ask for', asy
   assert.match(long.json.note, /ask for less next time \(one part at a time \(part, a dotted path\)\)/)
   // In a batch the same; a command that says nothing gets the server's own
   // word (guide.read's, for a page from before askForLess: fit.test.js).
-  const batched = await call('scanruler_batch', { calls: [{ tool: 'demo_long', arguments: { n: 2_000 } }] })
+  const batched = await call('bananascan_batch', { calls: [{ tool: 'demo_long', arguments: { n: 2_000 } }] })
   assert.equal(batched.json.results[0].result.truncated, true)
   assert.match(batched.json.results[0].result.note, /one part at a time/)
   const plain = await call('demo_points', { n: 'x'.repeat(6_000) })
@@ -150,11 +150,11 @@ test('a long answer’s spill says what the command itself says to ask for', asy
 })
 
 test('a page that came back empty is told on the next answer — when it reloaded, and the project last opened or saved here — once', async () => {
-  const file = join(dir, '14_joycon_01-datums.scanruler')
+  const file = join(dir, '14_joycon_01-datums.bananascan')
   await writeFile(file, Buffer.alloc(4))
   const loaded = await call('project_load', { path: file, discard: true })
   assert.equal(loaded.error, false, loaded.text)
-  const status = (await call('scanruler_status')).json
+  const status = (await call('bananascan_status')).json
   assert.equal(status.lastProject, file)
   assert.equal(status.page.since, '2026-10-24T13:54:00.000Z')
   // Kept with the folders, for a copy started afresh.
@@ -170,7 +170,7 @@ test('a page that came back empty is told on the next answer — when it reloade
   for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 10))
   const next = await call('demo_points', { n: 1 })
   const at = localTime(new Date('2026-10-24T14:08:00.000Z')).slice(11, 16)
-  assert.equal(next.json.pageReloaded, `The ScanRuler page reloaded at ${at} and holds nothing now: what the page held before is gone, unless it was saved. The last project opened or saved here was ${file} (project_load opens it).`)
+  assert.equal(next.json.pageReloaded, `The Banana Scan page reloaded at ${at} and holds nothing now: what the page held before is gone, unless it was saved. The last project opened or saved here was ${file} (project_load opens it).`)
   assert.equal(next.json.matched, 1)
   assert.deepEqual(Object.keys(next.json), ['pageReloaded', 'matched'])
   assert.equal((await call('demo_points', { n: 1 })).json.pageReloaded, undefined, 'said once')
@@ -179,43 +179,43 @@ test('a page that came back empty is told on the next answer — when it reloade
   // refusal too — after its message — with the project saved since.
   page = await connect({ pageId: 'page-c', since: '2026-10-24T14:10:00.000Z' })
   assert.equal((await call('demo_points', { n: 1 })).json.pageReloaded, undefined)
-  const saved = await call('project_save', { path: join(dir, 'joycon-r2.scanruler') })
+  const saved = await call('project_save', { path: join(dir, 'joycon-r2.bananascan') })
   assert.equal(saved.error, false, saved.text)
   await call('demo_change', { n: 1 })
   page = await connect({ pageId: 'page-d', since: '2026-10-24T14:20:00.000Z' })
   for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 10))
   const refused = await call('demo_scan')
   assert.equal(refused.error, true)
-  assert.match(refused.text, /^no_scan: Open a scan first\. — The ScanRuler page reloaded at \d\d:\d\d and holds nothing now: .*joycon-r2\.scanruler \(project_load opens it\)\.$/)
+  assert.match(refused.text, /^no_scan: Open a scan first\. — The Banana Scan page reloaded at \d\d:\d\d and holds nothing now: .*joycon-r2\.bananascan \(project_load opens it\)\.$/)
 })
 
 test('a page older than its app: a stale_page answer, or the page’s own word, puts page.stale in the status', async () => {
   page = await connect({ pageId: 'page-e', since: '2026-10-24T14:30:00.000Z' })
-  assert.equal((await call('scanruler_status')).json.page.stale, undefined)
+  assert.equal((await call('bananascan_status')).json.page.stale, undefined)
   const read = await call('guide_read', { topic: 'model' })
   assert.equal(read.error, true)
   assert.match(read.text, /^stale_page: This tab is older than the app/)
-  const status = (await call('scanruler_status')).json
+  const status = (await call('bananascan_status')).json
   assert.equal(status.page.stale, true)
   assert.equal(status.page.staleNote, STALE)
 
   // A new page is not stale — until its session says it is.
   page = await connect({ pageId: 'page-f', since: '2026-10-24T14:40:00.000Z' })
-  assert.equal((await call('scanruler_status')).json.page.stale, undefined)
+  assert.equal((await call('bananascan_status')).json.page.stale, undefined)
   state = { ...state, stale: { since: '2026-10-24T14:41:00.000Z', note: 'this tab is older than the app it came from' } }
-  const said = (await call('scanruler_status')).json
+  const said = (await call('bananascan_status')).json
   assert.equal(said.page.stale, true)
   assert.equal(said.page.staleNote, 'this tab is older than the app it came from')
 })
 
 test('the last project kept beside folders that cannot be read leaves them, not an empty list', async () => {
-  const kept = await mkdtemp(join(tmpdir(), 'scanruler-mcp-folders-'))
+  const kept = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-folders-'))
   // Half of what another copy was writing, as a read in the middle of it saw.
   await writeFile(join(kept, 'folders.json'), '{"saved":"2026-10-24T14:41:00.000Z","folders":["C:\\\\scans\\\\a",')
-  saveLastProject('C:\\scans\\a\\p.scanruler', kept)
+  saveLastProject('C:\\scans\\a\\p.bananascan', kept)
   assert.equal(loadFolders(kept), null, 'not written over with no folders')
   saveFolders(['C:\\scans\\a'], kept)
-  saveLastProject('C:\\scans\\a\\p.scanruler', kept)
+  saveLastProject('C:\\scans\\a\\p.bananascan', kept)
   assert.deepEqual(loadFolders(kept), ['C:\\scans\\a'])
-  assert.equal(loadLastProject(kept), 'C:\\scans\\a\\p.scanruler')
+  assert.equal(loadLastProject(kept), 'C:\\scans\\a\\p.bananascan')
 })

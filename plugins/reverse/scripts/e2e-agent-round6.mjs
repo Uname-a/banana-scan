@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Round 6 of the agent plan (the measuring back in ScanRuler) driven by an
-// agent, end to end: an MCP client starts scanruler-mcp with its call trace
+// Round 6 of the agent plan (the measuring back in Banana Scan) driven by an
+// agent, end to end: an MCP client starts banana-scan-mcp with its call trace
 // on, the app in headless Chrome is paired with it, and on the scan of a
 // 40 mm block whose one top edge is rounded R2.5 the agent reads the round
 // off the scan (reverse_body_fillet_read), rounds the model to it, writes
@@ -84,7 +84,7 @@ const scanPath = join(OUT_DIR, 'round6-block.stl')
 writeFileSync(scanPath, stl(roundedBlock()))
 const traceDir = join(OUT_DIR, 'round6-trace')
 rmSync(traceDir, { recursive: true, force: true })
-process.env.SCANRULER_MCP_TRACE = traceDir
+process.env.BANANA_SCAN_MCP_TRACE = traceDir
 
 const { agent } = await launchAgent(startAgent)
 const { call } = agent
@@ -94,16 +94,16 @@ const ok = async (name, input, what) => {
   return r
 }
 
-const status = await call('scanruler_status')
+const status = await call('bananascan_status')
 const link = /(\S+#agent=\d+:[\w-]+)/.exec(status.json?.howToConnect ?? '')?.[1]
 check(Boolean(link) && status.json?.server?.trace?.startsWith(traceDir), `the server traces to ${status.json?.server?.trace}`)
 const { browser, page, consoleErrors } = await launchApp({ url: link, protocolTimeout: 300_000 })
 try {
-  const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+  const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
   check(waited.json?.connected === true, 'the page connected')
   await ok('scan_open', { path: scanPath, discard: true })
   await ok('workspace_set', { workspace: 'reverse' })
-  await call('scanruler_wait', { for: 'idle', timeoutSeconds: 120 })
+  await call('bananascan_wait', { for: 'idle', timeoutSeconds: 120 })
 
   // ---- the sharp block, its edge read for a round ---------------------------------
   await ok('reverse_feature_add', { feature: { kind: 'sketch', name: 'Base', plane: { kind: 'world', axis: 'z', offset: -20 }, sketch: { shapes: [{ kind: 'rectangle', id: 1, center: [0, 0], size: [40, 40], fixed: true }] } } })
@@ -125,10 +125,10 @@ try {
   // Queued, timed: answered at once, said finished by the idle wait.
   const queued = await ok('reverse_feature_add', { feature: { kind: 'fillet', body, edges: [roundEdge?.index ?? 0], radius: rounded?.nominal ?? 2.5 }, timings: true, wait: false })
   check(queued.json?.queued === true, `the fillet queued as ${queued.json?.job}`)
-  const idle = await ok('scanruler_wait', { for: 'idle', timeoutSeconds: 120 })
+  const idle = await ok('bananascan_wait', { for: 'idle', timeoutSeconds: 120 })
   const fin = idle.json?.finished?.find((j) => j.job === queued.json?.job)
-  check(fin?.state === 'done', `scanruler_wait idle says it finished: ${JSON.stringify(idle.json?.finished)}`)
-  const fillet = await ok('scanruler_wait', { for: 'job', job: queued.json?.job })
+  check(fin?.state === 'done', `bananascan_wait idle says it finished: ${JSON.stringify(idle.json?.finished)}`)
+  const fillet = await ok('bananascan_wait', { for: 'job', job: queued.json?.job })
   const r = fillet.json?.result
   check(r?.feature?.status === 'ok' && r.ms > 0 && Array.isArray(r.steps?.played) && r.made?.[0]?.faces?.some((f) => f.kind === 'cylinder' && Math.abs(f.radius - 2.5) < 1e-6), `the fillet at the nominal builds in ${r?.ms} ms (steps played ${JSON.stringify(r?.steps?.played)}), its round face named`)
   const stepPath = join(OUT_DIR, 'round6-block.step')
@@ -193,7 +193,7 @@ try {
   const tools = lines.filter((l) => l.ev === 'call').map((l) => l.tool)
   check(['reverse_body_fillet_read', 'reverse_export_step', 'scan_open', 'section_render', 'reverse_sketch_edit'].every((t) => tools.includes(t)), `the trace has the calls (${tools.length})`)
   const s = summarize(lines)
-  check(s.calls === tools.length && s.wallMs > 0 && s.scanrulerMs > 0, `trace summary: ${s.calls} calls, ScanRuler ${(s.scanrulerMs / 1000).toFixed(1)} s of ${(s.wallMs / 1000).toFixed(1)} s`)
+  check(s.calls === tools.length && s.wallMs > 0 && s.bananaScanMs > 0, `trace summary: ${s.calls} calls, Banana Scan ${(s.bananaScanMs / 1000).toFixed(1)} s of ${(s.wallMs / 1000).toFixed(1)} s`)
 } finally {
   await agent.close()
   await finish(browser, consoleErrors)

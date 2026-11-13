@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 
-# Measuring a 3D scan (ScanRuler)
+# Measuring a 3D scan (Banana Scan)
 
 Guiding principle: **measure from reliable scan evidence, against datums the part actually uses, and never report a number finer than the scan can hold.**
 
@@ -10,13 +10,13 @@ This guide is the workflow and the judgement. **measure-reference** has every co
 
 ## 0. Setup
 
-- **Tools.** The tools are ScanRuler's commands with dots turned into underscores (`element_fit`). The server prefix can change mid-session; on "No such tool", load again by the new prefix. Load the tools you need by exact name; every tool loaded stays in context.
-- **Session.** `scanruler_status` first:
-  - `backend` "page" is a ScanRuler tab the person watches; "headless" runs without a scan or viewport, where measuring tools answer `unavailable` — measuring needs page mode.
+- **Tools.** The tools are Banana Scan's commands with dots turned into underscores (`element_fit`). The server prefix can change mid-session; on "No such tool", load again by the new prefix. Load the tools you need by exact name; every tool loaded stays in context.
+- **Session.** `bananascan_status` first:
+  - `backend` "page" is a Banana Scan tab the person watches; "headless" runs without a scan or viewport, where measuring tools answer `unavailable` — measuring needs page mode.
   - `page.origin`: scanruler.com is the released build, localhost a development build. No page → `scanruler_open` (opens one paired, and waits); if still unconnected, pass on `howToConnect` and `scanruler_wait`.
   - `page.hidden: true` — the tab is in the background or the screen is locked. Commands still run; pictures and anything waiting on the screen are slower. Tell the person once to keep the site active in Chrome's Memory Saver.
   - `jobs` — the running changes and the newest few, each running, done or failed.
-  - `serverTooOld` — the connector is older than the page needs (the page shows the person a banner with the steps); `server.latest` — a newer one is out, which the server takes up by itself at its next start. Tell the person once: quit the app completely and open it again — while this copy relays (`server.role: "relay"`), the app to quit is the other one, holding the connection. Change nothing on your own; when the person asks you to update it, change your app's scanruler setting to run `npx -y scanruler-mcp@latest`, and tell them to quit the app and open it again.
+  - `serverTooOld` — the connector is older than the page needs (the page shows the person a banner with the steps); `server.latest` — a newer one is out, which the server takes up by itself at its next start. Tell the person once: quit the app completely and open it again — while this copy relays (`server.role: "relay"`), the app to quit is the other one, holding the connection. Change nothing on your own; when the person asks you to update it, change your app's banana-scan setting to run `npx -y banana-scan-mcp@latest`, and tell them to quit the app and open it again.
 - **Read `session_state` before acting and after.** The scan's bounding box says where the part lies; the elements, dimensions and sections what is measured; the history what can be undone.
 - **Every answer is in millimetres** (angles in degrees), whatever the screen shows. The person may have it in inches — `session_state` → `ui.units` says which — so a figure you point them to on screen reads there as mm ÷ 25.4.
 - **The person can undo anything** you do in the viewport; every change is one undo step. Do not fight their edits — read the state again.
@@ -50,7 +50,7 @@ This guide is the workflow and the judgement. **measure-reference** has every co
 - **Known balls:** a precision sphere (a gauge ball, a ballbar's) whose diameter is known: fit it with `knownDiameter` — it holds the diameter and fits the centre alone, which keeps the centre right on a ball scanned only partly. Read `fit.held.freeDiameter` against it: a scan reading off by some µm moves a held centre by about as much towards the scanned side. On a ball scanned all round, the free fit is as good. Write down which was used.
 - **Constructions:** `element_construct` — midplanes, offsets, intersections (line-plane-plane, point-line-plane), circles where a plane cuts a cylinder, planes from typed-in numbers. A section stands in any plane's slot as the plane it was cut on.
 - **Points on the surface:** `scan_nearest` checks a place lies on the scan before fitting there.
-- Batch runs of fits and point probes with `scanruler_batch`.
+- Batch runs of fits and point probes with `bananascan_batch`.
 
 ## 4. Dimensions and checks
 
@@ -106,9 +106,9 @@ This guide is the workflow and the judgement. **measure-reference** has every co
 
 ## 9. Batches, jobs and undo
 
-- `scanruler_batch` runs many calls in one round trip — twenty `scan_nearest`, a row of `element_fit`, a set of dimensions. **It stands or falls whole:** stopped at the first refused call, with `rollback` (the default) it undoes what the calls before it changed and answers `failed: { index, tool, error }` and `undone` (the step labels taken back, newest first). Fix that call and send the batch again. `rollback: false` keeps what went through. `timings: true` adds each call's `ms` and the batch's total_ms — the way to find the slow step.
+- `bananascan_batch` runs many calls in one round trip — twenty `scan_nearest`, a row of `element_fit`, a set of dimensions. **It stands or falls whole:** stopped at the first refused call, with `rollback` (the default) it undoes what the calls before it changed and answers `failed: { index, tool, error }` and `undone` (the step labels taken back, newest first). Fix that call and send the batch again. `rollback: false` keeps what went through. `timings: true` adds each call's `ms` and the batch's total_ms — the way to find the slow step.
 - **By hand across several calls:** `history_checkpoint` before, `history_restore { checkpoint }` to go back to it. `history_undo` takes one step back.
-- **Jobs.** Every tool that changes the session takes `wait`. `wait: false` answers at once with `{ queued: true, job }` while the change runs on; `scanruler_wait { for: "job", job }` gives the answer. A batch takes `wait: false` too. The server keeps every change as a job, so a call that timed out on the client keeps running and its answer can be read: **never resend it** — find it in `scanruler_status` `jobs`. While a change runs, read-only tools such as `session_state` still answer.
+- **Jobs.** Every tool that changes the session takes `wait`. `wait: false` answers at once with `{ queued: true, job }` while the change runs on; `bananascan_wait { for: "job", job }` gives the answer. A batch takes `wait: false` too. The server keeps every change as a job, so a call that timed out on the client keeps running and its answer can be read: **never resend it** — find it in `bananascan_status` `jobs`. While a change runs, read-only tools such as `session_state` still answer.
 
 ## 10. Final reply
 
@@ -132,8 +132,8 @@ Short: the frame and σ_scan, the tolerance used, the headline results against i
 | `view_render` refused: 2D workspace on screen | The 3D view is not drawn there | `flat_render`, or `workspace_set { workspace: "measure" }` |
 | `flat_fit` pick refused: no edge within reach | The place is off the detected edges | `flat_detect_edges` at a higher sensitivity, a larger `reach`, or `snap: false` |
 | A batch answers `failed` and `undone` | Stopped at a refused call; earlier changes taken back | Fix that call, send the whole batch again |
-| A call times out on the client | Still running as a job | Never resend; `scanruler_status` `jobs`, then `scanruler_wait { for: "job", job }` |
-| **busy** | A load, fit or measurement is under way, or the person is working | `scanruler_wait { for: "idle" }`, retry |
-| **unavailable** | Headless server, or no page paired | Page mode; `scanruler_open` |
+| A call times out on the client | Still running as a job | Never resend; `bananascan_status` `jobs`, then `bananascan_wait { for: "job", job }` |
+| **busy** | A load, fit or measurement is under way, or the person is working | `bananascan_wait { for: "idle" }`, retry |
+| **unavailable** | Headless server, or no page paired | Page mode; `bananascan_open` |
 | `page.hidden: true` | Tab hidden or screen locked | Carry on; pictures slower; warn once about Memory Saver |
-| "No such tool", **unknown_command** | Stale tool list or new prefix | Load the tools again; `scanruler_status` |
+| "No such tool", **unknown_command** | Stale tool list or new prefix | Load the tools again; `bananascan_status` |

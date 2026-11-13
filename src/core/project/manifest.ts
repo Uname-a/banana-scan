@@ -26,7 +26,7 @@ import type { PixelsPerMm } from '../flat/image'
 import type { Vec2 } from '../flat/types'
 import { NEWER_PROJECT, validateProjectParts } from './validation'
 
-export const PROJECT_APP = 'ScanRuler'
+export const PROJECT_APP = 'Banana Scan'
 /** The version a project is saved as. A build refuses a higher one, so it
  *  goes up when a project starts to hold something an older build would
  *  read wrongly without noticing: a field whose meaning changes, a new one
@@ -39,7 +39,7 @@ export const PROJECT_APP = 'ScanRuler'
  *  that 0.10.2 and older, which only read this number, turn away projects
  *  from the constructions added since and do not open them half-built. */
 export const PROJECT_SCHEMA = 2
-export const PROJECT_EXTENSION = 'scanruler'
+export const PROJECT_EXTENSION = 'bananascan'
 
 /** Names the model files take inside the archive: a fixed stem, the original
  *  extension, so the right parser picks them up again. */
@@ -49,11 +49,11 @@ export const IMAGE_STEM = 'image'
 export const MANIFEST_NAME = 'project.json'
 
 /** PROJECT_EXTENSION, then a count: see isProjectName. */
-const PROJECT_NAME = /\.scanruler(?:-\d+| ?\(\d+\))?$/i
+const PROJECT_NAME = /\.bananascan(?:-\d+| ?\(\d+\))?$/i
 
-/** Whether a file's name is a project's: `.scanruler`, or that with the
+/** Whether a file's name is a project's: `.bananascan`, or that with the
  *  count a browser adds after it when the name is taken in the folder —
- *  `MyProject.scanruler-2` (Chrome on macOS, issue 83), or ` (2)`. */
+ *  `MyProject.bananascan-2` (Chrome on macOS, issue 83), or ` (2)`. */
 export function isProjectName(name: string): boolean {
   return PROJECT_NAME.test(name.trim())
 }
@@ -316,7 +316,7 @@ export interface ProjectManifest {
 export function validateManifest(raw: unknown): ProjectManifest {
   const m = raw as Partial<ProjectManifest> | null
   if (!m || typeof m !== 'object' || m.app !== PROJECT_APP || typeof m.schemaVersion !== 'number') {
-    throw new Error('Not a ScanRuler project file.')
+    throw new Error('Not a Banana Scan project file.')
   }
   if (!Number.isInteger(m.schemaVersion) || m.schemaVersion < 1) throw new Error('Unsupported project schema version.')
   if (m.schemaVersion > PROJECT_SCHEMA) {

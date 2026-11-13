@@ -28,7 +28,7 @@ const RAISE = 0.2 // top face, z = SIZE, pushed outward
 const SINK = 0.15 // +X face, pulled inward
 
 // ---- the pair --------------------------------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-step-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-step-'))
 const stepText = cubeStep(SIZE)
 const stepPath = join(dir, 'cube.step')
 writeFileSync(stepPath, stepText)

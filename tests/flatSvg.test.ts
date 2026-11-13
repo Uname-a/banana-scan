@@ -58,7 +58,7 @@ function input(over: Partial<FlatDrawingInput> = {}): FlatDrawingInput {
     turns: 0,
     mirror: false,
     unit: 'mm',
-    title: 'ScanRuler 2D measurement — part.png (1000 × 800 px)',
+    title: 'Banana Scan 2D measurement — part.png (1000 × 800 px)',
     scaleNote: 'Scale: CALIBRATED, 10.0000 px/mm',
     ...over,
   }
@@ -69,7 +69,7 @@ describe('buildFlatSvg', () => {
     const svg = buildFlatSvg(input())
     expect(svg.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
     expect(svg).toContain('width="100mm" height="80mm" viewBox="0 0 100 80"')
-    expect(svg).toContain('<title>ScanRuler 2D measurement — part.png (1000 × 800 px)</title>')
+    expect(svg).toContain('<title>Banana Scan 2D measurement — part.png (1000 × 800 px)</title>')
     expect(svg).toContain('Scale: CALIBRATED, 10.0000 px/mm. One unit is one millimetre; y runs down')
     expect(svg.trimEnd().endsWith('</svg>')).toBe(true)
   })

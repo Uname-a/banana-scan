@@ -95,7 +95,7 @@ describe('element text in inches', () => {
     expect(text).toContain('  center: (1.00000, 2.00000, 0.00000)')
     expect(text).not.toMatch(/\bmm\b/)
     // In millimetres nothing is added.
-    expect(buildSummary('t.stl', [], [])).toBe('ScanRuler — t.stl\nMethod: Gaussian best-fit\n')
+    expect(buildSummary('t.stl', [], [])).toBe('Banana Scan — t.stl\nMethod: Gaussian best-fit\n')
   })
 
   it('writes a construction in inches', () => {

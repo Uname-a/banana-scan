@@ -1,14 +1,14 @@
 {
-  "name": "scanruler-mcp",
+  "name": "banana-scan-mcp",
   "version": "0.6.4",
-  "description": "Drive ScanRuler, the 3D-scan measuring tool, from an AI agent: a local MCP server that reaches the ScanRuler tab open in your browser.",
+  "description": "Drive Banana Scan, the 3D-scan measuring tool, from an AI agent: a local MCP server that reaches the Banana Scan tab open in your browser.",
   "type": "module",
   "license": "AGPL-3.0-only",
   "author": "Stefan Hermann (CNC Kitchen) <stefan@cnckitchen.com>",
   "homepage": "https://scanruler.com/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CNCKitchen/scanruler.git",
+    "url": "git+https://github.com/Uname-a/banana-scan.git",
     "directory": "mcp"
   },
   "keywords": [
@@ -16,10 +16,10 @@
     "model-context-protocol",
     "3d-scan",
     "metrology",
-    "scanruler"
+    "banana-scan"
   ],
   "bin": {
-    "scanruler-mcp": "bin/scanruler-mcp.js"
+    "banana-scan-mcp": "bin/banana-scan-mcp.js"
   },
   "files": [
     "bin",
@@ -31,7 +31,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node bin/scanruler-mcp.js",
+    "start": "node bin/banana-scan-mcp.js",
     "test": "node --test"
   },
   "dependencies": {

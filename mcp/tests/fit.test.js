@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Answers that fit an agent's context: one past the cap written whole to a
-// file and named — in scanruler-work in the folder the scan open now came
+// file and named — in banana-scan-work in the folder the scan open now came
 // from, else the server's own — in a call, a batch and a job's wait, the notes for the
 // agent kept in its brief; the status listing the jobs running and the
 // newest few, however many were kept, and the time here; and a scan path
@@ -45,13 +45,13 @@ let page
 let held = 'top_scan_aligned.stl'
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-fit-'))
+  dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-fit-'))
   link = new PageLink({ token: TOKEN })
   http = httpServer({})
   link.attach(http)
   await new Promise((resolve) => http.listen(0, '127.0.0.1', resolve))
   // As the server says of itself when run from npm.
-  const serverInfo = () => ({ name: 'scanruler-mcp', version: '0.4.0', port: 7317, role: 'holder', tools: 'full', outDir: dir, config: join(dir, 'config.json') })
+  const serverInfo = () => ({ name: 'banana-scan-mcp', version: '0.4.0', port: 7317, role: 'holder', tools: 'full', outDir: dir, config: join(dir, 'config.json') })
   const server = createMcpServer({ link, version: '0.4.0', cwd: dir, outDir: dir, connectHelp: () => 'Pair it.', serverInfo, pageTimeoutMs: 50 })
   const [a, b] = InMemoryTransport.createLinkedPair()
   client = new Client({ name: 'test', version: '0.0.0' })
@@ -69,7 +69,7 @@ before(async () => {
         held = input.name
         return { scan: { fileName: input.name } }
       }
-      if (name === 'project.save') return { file: { name: 'Scooter head.scanruler', mimeType: 'application/zip', bytes: new Uint8Array([0x50, 0x4b]) } }
+      if (name === 'project.save') return { file: { name: 'Scooter head.bananascan', mimeType: 'application/zip', bytes: new Uint8Array([0x50, 0x4b]) } }
       if (name === 'guide.read') return { guides: [{ topic: input.topic, text: 'g'.repeat(input.chars) }] }
       if (name === 'view.render') {
         await new Promise((r) => setTimeout(r, input.view === 'front' ? 80 : 10))
@@ -114,14 +114,14 @@ test('an answer within the cap comes whole; one past it is written to a file and
   assert.notEqual(again.json.file, big.json.file)
 })
 
-test('scanruler_read gives a spilled answer back in parts, each within the cap — from the server’s own folder, with no scan’s folder known', async () => {
+test('bananascan_read gives a spilled answer back in parts, each within the cap — from the server’s own folder, with no scan’s folder known', async () => {
   const big = await call('demo_points', { n: 5000 })
-  assert.match(big.json.note, /scanruler_read \{ path: file \}/)
+  assert.match(big.json.note, /bananascan_read \{ path: file \}/)
   let whole = ''
   let offset = 0
   let parts = 0
   for (;;) {
-    const part = await call('scanruler_read', { path: big.json.file, offset })
+    const part = await call('bananascan_read', { path: big.json.file, offset })
     assert.equal(part.error, false, part.text)
     assert.ok(part.text.length <= ANSWER_CAP, `${part.text.length} characters`)
     assert.equal(part.json.offset, offset)
@@ -137,17 +137,17 @@ test('scanruler_read gives a spilled answer back in parts, each within the cap �
   assert.equal(JSON.parse(whole).points.length, 5000)
   // Any other file there is not read: the server's folder is no scan's.
   await writeFile(join(dir, 'beside-the-spill.json'), '{}')
-  const other = await call('scanruler_read', { path: join(dir, 'beside-the-spill.json') })
+  const other = await call('bananascan_read', { path: join(dir, 'beside-the-spill.json') })
   assert.equal(other.error, true)
   assert.match(other.text, /^invalid_state: .*scan_open/)
 })
 
 test('a batch caps each result, and the whole when many together are past the cap', async () => {
-  const one = await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: { n: 5000 } }, { tool: 'demo_points', arguments: { n: 3 } }] })
+  const one = await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: { n: 5000 } }, { tool: 'demo_points', arguments: { n: 3 } }] })
   assert.equal(one.json.results[0].result.truncated, true)
   assert.equal(one.json.results[1].result.points.length, 3)
   // Twenty reads of 1000 points: each under the cap, all together past it.
-  const many = await call('scanruler_batch', { calls: Array.from({ length: 20 }, () => ({ tool: 'demo_points', arguments: { n: 1000 } })) })
+  const many = await call('bananascan_batch', { calls: Array.from({ length: 20 }, () => ({ tool: 'demo_points', arguments: { n: 1000 } })) })
   assert.equal(many.json.truncated, true)
   assert.equal(many.json.brief.ran, 20)
   assert.equal(many.json.brief.of, 20)
@@ -157,9 +157,9 @@ test('a batch caps each result, and the whole when many together are past the ca
   assert.equal(whole.results[19].result.points.length, 1000)
 })
 
-test('a job’s answer read by scanruler_wait is capped the same', async () => {
+test('a job’s answer read by bananascan_wait is capped the same', async () => {
   const queued = await call('demo_change', { n: 1, points: 5000, wait: false })
-  const answer = await call('scanruler_wait', { for: 'job', job: queued.json.job, timeoutSeconds: 5 })
+  const answer = await call('bananascan_wait', { for: 'job', job: queued.json.job, timeoutSeconds: 5 })
   assert.equal(answer.json.state, 'done')
   assert.equal(answer.json.result.truncated, true)
   assert.ok(answer.text.length < 2_000)
@@ -167,13 +167,13 @@ test('a job’s answer read by scanruler_wait is capped the same', async () => {
 
 test('the status lists the jobs running and the newest five, and stays small after fifty', async () => {
   for (let n = 0; n < 60; n++) await call('demo_change', { n })
-  const status = await call('scanruler_status')
+  const status = await call('bananascan_status')
   assert.equal(status.json.jobs.length, 5)
   assert.equal(status.json.jobsMore, 45, 'the fifty kept, less the five listed')
   assert.deepEqual(status.json.jobs.map((j) => j.state), ['done', 'done', 'done', 'done', 'done'])
   assert.ok(status.text.length < 1_500, `${status.text.length} characters`)
   // wait { idle } says the state and what finished — not the status again.
-  const idle = await call('scanruler_wait', { for: 'idle', timeoutSeconds: 5 })
+  const idle = await call('bananascan_wait', { for: 'idle', timeoutSeconds: 5 })
   assert.deepEqual(Object.keys(idle.json).sort(), ['connected', 'finished', 'state'])
   assert.equal(idle.json.state, 'idle')
 })
@@ -216,7 +216,7 @@ test('a guide answers up to 70 k characters before it spills, and its spill says
   assert.equal(points.json.truncated, true)
   assert.match(points.json.note, /past the 40 k.*\(fields, limit\)/)
   // A batch with a guide in it answers as long.
-  const batch = await call('scanruler_batch', { calls: [{ tool: 'guide_read', arguments: { topic: 'model', chars: 60_000 } }] })
+  const batch = await call('bananascan_batch', { calls: [{ tool: 'guide_read', arguments: { topic: 'model', chars: 60_000 } }] })
   assert.equal(batch.json.truncated, undefined)
   assert.equal(batch.json.results[0].result.guides[0].text.length, 60_000)
 })
@@ -245,22 +245,22 @@ test('the notes for the agent are kept in a spilled answer’s brief — at its 
   assert.equal(big.json.truncated, true)
   assert.deepEqual(big.json.brief, { matched: 5000, returned: 5000, from: 'a box', notes: NOTES, part: { notes: NOTES } })
   // A batch: the last call's notes at the top, whole or spilled.
-  const batch = await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: { n: 3, notes: true } }, { tool: 'demo_points', arguments: { n: 3 } }] })
+  const batch = await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: { n: 3, notes: true } }, { tool: 'demo_points', arguments: { n: 3 } }] })
   assert.deepEqual(batch.json.notes, NOTES)
-  const none = await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: { n: 3 } }] })
+  const none = await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: { n: 3 } }] })
   assert.equal(none.json.notes, undefined)
-  const spilledCall = await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: { n: 5000, notes: true } }] })
+  const spilledCall = await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: { n: 5000, notes: true } }] })
   assert.equal(spilledCall.json.results[0].result.truncated, true)
   assert.deepEqual(spilledCall.json.notes, NOTES)
   // Many together past the cap: the batch's brief keeps them.
-  const many = await call('scanruler_batch', { calls: Array.from({ length: 20 }, (_, i) => ({ tool: 'demo_points', arguments: { n: 1000, notes: i === 3 } })) })
+  const many = await call('bananascan_batch', { calls: Array.from({ length: 20 }, (_, i) => ({ tool: 'demo_points', arguments: { n: 1000, notes: i === 3 } })) })
   assert.equal(many.json.truncated, true)
   assert.deepEqual(many.json.brief.notes, NOTES)
 })
 
 test('the status says the time here, local, with its offset', async () => {
   const before = Math.floor(Date.now() / 1000) * 1000
-  const status = await call('scanruler_status')
+  const status = await call('bananascan_status')
   const now = status.json.server.now
   assert.match(now, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/)
   const at = Date.parse(now)
@@ -273,9 +273,9 @@ test('the status says the time here, local, with its offset', async () => {
   assert.equal(Date.parse(localTime(winter)), winter.getTime())
 })
 
-test('once a scan is opened from a folder, a spilled answer and a batch’s picture go into scanruler-work there, and the answer says so', async () => {
+test('once a scan is opened from a folder, a spilled answer and a batch’s picture go into banana-scan-work there, and the answer says so', async () => {
   const folder = join(dir, 'reverseengineer', '13_rumblePack')
-  const work = join(folder, 'scanruler-work')
+  const work = join(folder, 'banana-scan-work')
   await mkdir(folder, { recursive: true })
   await writeFile(join(folder, 'pak.stl'), Buffer.alloc(84))
   const opened = await call('scan_open', { path: join(folder, 'pak.stl') })
@@ -283,33 +283,33 @@ test('once a scan is opened from a folder, a spilled answer and a batch’s pict
   const big = await call('demo_points', { n: 5000 })
   assert.equal(big.json.truncated, true)
   assert.equal(dirname(big.json.file), work)
-  assert.ok(big.json.note.endsWith(`It is in ${work}, scanruler-work in the folder the scan open now was opened from.`), big.json.note)
+  assert.ok(big.json.note.endsWith(`It is in ${work}, banana-scan-work in the folder the scan open now was opened from.`), big.json.note)
   assert.equal(JSON.parse(await readFile(big.json.file, 'utf8')).points.length, 5000)
   // In a batch, the same; and a picture without a path is written there,
   // the result naming the folder — not among the person's files beside
   // the scan.
-  const batch = await call('scanruler_batch', { calls: [{ tool: 'demo_points', arguments: { n: 5000 } }, { tool: 'view_render', arguments: { view: 'top' } }] })
+  const batch = await call('bananascan_batch', { calls: [{ tool: 'demo_points', arguments: { n: 5000 } }, { tool: 'view_render', arguments: { view: 'top' } }] })
   assert.equal(dirname(batch.json.results[0].result.file), work)
   const picture = batch.json.results[1].result.file.path
   assert.equal(dirname(picture), work)
   assert.equal(batch.json.results[1].result.file.folder, work)
   assert.deepEqual([...(await readFile(picture))], VIEWS.top)
-  // scanruler_files lists it under the scan's folder.
-  const listed = await call('scanruler_files', { path: 'scanruler-work' })
+  // bananascan_files lists it under the scan's folder.
+  const listed = await call('bananascan_files', { path: 'banana-scan-work' })
   assert.equal(listed.error, false, listed.text)
   assert.ok(JSON.stringify(listed.json).includes(basename(picture)), listed.text)
   // A path given still wins.
   const shots = join(dir, 'shots-asked')
-  const asked = await call('scanruler_batch', { calls: [{ tool: 'view_render', arguments: { view: 'front', path: `${shots}/` } }] })
+  const asked = await call('bananascan_batch', { calls: [{ tool: 'view_render', arguments: { view: 'front', path: `${shots}/` } }] })
   assert.equal(dirname(asked.json.results[0].result.file.path), shots)
 })
 
-test('scanruler_read reads text under the scan’s folder, by the rule scanruler_files keeps, cut on a character and within the cap however its text escapes', async () => {
+test('bananascan_read reads text under the scan’s folder, by the rule bananascan_files keeps, cut on a character and within the cap however its text escapes', async () => {
   const folder = join(dir, 'reverseengineer', '14_reader')
   await mkdir(join(folder, 'report'), { recursive: true })
   await writeFile(join(folder, 'reader.stl'), Buffer.alloc(84))
   assert.equal((await call('scan_open', { path: join(folder, 'reader.stl') })).error, false)
-  const read = async (args) => (await call('scanruler_read', args))
+  const read = async (args) => (await call('bananascan_read', args))
   await writeFile(join(folder, 'report', 'notes.md'), '# Sigma\n\nRMS 0.067 mm\n')
   // Relative and absolute, a folder under it; a whole small file has no nextOffset.
   assert.deepEqual((await read({ path: 'report/notes.md' })).json, { text: '# Sigma\n\nRMS 0.067 mm\n', offset: 0, size: 22 })
@@ -318,8 +318,8 @@ test('scanruler_read reads text under the scan’s folder, by the rule scanruler
   assert.deepEqual((await read({ path: 'report/notes.md', limit: 7 })).json, { text: '# Sigma', offset: 0, nextOffset: 7, size: 22 })
   assert.deepEqual((await read({ path: 'report/notes.md', offset: 9, limit: 3 })).json, { text: 'RMS', offset: 9, nextOffset: 12, size: 22 })
   assert.deepEqual((await read({ path: 'report/notes.md', offset: 100 })).json, { text: '', offset: 22, size: 22 })
-  // Another folder scanruler_status lists is read too; one it does not, not.
-  const earlier = (await call('scanruler_status')).json.folders.find((f) => f !== folder)
+  // Another folder bananascan_status lists is read too; one it does not, not.
+  const earlier = (await call('bananascan_status')).json.folders.find((f) => f !== folder)
   await writeFile(join(earlier, 'earlier.txt'), 'kept')
   assert.equal((await read({ path: join(earlier, 'earlier.txt') })).json.text, 'kept')
   for (const [path, why] of [
@@ -387,19 +387,19 @@ test('a spilled answer goes to the folder of the scan open now — never to the 
   // one this server opened, so not its folder.
   held = 'Mesh.stl'
   assert.equal(await spillFolder(), dir)
-  const batch = await call('scanruler_batch', { calls: [{ tool: 'view_render', arguments: { view: 'top' } }] })
+  const batch = await call('bananascan_batch', { calls: [{ tool: 'view_render', arguments: { view: 'top' } }] })
   assert.equal(dirname(batch.json.results[0].result.file.path), dir)
   // That session saved into the previous part's folder, and the scan that
   // was to replace it refused: the latest of the folders is the saved one's,
   // and still not where a spill goes.
-  const failed = await call('scan_open', { path: join(part, 'broken.stl'), saveTo: join(before, 'before.scanruler') })
+  const failed = await call('scan_open', { path: join(part, 'broken.stl'), saveTo: join(before, 'before.bananascan') })
   assert.equal(failed.error, true, failed.text)
-  assert.equal((await call('scanruler_status')).json.folders[0], before)
+  assert.equal((await call('bananascan_status')).json.folders[0], before)
   const big = await call('demo_points', { n: 5000 })
   assert.equal(dirname(big.json.file), dir)
   assert.match(big.json.note, /the scan open now was not opened from a folder through this server\.$/)
-  // The part's scan opened from its folder: there, in scanruler-work.
+  // The part's scan opened from its folder: there, in banana-scan-work.
   const opened = await call('scan_open', { path: join(part, 'Mesh.stl') })
   assert.equal(opened.error, false, opened.text)
-  assert.equal(await spillFolder(), join(part, 'scanruler-work'))
+  assert.equal(await spillFolder(), join(part, 'banana-scan-work'))
 })

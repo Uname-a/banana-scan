@@ -30,10 +30,10 @@ describe('the Imprint’s privacy policy', () => {
   })
 
   it('does not count the settings kept in localStorage, and names the agent token', () => {
-    const keys = new Set(code.match(/'scanruler\.[a-z0-9.]+'/g) ?? [])
+    const keys = new Set(code.match(/'bananascan\.[a-z0-9.]+'/g) ?? [])
     expect(keys.size).toBeGreaterThan(4)
     expect(/\b(four|five|six) preferences\b/.test(imprint), 'counts the preferences').toBe(false)
-    expect(code.includes("'scanruler.agenttoken'"), 'the agent token is a key').toBe(true)
+    expect(code.includes("'bananascan.agenttoken'"), 'the agent token is a key').toBe(true)
     expect(/token/.test(imprint), 'names the token').toBe(true)
   })
 

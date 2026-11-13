@@ -30,7 +30,7 @@ import {
 
 const STL = process.env.STL ?? repoFile('ballbar.stl')
 // Where the exported STEP file lands — a scratch dir, not the screenshot dir.
-const DOWNLOAD_DIR = process.env.OUT_DIR ?? mkdtempSync(join(tmpdir(), 'scanruler-step-'))
+const DOWNLOAD_DIR = process.env.OUT_DIR ?? mkdtempSync(join(tmpdir(), 'banana-scan-step-'))
 
 const BAR_LENGTH = 148.64 // GOM reference center distance of the ball bar
 

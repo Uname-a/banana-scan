@@ -39,13 +39,13 @@ after(async () => {
   http.close()
 })
 
-const status = async () => JSON.parse((await client.callTool({ name: 'scanruler_status', arguments: {} })).content[0].text)
+const status = async () => JSON.parse((await client.callTool({ name: 'bananascan_status', arguments: {} })).content[0].text)
 
 test('a fresh server copy says it knows no jobs, and that a job of an earlier copy is not known here', async () => {
   const s = await status()
   assert.equal(s.jobs, undefined)
   assert.match(s.jobsNote, /^None asked of this server copy, which started at \d{4}-\d\d-\d\dT.*A change asked of an earlier copy is not known here/)
-  const missing = await client.callTool({ name: 'scanruler_wait', arguments: { for: 'job', job: 'j7' } })
+  const missing = await client.callTool({ name: 'bananascan_wait', arguments: { for: 'job', job: 'j7' } })
   assert.equal(missing.isError, true)
   assert.match(missing.content[0].text, /^not_found: There is no job "j7".*a job of an earlier one is not known here/)
 })
@@ -69,16 +69,16 @@ test('the status says the tools the client holds are stale until it lists them a
     assert.deepEqual(s.tools.added, ['demo_added'])
     assert.equal(s.tools.removed, undefined)
     assert.equal(s.tools.changed, undefined)
-    assert.equal(s.tools.listedFrom, 'the page, ScanRuler 0.0.0-test')
+    assert.equal(s.tools.listedFrom, 'the page, Banana Scan 0.0.0-test')
     assert.match(s.tools.note, /quit the AI app completely and open it again to get the current tools/)
     assert.match(s.tools.note, /A new chat does not help/)
-    assert.match(s.tools.note, /scanruler_batch runs any of the page’s tools by name/)
+    assert.match(s.tools.note, /bananascan_batch runs any of the page’s tools by name/)
     // Named once; counted after, with a short note.
     const later = await status()
     assert.equal(later.tools.added, 1)
-    assert.equal(later.tools.listedFrom, 'the page, ScanRuler 0.0.0-test')
+    assert.equal(later.tools.listedFrom, 'the page, Banana Scan 0.0.0-test')
     assert.match(later.tools.note, /^Still stale, as an earlier answer named them/)
-    assert.match(later.tools.note, /scanruler_batch runs any of the page’s tools by name/)
+    assert.match(later.tools.note, /bananascan_batch runs any of the page’s tools by name/)
     await client.listTools()
     assert.equal((await status()).tools, undefined, 'listed again: not stale')
   } finally {
@@ -103,7 +103,7 @@ test('a tool whose input changed is named in changed, and the list says which pa
     assert.deepEqual(s.tools.changed, ['demo_change'])
     assert.equal(s.tools.added, undefined)
     assert.equal(s.tools.listed, s.tools.now)
-    assert.equal(s.tools.listedFrom, 'the page, ScanRuler 0.0.0-test')
+    assert.equal(s.tools.listedFrom, 'the page, Banana Scan 0.0.0-test')
     await client.listTools()
     assert.equal((await status()).tools, undefined)
   } finally {
@@ -129,7 +129,7 @@ test('a change dropped when the page goes away says it may have been made, and h
   page.close()
   const r = await call
   assert.equal(r.isError, true)
-  assert.match(r.content[0].text, /^unavailable: The ScanRuler page closed the connection before it answered\. If it was a change, it may still have been made on the page: read session_state/)
+  assert.match(r.content[0].text, /^unavailable: The Banana Scan page closed the connection before it answered\. If it was a change, it may still have been made on the page: read session_state/)
   const job = (await status()).jobs[0]
   assert.equal(job.state, 'failed')
 })

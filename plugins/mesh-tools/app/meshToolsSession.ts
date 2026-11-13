@@ -408,7 +408,7 @@ export function createMeshToolsSession({
         const name = s.fileName ?? 'scan'
         const source: EditedCopy['source'] = {
           name: `${name.replace(/\.[^.]+$/, '')}.ply`,
-          bytes: buildBinaryPly(result.positions, result.indices, `${name}, edited in ScanRuler`),
+          bytes: buildBinaryPly(result.positions, result.indices, `${name}, edited in Banana Scan`),
           // units-ok: the file's own unit, an id — the copy is written in mm.
           units: 'mm',
         }

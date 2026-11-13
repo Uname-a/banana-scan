@@ -23,7 +23,7 @@ import { holdsProject, isProjectFile } from '../app/useProject'
 import { APP_VERSION } from '../version'
 import type { RecoveryStatus } from '../app/useRecovery'
 
-const GITHUB_URL = 'https://github.com/CNCKitchen/scanruler'
+const GITHUB_URL = 'https://github.com/Uname-a/banana-scan'
 
 /** What the GitHub key links to: the whole app, or — with plugins in use,
  *  which are not published there — the app without them. */
@@ -46,7 +46,7 @@ const workspaceTabs = () => [
 ]
 
 /** The page's own title, while no project is named. */
-const APP_TITLE = 'ScanRuler by CNC Kitchen'
+const APP_TITLE = 'Banana Scan'
 
 /** The project's name, typed in place — what Save Project saves it under,
  *  every export is named on and the browser tab reads. Unnamed, those go by
@@ -60,7 +60,7 @@ function ProjectName() {
   const [typed, setTyped] = useState<string | null>(null)
   const dropped = useRef(false)
   useEffect(() => {
-    document.title = name ? `${name} — ScanRuler` : APP_TITLE
+    document.title = name ? `${name} — Banana Scan` : APP_TITLE
   }, [name])
   const shown = typed ?? name ?? ''
   const fallback = projectStem(null, fileName, imageName)
@@ -226,12 +226,12 @@ export function TopBar({
 
   return (
     <header className="top" ref={barRef}>
-      <img className="brandmark" src="/scanruler-mark.svg" alt="" />
+      <img className="brandmark" src="/banana-scan-mark.svg" alt="" />
       {/* The version rides in the caption, and in the tooltip for the narrow
           layouts that drop the caption: a bug report needs the number, and
           the imprint carries it too. */}
-      <div className="brand" title={`ScanRuler v${APP_VERSION}`}>
-        <b>ScanRuler</b>
+      <div className="brand" title={`Banana Scan v${APP_VERSION}`}>
+        <b>Banana Scan</b>
         <span>
           CNC Kitchen · 3D scan analysis ·{' '}
           <i className="ver" data-test="app-version">

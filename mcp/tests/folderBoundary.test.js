@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// scanruler_read, _write and _files stay in the folders a scan or project
+// bananascan_read, _write and _files stay in the folders a scan or project
 // came from with links followed: a link in the scan's folder that points
 // elsewhere is refused. A name that merely starts with two dots is a name
 // in the folder, not a climb out of it.
@@ -14,7 +14,7 @@ import { PageLink } from '../src/link.js'
 import { createMcpServer } from '../src/mcp.js'
 
 test('a link out of the scan folder is refused; "..notes.md" is read', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-boundary-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-boundary-'))
   const scans = join(dir, 'scans')
   const outside = join(dir, 'outside')
   await mkdir(scans, { recursive: true })
@@ -44,15 +44,15 @@ test('a link out of the scan folder is refused; "..notes.md" is read', async () 
   }
   try {
     for (const [name, args] of [
-      ['scanruler_read', { path: 'link/secret.txt' }],
-      ['scanruler_write', { path: 'link/planted.md', text: 'x' }],
-      ['scanruler_files', { path: 'link' }],
+      ['bananascan_read', { path: 'link/secret.txt' }],
+      ['bananascan_write', { path: 'link/planted.md', text: 'x' }],
+      ['bananascan_files', { path: 'link' }],
     ]) {
       const refused = await call(name, args)
       assert.equal(refused.error, true, name)
       assert.match(refused.text, /outside/, name)
     }
-    const read = await call('scanruler_read', { path: '..notes.md' })
+    const read = await call('bananascan_read', { path: '..notes.md' })
     assert.equal(read.error, false, read.text)
     assert.match(read.text, /mine/)
   } finally {

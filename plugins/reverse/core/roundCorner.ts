@@ -6,7 +6,7 @@
 // the scan's: the slice points about the corner that the two pieces carried
 // (a segmenter that missed the round merged them in) move onto the arc, and
 // the solver fits it to them with the tangencies held — "this corner is a
-// tangent blend", said once, and ScanRuler finds how large.
+// tangent blend", said once, and Banana Scan finds how large.
 //
 // filletLines (filletCorner.ts) is the panel's sketch fillet for two lines,
 // a radius typed; this is the agent's, for the pieces a fit leaves, read off

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// A stand-in for the ScanRuler page, for the tests: it connects as the page's
+// A stand-in for the Banana Scan page, for the tests: it connects as the page's
 // bridge does, says hello with a command list, and answers runs from a table.
 import WebSocket from 'ws'
 import { decoder, encode } from '../src/framing.js'
@@ -35,7 +35,7 @@ export function fakePage(port, { token, origin = 'https://scanruler.com', comman
       }
     })
     ws.on('message', (data, isBinary) => read(isBinary ? new Uint8Array(data) : data.toString('utf8')))
-    ws.on('open', () => ws.send(JSON.stringify({ hello: { app: 'ScanRuler', version: '0.0.0-test', token, commands, plugins: [], viewport: true, ...hello } })))
+    ws.on('open', () => ws.send(JSON.stringify({ hello: { app: 'Banana Scan', version: '0.0.0-test', token, commands, plugins: [], viewport: true, ...hello } })))
     ws.on('unexpected-response', (_req, res) => resolve({ page, refused: `HTTP ${res.statusCode}`, code: res.statusCode }))
     ws.on('error', (e) => {
       if (!greeted) reject(e)

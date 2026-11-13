@@ -193,7 +193,7 @@ const UNIT_GUESSES: { factor: number; word: string }[] = [
 ]
 
 /** Under this diagonal, or over the next, a scan is taken to have no true
- *  size, mm: no part ScanRuler measures is a few millimetres across, or
+ *  size, mm: no part Banana Scan measures is a few millimetres across, or
  *  several metres. */
 export const SIZE_PLAUSIBLE_MIN_MM = 5
 export const SIZE_PLAUSIBLE_MAX_MM = 5000

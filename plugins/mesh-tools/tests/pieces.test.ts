@@ -113,7 +113,7 @@ describe('the edited scan as a PLY', () => {
     const graph = partAndSpeck()
     const s = surveyPieces(graph.positions, graph.indices, graph.vertexCount, 2)
     const kept = withoutTriangles(graph.positions, graph.indices, graph.vertexCount, s.islandMask)
-    const bytes = buildBinaryPly(kept.positions, kept.indices, 'part.stl, edited in ScanRuler — ✓')
+    const bytes = buildBinaryPly(kept.positions, kept.indices, 'part.stl, edited in Banana Scan — ✓')
     const parsed = parsePLY(bytes.slice().buffer)
     expect(parsed.kind).toBe('indexed')
     expect(Array.from(parsed.positions)).toEqual(Array.from(kept.positions))
@@ -125,7 +125,7 @@ describe('the edited scan as a PLY', () => {
     expect(Array.from(again.indices)).toEqual(Array.from(kept.indices))
     // The comment is one line of plain text in the header.
     const header = new TextDecoder().decode(bytes.subarray(0, 200))
-    expect(header).toContain('comment part.stl, edited in ScanRuler ? ?\n')
+    expect(header).toContain('comment part.stl, edited in Banana Scan ? ?\n')
   })
 
   it('keeps the winding of what a delete leaves, where a guess would turn it inside out', () => {

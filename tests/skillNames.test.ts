@@ -3,7 +3,7 @@
 // skills/ that point at them, and the MCP server's instructions name only
 // tools that exist: every tool name one writes in backticks in one of the
 // app's namespaces (scan_, element_, history_ …) or the server's own
-// (scanruler_) must be a command the app registers, as the server lists it,
+// (bananascan_) must be a command the app registers, as the server lists it,
 // or one of the server's own tools; the server's instructions likewise. A
 // plugin checks its own namespace in its own guides. A renamed or removed
 // command that a guide still teaches fails here.
@@ -18,7 +18,7 @@ const GUIDES = new URL('../src/commands/guides/', import.meta.url)
 const MCP = readFileSync(new URL('../mcp/src/mcp.js', import.meta.url), 'utf8')
 
 /** The server's own tools, as mcp.js names them. */
-const ownTools = () => [...MCP.matchAll(/name: '(scanruler_[a-z_]+)'/g)].map((m) => m[1])
+const ownTools = () => [...MCP.matchAll(/name: '(bananascan_[a-z_]+)'/g)].map((m) => m[1])
 
 /** The tools the app's commands are, as the server names them. */
 function tools(): Set<string> {
@@ -29,7 +29,7 @@ function tools(): Set<string> {
 /** The namespaces whose tool names are checked: the app's and the server's. */
 function namespaces(): Set<string> {
   registerCoreCommands()
-  return new Set([...listCommands().map((c) => c.name.split('.')[0]), 'scanruler'])
+  return new Set([...listCommands().map((c) => c.name.split('.')[0]), 'bananascan'])
 }
 
 /** A file's text with its line ends as LF, however it was checked out. */
@@ -59,7 +59,7 @@ const backticked = (text: string) => [...new Set([...text.matchAll(/`([a-z][a-z0
 
 describe('the names the guides, the skills and the server’s instructions teach', () => {
   it('are the server’s own tools in mcp.js', () => {
-    expect(ownTools()).toEqual(expect.arrayContaining(['scanruler_status', 'scanruler_open', 'scanruler_wait', 'scanruler_batch']))
+    expect(ownTools()).toEqual(expect.arrayContaining(['bananascan_status', 'bananascan_open', 'bananascan_wait', 'bananascan_batch']))
   })
 
   it('in every guide and skill, name only tools that exist', () => {

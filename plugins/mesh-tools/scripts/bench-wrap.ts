@@ -54,7 +54,7 @@ const workers = workersArg !== null ? Number(workersArg) : Math.max(1, Math.min(
  *  thread need not read TypeScript. */
 async function nodePool(size: number): Promise<WrapRunner> {
   const core = resolve(dirname(fileURLToPath(import.meta.url)), '../core')
-  const outfile = join(tmpdir(), 'scanruler-bench-wrap-worker.mjs')
+  const outfile = join(tmpdir(), 'banana-scan-bench-wrap-worker.mjs')
   await build({
     stdin: {
       contents: `

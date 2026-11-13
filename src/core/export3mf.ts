@@ -166,7 +166,7 @@ export function build3mf(parts: readonly MeshPart[], transform: Rigid | null, ti
   out.push('<?xml version="1.0" encoding="UTF-8"?>\n')
   out.push(`<model unit="millimeter" xml:lang="en-US" xmlns="${CORE_NS}"${coloured ? ` xmlns:m="${MATERIAL_NS}"` : ''}>\n`)
   out.push(`<metadata name="Title">${escapeXml(title)}</metadata>\n`)
-  out.push('<metadata name="Application">ScanRuler</metadata>\n')
+  out.push('<metadata name="Application">Banana Scan</metadata>\n')
   out.push('<resources>\n')
   let nextId = 1
   const objectIds: number[] = []

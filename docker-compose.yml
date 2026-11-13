@@ -1,20 +1,20 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # `docker compose up -d --build`, then open http://localhost:8080
 #
-# scanruler-mcp, the agent connection, is not started by `up`: the agent
+# banana-scan-mcp, the agent connection, is not started by `up`: the agent
 # starts it, talking over stdin and stdout. See docs/docker.md.
-#   docker compose run --rm scanruler-mcp --pair      the pairing link
-#   docker compose -f <this file> run --rm -T --service-ports scanruler-mcp
+#   docker compose run --rm banana-scan-mcp --pair      the pairing link
+#   docker compose -f <this file> run --rm -T --service-ports banana-scan-mcp
 #                                                     the agent's command
 services:
-  scanruler:
+  banana-scan:
     build:
       context: .
       args:
-        VITE_FILES_URL: ${SCANRULER_FILES_URL:-}
-    image: scanruler
+        VITE_FILES_URL: ${BANANA_SCAN_FILES_URL:-}
+    image: banana-scan
     ports:
-      - "${SCANRULER_PORT:-8080}:8080"
+      - "${BANANA_SCAN_PORT:-8080}:8080"
     read_only: true
     tmpfs:
       - /tmp
@@ -23,10 +23,10 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
-  scanruler-mcp:
+  banana-scan-mcp:
     profiles: [mcp]
     build: ./mcp
-    image: scanruler-mcp
+    image: banana-scan-mcp
     init: true
     stdin_open: true
     # The tab connects here: on this computer only.
@@ -35,16 +35,16 @@ services:
     # Where exports land and files are read from, at the same path as on
     # this computer, so the paths the agent names are the same on both.
     volumes:
-      - scanruler-mcp:/config
-      - ${SCANRULER_FILES:-${HOME}/ScanRuler}:${SCANRULER_FILES:-${HOME}/ScanRuler}
-    working_dir: ${SCANRULER_FILES:-${HOME}/ScanRuler}
+      - banana-scan-mcp:/config
+      - ${BANANA_SCAN_FILES:-${HOME}/BananaScan}:${BANANA_SCAN_FILES:-${HOME}/BananaScan}
+    working_dir: ${BANANA_SCAN_FILES:-${HOME}/BananaScan}
     # --app in the entrypoint, so that what `run` is given goes after it.
-    entrypoint: ["node", "/opt/scanruler-mcp/bin/scanruler-mcp.js", "--app", "http://localhost:${SCANRULER_PORT:-8080}/"]
+    entrypoint: ["node", "/opt/banana-scan-mcp/bin/banana-scan-mcp.js", "--app", "http://localhost:${BANANA_SCAN_PORT:-8080}/"]
     read_only: true
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
 
 volumes:
-  scanruler-mcp:
-    name: scanruler-mcp
+  banana-scan-mcp:
+    name: banana-scan-mcp

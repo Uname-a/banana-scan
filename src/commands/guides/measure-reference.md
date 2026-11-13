@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 # Measuring a 3D scan — reference
 
-The shapes behind the measure guide. Every tool is a ScanRuler command with dots turned into underscores (`element.fit` is `element_fit`), plus the server's own four (`scanruler_status`, `scanruler_open`, `scanruler_wait`, `scanruler_batch`). Inputs are JSON; lengths in mm, angles in degrees. A field marked `?` is optional. An element, dimension or section is named by its id or by its name as the list shows it ("Plane 1").
+The shapes behind the measure guide. Every tool is a Banana Scan command with dots turned into underscores (`element.fit` is `element_fit`), plus the server's own four (`bananascan_status`, `bananascan_open`, `bananascan_wait`, `bananascan_batch`). Inputs are JSON; lengths in mm, angles in degrees. A field marked `?` is optional. An element, dimension or section is named by its id or by its name as the list shows it ("Plane 1").
 
 **How answers come back.** JSON, numbers kept to six significant digits. A refusal comes back as text `code: message`, marked as an error; in a batch as `{ tool, ok: false, error: { code, message } }` (see Errors). A tool that takes a file takes `path` (absolute, or relative to the agent's folder) and the server reads it; a tool that hands a file back takes `path?` and the server writes it there, answering where and how large.
 
@@ -11,16 +11,16 @@ The shapes behind the measure guide. Every tool is a ScanRuler command with dots
 
 ### The server's own tools
 
-**`scanruler_status`** `{}` — `backend` ("page" or "headless"), `connected`, `page: { app, version, origin, plugins, viewport, hidden, commands }`, `server` (`server.role`: `holder` — this copy holds the tab's connection; `relay` — another copy, another chat or AI app, holds it and this one sends its calls through it, `server.holder.version` saying which; `none` — neither yet, `server.error` saying why; the work runs in the tab either way), and when it applies `howToConnect`, `hiddenNote`, `jobs: [{ job, tool, state: "running" | "done" | "failed", ms | runningMs }]`, newest first, the last 50 kept.
+**`bananascan_status`** `{}` — `backend` ("page" or "headless"), `connected`, `page: { app, version, origin, plugins, viewport, hidden, commands }`, `server` (`server.role`: `holder` — this copy holds the tab's connection; `relay` — another copy, another chat or AI app, holds it and this one sends its calls through it, `server.holder.version` saying which; `none` — neither yet, `server.error` saying why; the work runs in the tab either way), and when it applies `howToConnect`, `hiddenNote`, `jobs: [{ job, tool, state: "running" | "done" | "failed", ms | runningMs }]`, newest first, the last 50 kept.
 Example: `{}`
 
-**`scanruler_open`** `{}` — opens ScanRuler in the person's browser, paired, and waits; answers the status with `opened`. The first time the browser asks whether the site may reach apps on this computer; they must allow it.
+**`bananascan_open`** `{}` — opens Banana Scan in the person's browser, paired, and waits; answers the status with `opened`. The first time the browser asks whether the site may reach apps on this computer; they must allow it.
 Example: `{}`
 
-**`scanruler_wait`** `{ for?: "page" | "idle" | "job", job?, timeoutSeconds? }` — until a page is connected (default), until it is also idle, or until a job is done — then `{ job, tool, state, ms, result }` or `{ …, error: { code, message } }`, `state: "running"` if the time ran out. 120 s by default, 600 at most.
+**`bananascan_wait`** `{ for?: "page" | "idle" | "job", job?, timeoutSeconds? }` — until a page is connected (default), until it is also idle, or until a job is done — then `{ job, tool, state, ms, result }` or `{ …, error: { code, message } }`, `state: "running"` if the time ran out. 120 s by default, 600 at most.
 Example: `{ for: "job", job: "j7" }`
 
-**`scanruler_batch`** `{ calls: [{ tool, arguments? }], stopOnError?, rollback?, timings?, wait? }` — up to 200 calls in order (not the server's own four). Answers `{ results: [{ tool, ok, result } | { tool, ok: false, error }], ran, of }`, and when stopped `stopped` and `failed: { index, tool, error }`; with `rollback` (default true) the changes made before the refused call are undone and listed in `undone`, newest first; `rollback: false` keeps them; `stopOnError: false` runs every call and reports each. `timings: true` adds each result's `ms` and the batch's total_ms. A picture is not shown in a batch: it is written to a file — the call's `path`, or a new file in the server's output folder — and its result's `file.path` says where.
+**`bananascan_batch`** `{ calls: [{ tool, arguments? }], stopOnError?, rollback?, timings?, wait? }` — up to 200 calls in order (not the server's own four). Answers `{ results: [{ tool, ok, result } | { tool, ok: false, error }], ran, of }`, and when stopped `stopped` and `failed: { index, tool, error }`; with `rollback` (default true) the changes made before the refused call are undone and listed in `undone`, newest first; `rollback: false` keeps them; `stopOnError: false` runs every call and reports each. `timings: true` adds each result's `ms` and the batch's total_ms. A picture is not shown in a batch: it is written to a file — the call's `path`, or a new file in the server's output folder — and its result's `file.path` says where.
 Example: `{ calls: [{ tool: "element_fit", arguments: { kind: "cylinder", at: { point: [20, 0, 5] } } }, { tool: "element_fit", arguments: { kind: "cylinder", at: { point: [-20, 0, 5] } } }, { tool: "dimension_add", arguments: { refs: ["Cylinder 1", "Cylinder 2"] } }] }`
 
 ### Session and history
@@ -294,8 +294,8 @@ Example: `{ format: "text", workspace: "deviation" }`
 Details: `text` is word for word what the workspace's Copy report button puts on the clipboard — measure (elements and dimensions with verdicts), deviation, thickness or flat (2D). `json` (the default) is the whole session's report structured: what the numbers rest on (units, scale, frame, applied alignment, fit method and each element's outlier cut-off), every element with its fit, every dimension with value, unit, limit and pass/fail verdict, the tally of checks, the sections, and the deviation, thickness and 2D results with their settings.
 
 **`project_save`** `{ path? }`; **`project_load`** `{ path, name?, discard?, wait? }`; **`project_rename`** `{ name, wait? }`
-Example: `{ path: "C:/scans/out/bracket.scanruler" }`
-Details: a `.scanruler` project file holds the scan, the reference, the image and every measurement, each rebuilt when it is opened — remeasured, each fit as it was saved by `project_load`, which refuses while the session holds measurements unless `discard: true` (or `saveTo` saves the session first) and starts a new history. Both need the browser. `project_rename` gives the project the name Save Project saves it under, the stem of every export and the browser tab's title, kept in the project file; an empty name takes it off, and the scan's or the image's name stands in again; `session_state` reads it as `project.name`.
+Example: `{ path: "C:/scans/out/bracket.bananascan" }`
+Details: a `.bananascan` project file holds the scan, the reference, the image and every measurement, each rebuilt when it is opened — remeasured, each fit as it was saved by `project_load`, which refuses while the session holds measurements unless `discard: true` (or `saveTo` saves the session first) and starts a new history. Both need the browser. `project_rename` gives the project the name Save Project saves it under, the stem of every export and the browser tab's title, kept in the project file; an empty name takes it off, and the scan's or the image's name stands in again; `session_state` reads it as `project.name`.
 
 **`export_step`** `{ style?: "solids" | "surfaces", path? }` — the fitted elements as analytic STEP.
 Example: `{ path: "C:/scans/out/bracket_elements.step" }`
@@ -329,8 +329,8 @@ Answer sizes measured on a real scan — a vacuum adapter, a plane fitted and a 
 | `view_render` 800 px (default) | 117 + image | 666 | image |
 | `view_render` `width: 1400` | 119 + image | 1,979 | image; deliverables only |
 | `flat_render` 800 px (default) | not measured | — | image |
-| `scanruler_batch` overhead per call | 78 | 20 | beyond the call's own answer |
-| `scanruler_batch` `timings: true`, per call | not measured | — |  |
+| `bananascan_batch` overhead per call | 78 | 20 | beyond the call's own answer |
+| `bananascan_batch` `timings: true`, per call | not measured | — |  |
 
 ## Errors
 
@@ -338,14 +338,14 @@ A refusal is `code: message`.
 
 | Code / message pattern | Cause | Fix |
 |---|---|---|
-| **unknown_command** "There is no tool …" | The tool is not on the page (stale list, older build) | `scanruler_status`; load the tools again |
+| **unknown_command** "There is no tool …" | The tool is not on the page (stale list, older build) | `bananascan_status`; load the tools again |
 | **invalid_input** | The input does not fit the schema, or names something that cannot be used there | Read the message; it names the field |
 | **invalid_input** "Could not read …: there is no such file" | A `path` that does not exist on the server's computer | Absolute path, or relative to the agent's folder |
 | **invalid_input** "… has no direction to cut across" | `section_cut` across a point or sphere | Cut across a plane, cylinder, cone, line, circle or a coordinate plane |
 | **invalid_input** "Give box or near — one of them." | `scan_query` with both or neither | One of them |
 | **invalid_input** "show.…: no such key" | A show key not on screen in this workspace | Use the keys `view_set` lists |
-| **invalid_input** "… is the server's own and is not batched" | A server tool inside `scanruler_batch` | Call it on its own |
-| **busy** "The session is busy — …" | Loading, fitting or measuring already, or the person is | `scanruler_wait { for: "idle" }`, then retry |
+| **invalid_input** "… is the server's own and is not batched" | A server tool inside `bananascan_batch` | Call it on its own |
+| **busy** "The session is busy — …" | Loading, fitting or measuring already, or the person is | `bananascan_wait { for: "idle" }`, then retry |
 | **no_scan** "No scan is open" | A scan tool with no scan | `scan_open` |
 | **not_found** | An element, dimension, section, chain, checkpoint or job named does not exist | Read the list the message gives; 2D chain numbers change after edge detection |
 | **invalid_state** "The 3D Measure panel has … — finish or cancel it there first" | The person has something open in the panel | Ask them to finish or cancel it |
@@ -358,9 +358,9 @@ A refusal is `code: message`.
 | **failed** | Ran and did not succeed: a fit that found no surface, a file that would not read | Read the message; move the seed or change the input |
 | **failed** "The plane misses the scan" | `section_cut` offset outside the part | A coordinate within the bounding box |
 | **failed** "The scan casts no shadow on that plane" | `kind: "shadow"` on a plane the scan is seen edge-on from (a sheet) | Another plane, or a cut |
-| **failed** "Gave up waiting for … after N s" | The app did not settle in time | `scanruler_wait { for: "idle" }`, read the state before retrying |
-| **unavailable** "… needs the ScanRuler page" | A headless server: no scan, viewport or browser | Start scanruler-mcp in page mode, paired with a tab |
-| **unavailable** "No ScanRuler page is connected" | No tab paired | `scanruler_open` |
-| **unavailable** "The mesh worker is not running" | The page is still starting | `scanruler_wait { for: "idle" }` |
+| **failed** "Gave up waiting for … after N s" | The app did not settle in time | `bananascan_wait { for: "idle" }`, read the state before retrying |
+| **unavailable** "… needs the Banana Scan page" | A headless server: no scan, viewport or browser | Start banana-scan-mcp in page mode, paired with a tab |
+| **unavailable** "No Banana Scan page is connected" | No tab paired | `bananascan_open` |
+| **unavailable** "The mesh worker is not running" | The page is still starting | `bananascan_wait { for: "idle" }` |
 | **not_implemented** | `{ screen }` or `{ candidate }` places | Use `{ point }` or `{ vertex }` |
 | **internal** | A fault of the app | Report it with the call; try another route |

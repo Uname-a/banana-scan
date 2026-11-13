@@ -36,7 +36,7 @@ const verify = args.includes('--verify')
 
 /** The license a private file carries; never in the open-source tree.
  *  Put together here so that this file does not carry it. */
-const MARKER = ['LicenseRef', 'ScanRuler', 'Proprietary'].join('-')
+const MARKER = ['LicenseRef', 'Banana Scan', 'Proprietary'].join('-')
 const STAMP = '.oss-export'
 
 const configPath = join(root, 'plugins', 'oss-export.json')

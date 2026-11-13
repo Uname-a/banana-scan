@@ -33,8 +33,8 @@ import {
 } from '../src/update.js'
 
 const MCP_DIR = fileURLToPath(new URL('..', import.meta.url))
-const tempDir = () => mkdtemp(join(tmpdir(), 'scanruler-update-'))
-const npxCopy = (spec) => join('/cache', '_npx', npxHash(spec), 'node_modules', 'scanruler-mcp')
+const tempDir = () => mkdtemp(join(tmpdir(), 'banana-scan-update-'))
+const npxCopy = (spec) => join('/cache', '_npx', npxHash(spec), 'node_modules', 'banana-scan-mcp')
 const noGit = () => false
 
 test('versions compare by number, a release above its prerelease', () => {
@@ -50,23 +50,23 @@ test('versions compare by number, a release above its prerelease', () => {
 test('how a copy was installed: npx with its spec, npm, a checkout, a copy', () => {
   // npm's own hash: the folder of `npx scanruler-mcp@0.2.0` seen on a real cache.
   assert.equal(npxHash('scanruler-mcp@0.2.0'), '4250227d2a5c2d2b')
-  assert.deepEqual(installOf(npxCopy('scanruler-mcp'), noGit), { kind: 'npx', pinned: false, npmCache: join('/cache') })
-  assert.equal(installOf(npxCopy('scanruler-mcp@latest'), noGit).pinned, false)
-  assert.equal(installOf(npxCopy('scanruler-mcp@0.4.0'), noGit).pinned, true)
-  assert.equal(installOf(npxCopy('scanruler-mcp@^0.4.0'), noGit).pinned, true)
-  assert.deepEqual(installOf(join('/usr', 'lib', 'node_modules', 'scanruler-mcp'), noGit), { kind: 'installed', pinned: false })
+  assert.deepEqual(installOf(npxCopy('banana-scan-mcp'), noGit), { kind: 'npx', pinned: false, npmCache: join('/cache') })
+  assert.equal(installOf(npxCopy('banana-scan-mcp@latest'), noGit).pinned, false)
+  assert.equal(installOf(npxCopy('banana-scan-mcp@0.4.0'), noGit).pinned, true)
+  assert.equal(installOf(npxCopy('banana-scan-mcp@^0.4.0'), noGit).pinned, true)
+  assert.deepEqual(installOf(join('/usr', 'lib', 'node_modules', 'banana-scan-mcp'), noGit), { kind: 'installed', pinned: false })
   // A .git above an npm install (a home folder kept in git) is not a checkout.
-  assert.equal(installOf(npxCopy('scanruler-mcp'), () => true).kind, 'npx')
-  const repo = join('/src', 'scanruler')
+  assert.equal(installOf(npxCopy('banana-scan-mcp'), () => true).kind, 'npx')
+  const repo = join('/src', 'banana-scan')
   assert.deepEqual(installOf(join(repo, 'mcp'), (p) => p === join(repo, '.git')), { kind: 'checkout', pinned: false })
-  assert.deepEqual(installOf(join('/work', 'scanruler-mcp'), noGit), { kind: 'copy', pinned: false })
+  assert.deepEqual(installOf(join('/work', 'banana-scan-mcp'), noGit), { kind: 'copy', pinned: false })
 })
 
 test('updates are off with --no-update or the variable, in a checkout, for a pinned spec; a copy handed to goes on', () => {
   const npx = { kind: 'npx', pinned: false }
   assert.deepEqual(updatePolicy({ argv: [], env: {}, install: npx }), { updates: 'on' })
   assert.deepEqual(updatePolicy({ argv: ['--no-update'], env: {}, install: npx }), { updates: 'off' })
-  assert.deepEqual(updatePolicy({ argv: [], env: { SCANRULER_MCP_NO_UPDATE: '1' }, install: npx }), { updates: 'off' })
+  assert.deepEqual(updatePolicy({ argv: [], env: { BANANA_SCAN_MCP_NO_UPDATE: '1' }, install: npx }), { updates: 'off' })
   assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'checkout' } }), { updates: 'checkout' })
   assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'npx', pinned: true } }), { updates: 'pinned', pinned: true })
   // The copy handed to sits in a pinned spec's folder; the launcher decided.
@@ -74,7 +74,7 @@ test('updates are off with --no-update or the variable, in a checkout, for a pin
 })
 
 test('the launcher runs a newer copy already fetched, and itself otherwise', () => {
-  const bin = join(npxCopy('scanruler-mcp@0.4.1'), 'bin', 'scanruler-mcp.js')
+  const bin = join(npxCopy('banana-scan-mcp@0.4.1'), 'bin', 'banana-scan-mcp.js')
   const ready = { checked: '2026-10-23T00:00:00.000Z', latest: '0.4.1', ready: { version: '0.4.1', bin } }
   const base = { argv: [], env: {}, version: '0.4.0', install: { kind: 'npx', pinned: false }, state: ready, exists: (p) => p === bin, readVersion: () => '0.4.1' }
   assert.deepEqual(launchPlan(base), { run: 'handoff', bin, version: '0.4.1' })
@@ -109,7 +109,7 @@ test('the check asks the registry once a day, and fetches a newer version for th
       },
       fetchCopy: async (v) => {
         fetched.push(v)
-        return `/cache/${v}/bin/scanruler-mcp.js`
+        return `/cache/${v}/bin/banana-scan-mcp.js`
       },
       exists: (p) => p.startsWith('/cache/'),
     })
@@ -126,7 +126,7 @@ test('the check asks the registry once a day, and fetches a newer version for th
   const state = await check()
   assert.equal(asked, 2)
   assert.deepEqual(fetched, ['0.4.1'])
-  assert.deepEqual(state.ready, { version: '0.4.1', bin: '/cache/0.4.1/bin/scanruler-mcp.js', fetched: new Date(now).toISOString() })
+  assert.deepEqual(state.ready, { version: '0.4.1', bin: '/cache/0.4.1/bin/banana-scan-mcp.js', fetched: new Date(now).toISOString() })
   assert.deepEqual(loadState(dir).ready.version, '0.4.1')
   // Fetched already: not again.
   await check()
@@ -155,11 +155,11 @@ test('the registry is asked within 2 s, and a failure is no answer', async () =>
   const ok = async (url, init) => {
     urls.push(url)
     assert.ok(init.signal instanceof AbortSignal)
-    return { ok: true, json: async () => ({ name: 'scanruler-mcp', version: '0.4.1' }) }
+    return { ok: true, json: async () => ({ name: 'banana-scan-mcp', version: '0.4.1' }) }
   }
   assert.equal(await fetchLatest({ env: {}, fetchFn: ok }), '0.4.1')
   assert.equal(await fetchLatest({ env: { npm_config_registry: 'http://127.0.0.1:9/npm' }, fetchFn: ok }), '0.4.1')
-  assert.deepEqual(urls, ['https://registry.npmjs.org/scanruler-mcp/latest', 'http://127.0.0.1:9/npm/scanruler-mcp/latest'])
+  assert.deepEqual(urls, ['https://registry.npmjs.org/banana-scan-mcp/latest', 'http://127.0.0.1:9/npm/banana-scan-mcp/latest'])
   assert.equal(await fetchLatest({ env: {}, fetchFn: async () => ({ ok: false }) }), null)
   assert.equal(await fetchLatest({ env: {}, fetchFn: async () => ({ ok: true, json: async () => ({ version: 'x' }) }) }), null)
   const slow = (url, { signal }) => new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)))
@@ -180,14 +180,14 @@ test('the registry is asked within 2 s, and a failure is no answer', async () =>
 test('the fetch runs the new copy once through npm, and finds it in npx’s folder for its spec', async () => {
   const calls = []
   const cache = '/npm-cache'
-  const bin = join(cache, '_npx', npxHash('scanruler-mcp@0.4.1'), 'node_modules', 'scanruler-mcp', 'bin', 'scanruler-mcp.js')
+  const bin = join(cache, '_npx', npxHash('banana-scan-mcp@0.4.1'), 'node_modules', 'banana-scan-mcp', 'bin', 'banana-scan-mcp.js')
   const npm = async (args) => {
     calls.push(args)
     return { code: 0, stdout: '0.4.1\n' }
   }
   const found = await prefetch('0.4.1', { env: {}, install: { kind: 'npx', npmCache: cache }, npm, readVersion: (p) => (p === bin ? '0.4.1' : null) })
   assert.equal(found, bin)
-  assert.deepEqual(calls, [['exec', '--yes', '--package=scanruler-mcp@0.4.1', '--', 'scanruler-mcp', '--version']])
+  assert.deepEqual(calls, [['exec', '--yes', '--package=banana-scan-mcp@0.4.1', '--', 'banana-scan-mcp', '--version']])
   // Where it is not where expected, npm is asked for its cache.
   calls.length = 0
   const asked = async (args) => {
@@ -213,7 +213,7 @@ test('the hand-off passes the arguments and the exit code through, marked agains
   const child = fakeChild()
   let spawned
   const out = runHandOff({
-    plan: { bin: '/new/bin/scanruler-mcp.js', version: '0.4.1' },
+    plan: { bin: '/new/bin/banana-scan-mcp.js', version: '0.4.1' },
     argv: ['--port', '7400'],
     version: '0.4.0',
     env: { KEEP: 'me' },
@@ -227,7 +227,7 @@ test('the hand-off passes the arguments and the exit code through, marked agains
       return child
     },
   })
-  assert.deepEqual([spawned.file, spawned.args], ['node', ['/new/bin/scanruler-mcp.js', '--port', '7400']])
+  assert.deepEqual([spawned.file, spawned.args], ['node', ['/new/bin/banana-scan-mcp.js', '--port', '7400']])
   assert.equal(spawned.options.stdio, 'inherit')
   assert.equal(spawned.options.env.KEEP, 'me')
   assert.equal(spawned.options.env[HANDED_OFF_ENV], '0.4.0')
@@ -270,49 +270,49 @@ test('a checkout makes no request, and the status says updates are off there', a
 test('the launcher, run for real, hands off to the fetched copy with the same arguments and passes its exit code back', { timeout: 30_000 }, async () => {
   const root = await tempDir()
   // This version, installed by npm — not a checkout — with its launcher.
-  const pkg = join(root, 'lib', 'node_modules', 'scanruler-mcp')
+  const pkg = join(root, 'lib', 'node_modules', 'banana-scan-mcp')
   mkdirSync(join(pkg, 'src'), { recursive: true })
   cpSync(join(MCP_DIR, 'bin'), join(pkg, 'bin'), { recursive: true })
   for (const f of ['update.js', 'config.js']) cpSync(join(MCP_DIR, 'src', f), join(pkg, 'src', f))
-  writeFileSync(join(pkg, 'package.json'), JSON.stringify({ name: 'scanruler-mcp', version: '0.4.0', type: 'module' }))
-  // A newer copy where npx puts `scanruler-mcp@0.4.1`, which says what it got.
-  const newer = join(root, 'cache', '_npx', npxHash('scanruler-mcp@0.4.1'), 'node_modules', 'scanruler-mcp')
+  writeFileSync(join(pkg, 'package.json'), JSON.stringify({ name: 'banana-scan-mcp', version: '0.4.0', type: 'module' }))
+  // A newer copy where npx puts `banana-scan-mcp@0.4.1`, which says what it got.
+  const newer = join(root, 'cache', '_npx', npxHash('banana-scan-mcp@0.4.1'), 'node_modules', 'banana-scan-mcp')
   mkdirSync(join(newer, 'bin'), { recursive: true })
-  writeFileSync(join(newer, 'package.json'), JSON.stringify({ name: 'scanruler-mcp', version: '0.4.1', type: 'module' }))
-  const fake = (body) => writeFileSync(join(newer, 'bin', 'scanruler-mcp.js'), body)
+  writeFileSync(join(newer, 'package.json'), JSON.stringify({ name: 'banana-scan-mcp', version: '0.4.1', type: 'module' }))
+  const fake = (body) => writeFileSync(join(newer, 'bin', 'banana-scan-mcp.js'), body)
   // Past the start-up grace, so its exit code is its answer.
   fake(
     `process.stdout.write(JSON.stringify({ args: process.argv.slice(2), from: process.env.${HANDED_OFF_ENV} }))\n` +
       `setTimeout(() => process.exit(7), ${START_GRACE_MS + 300})\n`,
   )
   const config = join(root, 'config')
-  saveState({ checked: new Date().toISOString(), latest: '0.4.1', ready: { version: '0.4.1', bin: join(newer, 'bin', 'scanruler-mcp.js') } }, config)
+  saveState({ checked: new Date().toISOString(), latest: '0.4.1', ready: { version: '0.4.1', bin: join(newer, 'bin', 'banana-scan-mcp.js') } }, config)
   const run = (args, env = {}) =>
-    spawnSync(process.execPath, [join(pkg, 'bin', 'scanruler-mcp.js'), ...args], {
-      env: { ...process.env, SCANRULER_MCP_CONFIG_DIR: config, [HANDED_OFF_ENV]: '', SCANRULER_MCP_NO_UPDATE: '', ...env },
+    spawnSync(process.execPath, [join(pkg, 'bin', 'banana-scan-mcp.js'), ...args], {
+      env: { ...process.env, BANANA_SCAN_MCP_CONFIG_DIR: config, [HANDED_OFF_ENV]: '', BANANA_SCAN_MCP_NO_UPDATE: '', ...env },
       encoding: 'utf8',
     })
   const handed = run(['--port', '7401', '--out', 'x y'])
   assert.equal(handed.status, 7, handed.stderr)
   assert.deepEqual(JSON.parse(handed.stdout), { args: ['--port', '7401', '--out', 'x y'], from: '0.4.0' })
-  assert.match(handed.stderr, /Starting scanruler-mcp 0\.4\.1, fetched earlier, in place of 0\.4\.0/)
+  assert.match(handed.stderr, /Starting banana-scan-mcp 0\.4\.1, fetched earlier, in place of 0\.4\.0/)
   // Off: this copy runs (and, with no main.js beside it here, fails so).
-  const off = run(['--port', '7401'], { SCANRULER_MCP_NO_UPDATE: '1' })
-  assert.doesNotMatch(off.stderr, /Starting scanruler-mcp/)
+  const off = run(['--port', '7401'], { BANANA_SCAN_MCP_NO_UPDATE: '1' })
+  assert.doesNotMatch(off.stderr, /Starting banana-scan-mcp/)
   assert.match(off.stderr, /src[\/]main\.js/)
   // A copy that stops at once with an error: this one runs, and that one is
   // not tried again.
   fake('process.exit(5)\n')
   const failed = run([])
-  assert.match(failed.stderr, /scanruler-mcp 0\.4\.1 did not start \(it stopped with code 5 as it started\); running 0\.4\.0/)
+  assert.match(failed.stderr, /banana-scan-mcp 0\.4\.1 did not start \(it stopped with code 5 as it started\); running 0\.4\.0/)
   assert.match(failed.stderr, /src[\/]main\.js/)
   assert.deepEqual(loadState(config).failed, ['0.4.1'])
-  assert.doesNotMatch(run([]).stderr, /Starting scanruler-mcp/)
+  assert.doesNotMatch(run([]).stderr, /Starting banana-scan-mcp/)
 })
 
 test('npm runs in a folder of this user’s own, never the shared temp folder', async () => {
   const config = await tempDir()
-  const env = { SCANRULER_MCP_CONFIG_DIR: config }
+  const env = { BANANA_SCAN_MCP_CONFIG_DIR: config }
   let cwd = null
   const fake = new EventEmitter()
   const ran = runNpm(['--version'], {
@@ -325,7 +325,7 @@ test('npm runs in a folder of this user’s own, never the shared temp folder', 
   })
   assert.deepEqual(await ran, { code: 0, stdout: '' })
   // npm exec takes a package from node_modules in the folder it runs in, so
-  // a planted /tmp/node_modules/scanruler-mcp would run as this user.
+  // a planted /tmp/node_modules/banana-scan-mcp would run as this user.
   assert.equal(cwd, join(config, 'npm-run'))
   assert.notEqual(cwd, tmpdir())
   if (process.platform !== 'win32') assert.equal(statSync(cwd).mode & 0o077, 0, 'nobody else may write into it')

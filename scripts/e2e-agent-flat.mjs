@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The 2D sheet worked by an agent that cannot see it: an MCP client starts
-// the scanruler-mcp server (mcp/), the app in headless Chrome is paired with
+// the banana-scan-mcp server (mcp/), the app in headless Chrome is paired with
 // it, and a flatbed scan of four knurled inserts — three standing upright,
 // one lying on its side — is measured through the tools alone. Open the
 // image, picture it, find the parts, count each one's teeth round its rim or
@@ -28,7 +28,7 @@ if (!existsSync(repoFile('mcp/node_modules/@modelcontextprotocol/sdk/package.jso
 const { startAgent } = await import('../mcp/tests/client.js')
 
 // ---- the scan ------------------------------------------------------------------
-// In sheet millimetres, y up, as ScanRuler reads the image.
+// In sheet millimetres, y up, as Banana Scan reads the image.
 const PPM = 23.622 // 600 dpi
 const W = 1400
 const H = 720
@@ -78,11 +78,11 @@ console.log(`scan: ${SCAN}`)
 // ---- pairing ------------------------------------------------------------------
 const { agent, port, token } = await launchAgent(startAgent)
 const { call } = agent
-const status = await call('scanruler_status')
+const status = await call('bananascan_status')
 const link = /(\S+#agent=\d+:[\w-]+)/.exec(status.json?.howToConnect ?? '')?.[1]
 check(Boolean(link) && link.includes(`#agent=${port}:${token}`), 'status hands out the pairing link')
 const { browser, page, consoleErrors } = await launchApp({ url: link })
-const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
 check(waited.json?.connected === true, 'the page connected')
 
 const { tools } = await agent.client.listTools()

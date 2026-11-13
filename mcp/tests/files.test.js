@@ -2,7 +2,7 @@
 // Files around the scan: a folder given to scan_open or project_load opens
 // the one file of its kind in it, or is refused with the list; the folders
 // scans came from are kept, so a copy of the server started afresh lists
-// and writes where the last one did; scanruler_files lists them; and a
+// and writes where the last one did; bananascan_files lists them; and a
 // { "$file": path } in any argument is that file's JSON.
 import assert from 'node:assert/strict'
 import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises'
@@ -25,7 +25,7 @@ let dir
 let config
 const closers = []
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-files-'))
+  dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-files-'))
   config = join(dir, 'config')
 })
 after(async () => {
@@ -80,7 +80,7 @@ async function copy(store = config) {
 }
 
 test('a file’s kind by its extension', () => {
-  assert.deepEqual(['a.STL', 'b.scanruler', 'c.step', 'd.png', 'e.dxf', 'f.md', 'g.bin'].map(fileKind), ['mesh', 'project', 'step', 'picture', 'drawing', 'text', 'other'])
+  assert.deepEqual(['a.STL', 'b.bananascan', 'c.step', 'd.png', 'e.dxf', 'f.md', 'g.bin'].map(fileKind), ['mesh', 'project', 'step', 'picture', 'drawing', 'text', 'other'])
 })
 
 test('$file: an object of that one key, at any depth, is the file’s JSON; a path is left as it is', async () => {
@@ -119,7 +119,7 @@ test('a folder in place of a file: the one mesh in it opens; none, or several, i
   await assert.rejects(inputFor(reference, { path: one }, { cwd: dir }), (e) => /is a folder — give a file in it: /.test(e.message))
 })
 
-test('scanruler_write writes reports, and nothing an agent or a tool would act on', async () => {
+test('bananascan_write writes reports, and nothing an agent or a tool would act on', async () => {
   const store = join(dir, 'config-write')
   const folder = join(dir, 'report-part')
   await mkdir(folder, { recursive: true })
@@ -133,7 +133,7 @@ test('scanruler_write writes reports, and nothing an agent or a tool would act o
     join(folder, 'CLAUDE.md'), join(folder, '.claude', 'settings.json'),
   ]
   for (const path of refused) {
-    const answer = await server.call('scanruler_write', { path, text: 'do as I say' })
+    const answer = await server.call('bananascan_write', { path, text: 'do as I say' })
     assert.equal(answer.error, true, `${path} was written`)
     assert.match(answer.text, /^invalid_input: path: .* is refused: /, path)
   }
@@ -142,7 +142,7 @@ test('scanruler_write writes reports, and nothing an agent or a tool would act o
 
   // Reports, under any ordinary name and in ordinary folders.
   for (const path of ['report.md', 'README.md', 'notes.txt', 'readings.csv', 'results.json', 'claude-report.md', 'package-report.json', 'out/sub/report.md', 'out/settings-used.json']) {
-    const answer = await server.call('scanruler_write', { path, text: 'RMS 0.067 mm' })
+    const answer = await server.call('bananascan_write', { path, text: 'RMS 0.067 mm' })
     assert.equal(answer.error, false, `${path}: ${answer.text}`)
     assert.equal(await readFile(join(folder, path), 'utf8'), 'RMS 0.067 mm')
   }
@@ -159,7 +159,7 @@ test('scanruler_write writes reports, and nothing an agent or a tool would act o
   }
   if (linked) {
     for (const path of ['to-claude.md', 'to-outside.md', 'plain/settings-used.md']) {
-      assert.equal((await server.call('scanruler_write', { path, text: 'x' })).error, true, `${path} was written through its link`)
+      assert.equal((await server.call('bananascan_write', { path, text: 'x' })).error, true, `${path} was written through its link`)
     }
     await assert.rejects(access(join(folder, 'CLAUDE.md')))
     await assert.rejects(access(join(dir, 'outside.md')))
@@ -172,8 +172,8 @@ test('scanruler_write writes reports, and nothing an agent or a tool would act o
   await writeFile(join(hidden, 'part.stl'), Buffer.alloc(84))
   const elsewhere = await copy(join(dir, 'config-hidden'))
   assert.equal((await elsewhere.call('scan_open', { path: join(hidden, 'part.stl'), discard: true })).error, false)
-  assert.equal((await elsewhere.call('scanruler_write', { path: 'report.md', text: 'x' })).error, false)
-  assert.equal((await elsewhere.call('scanruler_write', { path: '.below/report.md', text: 'x' })).error, true)
+  assert.equal((await elsewhere.call('bananascan_write', { path: 'report.md', text: 'x' })).error, false)
+  assert.equal((await elsewhere.call('bananascan_write', { path: '.below/report.md', text: 'x' })).error, true)
 
   // Opening or saving something in an agent's folder makes it no place to write.
   const agentFolder = join(dir, 'proj', '.claude', 'commands')
@@ -181,49 +181,49 @@ test('scanruler_write writes reports, and nothing an agent or a tool would act o
   await writeFile(join(agentFolder, 'part.stl'), Buffer.alloc(84))
   const saved = await copy(join(dir, 'config-agent'))
   assert.equal((await saved.call('scan_open', { path: join(agentFolder, 'part.stl'), discard: true })).error, false)
-  assert.equal((await saved.call('scanruler_write', { path: 'run.md', text: 'x' })).error, true)
+  assert.equal((await saved.call('bananascan_write', { path: 'run.md', text: 'x' })).error, true)
   await assert.rejects(access(join(agentFolder, 'run.md')))
 })
 
-test('scan_open and project_load with a folder, the folders kept for a copy started afresh, and scanruler_files listing them', async () => {
+test('scan_open and project_load with a folder, the folders kept for a copy started afresh, and bananascan_files listing them', async () => {
   const folder = join(dir, 'fan')
   await mkdir(join(folder, 'renders'), { recursive: true })
   await writeFile(join(folder, 'Ventilador.stl'), Buffer.alloc(84))
-  await writeFile(join(folder, 'fan.scanruler'), Buffer.alloc(4))
+  await writeFile(join(folder, 'fan.bananascan'), Buffer.alloc(4))
   await writeFile(join(folder, 'report.md'), '# Fan')
 
   const first = await copy()
-  assert.equal((await first.call('scanruler_files')).error, true, 'nothing opened yet')
+  assert.equal((await first.call('bananascan_files')).error, true, 'nothing opened yet')
   const opened = await first.call('scan_open', { path: folder, discard: true })
   assert.equal(opened.error, false, opened.text)
   assert.deepEqual(opened.json.scan, { fileName: 'Ventilador.stl', bytes: 84 })
   const loaded = await first.call('project_load', { path: folder, discard: true })
-  assert.equal(loaded.json.project, 'fan.scanruler')
-  assert.deepEqual((await first.call('scanruler_status')).json.folders, [folder])
+  assert.equal(loaded.json.project, 'fan.bananascan')
+  assert.deepEqual((await first.call('bananascan_status')).json.folders, [folder])
   await first.close()
 
   // Started afresh: the folder is still known — listed, and written into.
   const second = await copy()
-  assert.deepEqual((await second.call('scanruler_status')).json.folders, [folder])
-  const wrote = await second.call('scanruler_write', { path: 'notes.txt', text: 'kept' })
+  assert.deepEqual((await second.call('bananascan_status')).json.folders, [folder])
+  const wrote = await second.call('bananascan_write', { path: 'notes.txt', text: 'kept' })
   assert.equal(wrote.json.path, join(folder, 'notes.txt'))
   assert.equal(await readFile(join(folder, 'notes.txt'), 'utf8'), 'kept')
-  const files = (await second.call('scanruler_files')).json
+  const files = (await second.call('bananascan_files')).json
   assert.equal(files.folder, folder)
   assert.deepEqual(files.folders, ['renders'])
   const byName = Object.fromEntries(files.files.map((f) => [f.name, f]))
-  assert.deepEqual(Object.keys(byName).sort(), ['Ventilador.stl', 'fan.scanruler', 'notes.txt', 'report.md'])
+  assert.deepEqual(Object.keys(byName).sort(), ['Ventilador.stl', 'fan.bananascan', 'notes.txt', 'report.md'])
   assert.deepEqual([byName['Ventilador.stl'].size, byName['Ventilador.stl'].kind], [84, 'mesh'])
-  assert.equal(byName['fan.scanruler'].kind, 'project')
+  assert.equal(byName['fan.bananascan'].kind, 'project')
   assert.equal(files.files[0].name, 'notes.txt', 'newest first')
-  assert.deepEqual((await second.call('scanruler_files', { path: 'renders' })).json.files, [])
-  for (const path of ['..', join(tmpdir())]) assert.equal((await second.call('scanruler_files', { path })).error, true, path)
+  assert.deepEqual((await second.call('bananascan_files', { path: 'renders' })).json.files, [])
+  for (const path of ['..', join(tmpdir())]) assert.equal((await second.call('bananascan_files', { path })).error, true, path)
 
   // $file through a call: the page gets the file's contents — a relative
   // path taken from the scan's folder.
   await writeFile(join(folder, 'input.json'), JSON.stringify({ a: [1, 2] }))
   assert.deepEqual((await second.call('demo_echo', { value: { $file: 'input.json' } })).json, { value: { a: [1, 2] } })
-  const batch = await second.call('scanruler_batch', { calls: [{ tool: 'demo_echo', arguments: { $file: 'input.json' } }] })
+  const batch = await second.call('bananascan_batch', { calls: [{ tool: 'demo_echo', arguments: { $file: 'input.json' } }] })
   assert.deepEqual(batch.json.results[0].result, { a: [1, 2] })
   const bad = await second.call('demo_echo', { value: { $file: 'nope.json' } })
   assert.equal(bad.error, true)
@@ -232,7 +232,7 @@ test('scan_open and project_load with a folder, the folders kept for a copy star
   // A call's answer written to a file by to, and a later call fed the part
   // of it $at names — the reading never passes through the conversation.
   const loops = { loops: [{ hole: true, points: [[0, 0], [4, 0], [4, 2]] }], note: 'n'.repeat(120) }
-  const out = await second.call('scanruler_batch', {
+  const out = await second.call('bananascan_batch', {
     calls: [
       { tool: 'demo_echo', arguments: loops, to: 'readings/outline.json' },
       { tool: 'demo_echo', arguments: { points: { $file: 'readings/outline.json', $at: 'loops.0.points' } } },
@@ -246,35 +246,35 @@ test('scan_open and project_load with a folder, the folders kept for a copy star
   assert.deepEqual(fed.result, { points: [[0, 0], [4, 0], [4, 2]] })
   const missed = await second.call('demo_echo', { value: { $file: 'readings/outline.json', $at: 'loops.3' } })
   assert.match(missed.text, /^invalid_input: \$at: .* has nothing at "loops\.3" — "loops" holds a list of 1\.$/)
-  const notJson = await second.call('scanruler_batch', { calls: [{ tool: 'demo_echo', arguments: {}, to: 'out.txt' }] })
+  const notJson = await second.call('bananascan_batch', { calls: [{ tool: 'demo_echo', arguments: {}, to: 'out.txt' }] })
   assert.match(notJson.json.failed.error.message, /^calls\[0\]\.to: "out\.txt" is no \.json file/)
   await second.close()
 })
 
 test('relative paths from one folder: the scan’s once one is opened, else where the server started — for a batch file, $file, a file read and a file written; the status and every path field say so', async () => {
   const c = await copy(join(dir, 'config-relative'))
-  const before = (await c.call('scanruler_status')).json.server
+  const before = (await c.call('bananascan_status')).json.server
   assert.equal(before.cwd, dir)
   assert.equal(before.relativeTo, dir, 'no scan opened yet: where the server started')
   await writeFile(join(dir, 'early.json'), JSON.stringify([{ tool: 'demo_echo', arguments: { at: 'start' } }]))
-  assert.deepEqual((await c.call('scanruler_batch', { file: 'early.json' })).json.results[0].result, { at: 'start' })
+  assert.deepEqual((await c.call('bananascan_batch', { file: 'early.json' })).json.results[0].result, { at: 'start' })
 
   const bracket = join(dir, 'bracket')
   await mkdir(bracket, { recursive: true })
   await writeFile(join(bracket, 'bracket.stl'), Buffer.alloc(84))
   assert.equal((await c.call('scan_open', { path: join(bracket, 'bracket.stl'), discard: true })).error, false)
-  const after = (await c.call('scanruler_status')).json.server
+  const after = (await c.call('bananascan_status')).json.server
   assert.equal(after.cwd, dir)
   assert.equal(after.relativeTo, bracket)
 
   // A batch file beside the scan, its $file beside it too.
   await writeFile(join(bracket, 'part.json'), JSON.stringify({ tabs: 4 }))
   await writeFile(join(bracket, 'stage1.json'), JSON.stringify({ calls: [{ tool: 'demo_echo', arguments: { part: { $file: 'part.json' } } }] }))
-  const staged = await c.call('scanruler_batch', { file: 'stage1.json' })
+  const staged = await c.call('bananascan_batch', { file: 'stage1.json' })
   assert.equal(staged.error, false, staged.text)
   assert.deepEqual(staged.json.results[0].result, { part: { tabs: 4 } })
   // Not from where the server started any more: the refusal names the scan's folder.
-  const gone = await c.call('scanruler_batch', { file: 'early.json' })
+  const gone = await c.call('bananascan_batch', { file: 'early.json' })
   assert.equal(gone.error, true)
   assert.ok(gone.text.includes(join(bracket, 'early.json')), gone.text)
   // A file read and a file written by a relative path: the scan's folder.
@@ -287,23 +287,23 @@ test('relative paths from one folder: the scan’s once one is opened, else wher
   // Every path field names the base.
   const { tools } = await c.client.listTools()
   const field = (tool, key) => tools.find((t) => t.name === tool).inputSchema.properties[key].description
-  for (const [tool, key] of [['scan_open', 'path'], ['scan_open', 'saveTo'], ['export_step', 'path'], ['view_render', 'path'], ['scanruler_batch', 'file']]) {
-    assert.match(field(tool, key), /relative path is taken from the folder of the scan or project last opened or saved \(scanruler_status: server\.relativeTo\)/, `${tool}.${key}`)
+  for (const [tool, key] of [['scan_open', 'path'], ['scan_open', 'saveTo'], ['export_step', 'path'], ['view_render', 'path'], ['bananascan_batch', 'file']]) {
+    assert.match(field(tool, key), /relative path is taken from the folder of the scan or project last opened or saved \(bananascan_status: server\.relativeTo\)/, `${tool}.${key}`)
     assert.ok(field(tool, key).includes(dir), `${tool}.${key} names where the server started`)
   }
-  assert.match(tools.find((t) => t.name === 'scanruler_batch').description, /\$file.*relative path is taken from the folder of the scan/)
+  assert.match(tools.find((t) => t.name === 'bananascan_batch').description, /\$file.*relative path is taken from the folder of the scan/)
   await c.close()
 })
 
 test('a batch file of more calls than a spread can pass still answers', async () => {
   const c = await copy()
   await writeFile(join(dir, 'many.json'), JSON.stringify(Array.from({ length: 130_000 }, () => ({ tool: 'demo_echo' }))))
-  const r = await c.call('scanruler_batch', { file: join(dir, 'many.json'), wait: false })
+  const r = await c.call('bananascan_batch', { file: join(dir, 'many.json'), wait: false })
   // A wait answers "running" at the answer limit (45 s), which this batch
   // can pass on a busy machine; an agent asks again, and so does this.
   let done
   for (let asked = 0; asked < 5; asked++) {
-    done = await c.call('scanruler_wait', { for: 'job', job: r.json.job, timeoutSeconds: 600 })
+    done = await c.call('bananascan_wait', { for: 'job', job: r.json.job, timeoutSeconds: 600 })
     if (done.error || done.json.state !== 'running') break
   }
   assert.equal(done.error, false, done.text)

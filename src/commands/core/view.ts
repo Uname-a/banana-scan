@@ -406,7 +406,7 @@ async function sheetOfViews(scene: SceneManager, views: readonly StandardView[],
   }
   const blob = await canvas.convertToBlob({ type: 'image/png' })
   const bytes = new Uint8Array(await blob.arrayBuffer())
-  const stem = exportStem('scanruler')
+  const stem = exportStem('banana-scan')
   return { file: { name: `${stem}-views.png`, mimeType: 'image/png', bytes }, width: canvas.width, height: canvas.height, views: [...views], ...(show ? { shown: shownNow(scene) } : {}) }
 }
 
@@ -428,7 +428,7 @@ async function picture(scene: SceneManager, width: number | undefined, height: n
           ? fitIn(height * aspect, height)
           : fitIn(...((aspect >= 1 ? [DEFAULT_LONG_SIDE, DEFAULT_LONG_SIDE / aspect] : [DEFAULT_LONG_SIDE * aspect, DEFAULT_LONG_SIDE]) as [number, number]))
   const bytes = await scene.capture(w, h)
-  const stem = exportStem('scanruler')
+  const stem = exportStem('banana-scan')
   return { file: { name: `${stem}-view.png`, mimeType: 'image/png', bytes }, width: w, height: h, mmAcross: mmAcross(scene, w, h), view: view ?? null, ...(show ? { shown: shownNow(scene) } : {}) }
 }
 

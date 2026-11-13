@@ -310,7 +310,7 @@ await page.screenshot({ path: shotPath('e2e-section-3d.png') })
 // The circle is exported with the section, in a wireframe group under its
 // name, as a CIRCLE at the ball's radius whose axis is the cutting plane's
 // normal — the line from ball to ball.
-const stepDir = mkdtempSync(join(tmpdir(), 'scanruler-section-'))
+const stepDir = mkdtempSync(join(tmpdir(), 'banana-scan-section-'))
 const cdp = await downloadsTo(page, stepDir)
 await click(page, '[data-test="export-step"]')
 const stepFile = await awaitDownload(stepDir, '.step')

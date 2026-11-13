@@ -113,7 +113,7 @@ export function installCommandHost(next: CommandHost): () => void {
 
 /** The host, or a refusal when none is installed. */
 export function commandHost(): CommandHost {
-  if (!host) throw new CommandError('unavailable', 'ScanRuler has no session to work on yet.')
+  if (!host) throw new CommandError('unavailable', 'Banana Scan has no session to work on yet.')
   return host
 }
 

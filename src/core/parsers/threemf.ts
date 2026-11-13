@@ -400,7 +400,7 @@ const MAX_DEPTH = 32
 const MAX_PLACED = { objects: 1_000_000, vertices: 30_000_000 }
 
 /** A model is XML whatever the zip makes of it: past the size text can be held
- *  at, about 7.5 million triangles at the 71 bytes a triangle ScanRuler writes. */
+ *  at, about 7.5 million triangles at the 71 bytes a triangle Banana Scan writes. */
 const THREEMF_INSTEAD = 'Export it as binary STL or binary PLY, which have no such limit.'
 
 export function parse3MF(buffer: ArrayBuffer, onProgress?: (text: string) => void, companions?: ObjCompanions, limits: ArchiveLimits = THREE_MF_LIMITS): ParsedMesh {
@@ -461,7 +461,7 @@ export function parse3MF(buffer: ArrayBuffer, onProgress?: (text: string) => voi
   let placed = 0
   const place = (model: ModelFile, id: string, transform: Matrix, depth: number) => {
     if (depth > MAX_DEPTH) throw new Error('This 3MF\'s components name each other in a ring.')
-    if (++placed > MAX_PLACED.objects) throw new Error('This 3MF places more objects than ScanRuler can open.')
+    if (++placed > MAX_PLACED.objects) throw new Error('This 3MF places more objects than Banana Scan can open.')
     const object = model.objects.get(id)
     if (!object) throw new Error(`This 3MF names object ${id}, which it does not hold.`)
     if (NOT_THE_PART.has(object.type) || slicer.objects.has(id)) return
@@ -469,7 +469,7 @@ export function parse3MF(buffer: ArrayBuffer, onProgress?: (text: string) => voi
     for (const c of object.components) place(c.path ? modelAt(c.path) : model, c.objectid, compose(c.transform, transform), depth + 1)
     const mesh = object.mesh
     if (!mesh) return
-    if (positions.length / 3 + mesh.vertices.length / 3 > MAX_PLACED.vertices) throw new Error('This 3MF places more geometry than ScanRuler can open.')
+    if (positions.length / 3 + mesh.vertices.length / 3 > MAX_PLACED.vertices) throw new Error('This 3MF places more geometry than Banana Scan can open.')
     const m = transform
     const s = model.scale
     const base = positions.length / 3

@@ -7,7 +7,7 @@
 import { create } from 'zustand'
 import type { HintTrack } from '../core/hints'
 
-const HINTS_KEY = 'scanruler.hints'
+const HINTS_KEY = 'bananascan.hints'
 
 /** Visits a workspace has to be carried through in before its ring retires.
  *

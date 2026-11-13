@@ -35,7 +35,7 @@ import {
 } from './e2e-lib.mjs'
 
 const SIZE = 20
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-element-dev-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-element-dev-'))
 const CUBE = join(dir, 'cube.stl')
 writeFileSync(
   CUBE,
@@ -162,7 +162,7 @@ check(colouredOnFace > 0.01, 'the map is painted on the part')
 // The coloured fraction alone is met by the other plane's shell. A cube's
 // sharp edges split its vertices for shading, and the map must still fit the
 // scan's own vertices, not the copies too.
-const painted = await page.evaluate(() => window.__scanruler.scene().mapPainted().scan)
+const painted = await page.evaluate(() => window.__bananascan.scene().mapPainted().scan)
 check(painted === 'painted', `the scan itself wears the map (${painted})`)
 
 // ---- what bounds the measurement -------------------------------------------
@@ -203,7 +203,7 @@ await page.screenshot({ path: shotPath('element-deviation-facing-off.png') })
 // plane's normal. That the picture moves is the deviation run's to show.
 const deflection = () =>
   page.evaluate(() => {
-    const a = window.__scanruler.scene().scanGeometry()?.getAttribute('deflect')
+    const a = window.__bananascan.scene().scanGeometry()?.getAttribute('deflect')
     if (!a) return null
     let up = 0
     for (let i = 2; i < a.array.length; i += 3) up = Math.min(up, a.array[i])

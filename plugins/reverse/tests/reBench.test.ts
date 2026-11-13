@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Benchmark (temporary): builds the projects named in RE_BENCH (paths to
-// .scanruler files, ';'-separated) and times every step and kernel call.
+// .bananascan files, ';'-separated) and times every step and kernel call.
 
 import { readFileSync } from 'node:fs'
 import { unzipSync, strFromU8 } from 'fflate'

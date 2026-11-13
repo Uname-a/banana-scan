@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The answer limit: no call held past it, for a client or a bridge that cuts
 // a call at a minute. A change, a batch or a long read still running there
-// answers with its job; scanruler_wait waits no longer than it either; and
+// answers with its job; bananascan_wait waits no longer than it either; and
 // a copy of the server started afresh reads a job of the copy before it from
 // the page's record (session.recent). A long export queued still writes its
 // file, a queued picture comes with its job's answer, and the note at the
@@ -103,32 +103,32 @@ async function copy({ answerWithinMs = LIMIT_MS, answers = answer } = {}) {
   return { client, call, page, close, link }
 }
 
-/** scanruler_wait for a job, called again while it says running. */
+/** bananascan_wait for a job, called again while it says running. */
 async function waitFor(call, job) {
   for (let i = 0; i < 100; i++) {
-    const r = await call('scanruler_wait', { for: 'job', job })
+    const r = await call('bananascan_wait', { for: 'job', job })
     if (r.error || r.json.state !== 'running') return r
   }
   throw new Error(`${job} still running`)
 }
 
-test('a 15-update batch answers queued at the limit, scanruler_wait finds it, and a copy started afresh finds it again through session.recent', async () => {
+test('a 15-update batch answers queued at the limit, bananascan_wait finds it, and a copy started afresh finds it again through session.recent', async () => {
   const first = await copy()
   const calls = Array.from({ length: 15 }, (_, n) => ({ tool: 'demo_update', arguments: { n, ms: 40 } }))
   const started = Date.now()
-  const queued = await first.call('scanruler_batch', { calls })
+  const queued = await first.call('bananascan_batch', { calls })
   const took = Date.now() - started
   assert.equal(queued.json.queued, true)
-  assert.equal(queued.json.tool, 'scanruler_batch')
+  assert.equal(queued.json.tool, 'bananascan_batch')
   assert.equal(queued.json.after, LIMIT_MS / 1000)
-  assert.match(queued.json.note, /scanruler_wait/)
+  assert.match(queued.json.note, /bananascan_wait/)
   assert.ok(took >= LIMIT_MS - 20 && took < LIMIT_MS + 400, `answered after ${took} ms`)
   assert.match(queued.json.job, /^j\d+-[0-9a-f]{4}$/)
 
-  // scanruler_wait is held no longer than the limit either: running, then
+  // bananascan_wait is held no longer than the limit either: running, then
   // asked again, the batch's answer.
   const at = Date.now()
-  const still = await first.call('scanruler_wait', { for: 'job', job: queued.json.job, timeoutSeconds: 60 })
+  const still = await first.call('bananascan_wait', { for: 'job', job: queued.json.job, timeoutSeconds: 60 })
   assert.equal(still.json.state, 'running')
   assert.ok(Date.now() - at < LIMIT_MS + 400)
   const done = await waitFor(first.call, queued.json.job)
@@ -140,10 +140,10 @@ test('a 15-update batch answers queued at the limit, scanruler_wait finds it, an
 
   // A copy started afresh knows no such job; the page does.
   const second = await copy()
-  const status = await second.call('scanruler_status')
+  const status = await second.call('bananascan_status')
   assert.equal(status.json.jobs, undefined)
   assert.equal(status.json.server.answerWithin, LIMIT_MS / 1000)
-  const found = await second.call('scanruler_wait', { for: 'job', job: queued.json.job })
+  const found = await second.call('bananascan_wait', { for: 'job', job: queued.json.job })
   assert.equal(found.error, false, found.text)
   assert.equal(found.json.job, queued.json.job)
   assert.equal(found.json.state, 'ended')
@@ -152,13 +152,13 @@ test('a 15-update batch answers queued at the limit, scanruler_wait finds it, an
   assert.ok(found.json.calls.every((c) => c.state === 'done'))
   assert.deepEqual(found.json.calls.at(-1).result, { n: 14 })
   // A job neither knows is not found.
-  const missing = await second.call('scanruler_wait', { for: 'job', job: 'j9-ffff' })
+  const missing = await second.call('bananascan_wait', { for: 'job', job: 'j9-ffff' })
   assert.equal(missing.error, true)
   assert.match(missing.text, /^not_found: There is no job "j9-ffff"/)
   // The new copy's own jobs are not the old one's.
   const mine = await second.call('demo_update', { n: 99, ms: 5 })
   assert.equal(mine.json.n, 99)
-  assert.notEqual((await second.call('scanruler_status')).json.jobs[0].job, queued.json.job)
+  assert.notEqual((await second.call('bananascan_status')).json.jobs[0].job, queued.json.job)
   await second.close()
 })
 
@@ -169,7 +169,7 @@ test('a single change past the limit answers queued, and a copy started afresh s
   assert.equal(queued.json.tool, 'demo_update')
   await first.close()
   const second = await copy()
-  const running = await second.call('scanruler_wait', { for: 'job', job: queued.json.job })
+  const running = await second.call('bananascan_wait', { for: 'job', job: queued.json.job })
   assert.equal(running.json.state, 'running')
   assert.equal(running.json.tool, 'demo_update')
   const done = await waitFor(second.call, queued.json.job)
@@ -192,11 +192,11 @@ test('a long read takes wait and runs as a job; the idle wait is held to the lim
   assert.equal(one.page.runs.find((m) => m.name === 'demo.compare').job, queued.json.job)
   assert.deepEqual(one.page.runs.find((m) => m.name === 'demo.compare').input, { ms: 400 }, 'wait is the server’s')
   const at = Date.now()
-  const idle = await one.call('scanruler_wait', { for: 'idle', timeoutSeconds: 30 })
+  const idle = await one.call('bananascan_wait', { for: 'idle', timeoutSeconds: 30 })
   assert.equal(idle.json.state, 'running')
   assert.ok(Date.now() - at < LIMIT_MS + 600)
   assert.deepEqual((await waitFor(one.call, queued.json.job)).json.result, { rms: 0.1 })
-  const later = await one.call('scanruler_wait', { for: 'idle' })
+  const later = await one.call('bananascan_wait', { for: 'idle' })
   assert.equal(later.json.state, 'idle')
   // Past the limit without wait: false, queued all the same.
   assert.equal((await one.call('demo_compare', { ms: 500 })).json.queued, true)
@@ -204,7 +204,7 @@ test('a long read takes wait and runs as a job; the idle wait is held to the lim
 })
 
 test('a long export takes wait, answers queued at once or at the limit, and still writes its file to path', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-limit-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-limit-'))
   const one = await copy()
   const schema = (await one.client.listTools()).tools.find((t) => t.name === 'demo_export').inputSchema
   assert.ok(schema.properties.wait, 'a long export takes wait')
@@ -230,7 +230,7 @@ test('a long export takes wait, answers queued at once or at the limit, and stil
   await one.close()
 })
 
-test('a job’s picture comes with its answer through scanruler_wait, but not with idle, and a copy started afresh says it has none', async () => {
+test('a job’s picture comes with its answer through bananascan_wait, but not with idle, and a copy started afresh says it has none', async () => {
   const first = await copy()
   // Called directly, as the job's answer is to match.
   const direct = await first.call('demo_review', { ms: 5 })
@@ -247,16 +247,16 @@ test('a job’s picture comes with its answer through scanruler_wait, but not wi
   assert.deepEqual([...Buffer.from(done.images[0].data, 'base64')], PICTURE)
   // Still running, none; and idle lists the job without it.
   const again = await first.call('demo_review', { ms: 200, wait: false })
-  const running = await first.call('scanruler_wait', { for: 'job', job: again.json.job, timeoutSeconds: 0.02 })
+  const running = await first.call('bananascan_wait', { for: 'job', job: again.json.job, timeoutSeconds: 0.02 })
   assert.equal(running.json.state, 'running')
   assert.deepEqual(running.images, [])
-  const idle = await first.call('scanruler_wait', { for: 'idle', timeoutSeconds: 5 })
+  const idle = await first.call('bananascan_wait', { for: 'idle', timeoutSeconds: 5 })
   assert.deepEqual(idle.images, [])
   assert.ok(idle.json.finished.some((j) => j.job === again.json.job))
   await first.close()
 
   const second = await copy()
-  const kept = await second.call('scanruler_wait', { for: 'job', job: queued.json.job })
+  const kept = await second.call('bananascan_wait', { for: 'job', job: queued.json.job })
   assert.equal(kept.json.state, 'done')
   assert.deepEqual(kept.images, [])
   assert.match(kept.json.from, /no picture or file it gave\.$/)
@@ -266,11 +266,11 @@ test('a job’s picture comes with its answer through scanruler_wait, but not wi
 test('the note at the limit says the tab is hidden, while it is, and no more', async () => {
   const one = await copy()
   const shown = await one.call('demo_compare', { ms: LIMIT_MS + 100 })
-  assert.match(shown.json.note, /^Still running after 0\.25 s, and running on\. scanruler_wait/)
+  assert.match(shown.json.note, /^Still running after 0\.25 s, and running on\. bananascan_wait/)
   one.page.ws.send(JSON.stringify({ event: 'visibility', hidden: true }))
-  for (let i = 0; i < 100 && !(await one.call('scanruler_status')).json.page.hidden; i++) await new Promise((r) => setTimeout(r, 10))
+  for (let i = 0; i < 100 && !(await one.call('bananascan_status')).json.page.hidden; i++) await new Promise((r) => setTimeout(r, 10))
   const hidden = await one.call('demo_compare', { ms: LIMIT_MS + 100 })
-  assert.match(hidden.json.note, /^Still running after 0\.25 s, and running on; the ScanRuler tab is hidden\. scanruler_wait/)
+  assert.match(hidden.json.note, /^Still running after 0\.25 s, and running on; the Banana Scan tab is hidden\. bananascan_wait/)
   // Only on the slow path: a queued answer and a quick one say nothing of it.
   assert.equal((await one.call('demo_compare', { ms: 5, wait: false })).json.note, undefined)
   assert.equal((await one.call('demo_compare', { ms: 5 })).json.note, undefined)
@@ -280,7 +280,7 @@ test('the note at the limit says the tab is hidden, while it is, and no more', a
 test('--answer-within 0 holds a call to its end', async () => {
   const one = await copy({ answerWithinMs: 0 })
   assert.deepEqual((await one.call('demo_update', { n: 3, ms: LIMIT_MS + 100 })).json, { n: 3 })
-  assert.equal((await one.call('scanruler_status')).json.server.answerWithin, null)
+  assert.equal((await one.call('bananascan_status')).json.server.answerWithin, null)
   await one.close()
 })
 
@@ -293,11 +293,11 @@ test('an answer limit too long for a timer still waits; a wait with a timeout it
   // Past the schema's 600 s, not a number, or not above zero: refused
   // before any timer is set, rather than waiting no time at all.
   for (const timeoutSeconds of [1e10, 'soon', -1]) {
-    const refused = await two.call('scanruler_wait', { for: 'job', job, timeoutSeconds })
+    const refused = await two.call('bananascan_wait', { for: 'job', job, timeoutSeconds })
     assert.equal(refused.error, true, `timeoutSeconds ${timeoutSeconds}`)
     assert.match(refused.text, /^invalid_input: timeoutSeconds/)
   }
-  const waited = await two.call('scanruler_wait', { for: 'job', job, timeoutSeconds: 600 })
+  const waited = await two.call('bananascan_wait', { for: 'job', job, timeoutSeconds: 600 })
   assert.equal(waited.json.state, 'done')
   await two.close()
 })
@@ -306,8 +306,8 @@ test('a page that never answers: a read, a wait for idle and a wait for a job of
   const one = await copy({ answerWithinMs: 300, answers: () => new Promise(() => {}) })
   for (const [name, args] of [
     ['session_state', {}],
-    ['scanruler_wait', { for: 'idle', timeoutSeconds: 1 }],
-    ['scanruler_wait', { for: 'job', job: 'j9-zzzz', timeoutSeconds: 1 }],
+    ['bananascan_wait', { for: 'idle', timeoutSeconds: 1 }],
+    ['bananascan_wait', { for: 'job', job: 'j9-zzzz', timeoutSeconds: 1 }],
   ]) {
     const at = Date.now()
     const r = await Promise.race([one.call(name, args), new Promise((resolve) => setTimeout(() => resolve('still waiting'), 2000))])

@@ -122,7 +122,7 @@ function chromeMemory(root) {
 }
 
 const gb = (b) => `${(b / 1024 ** 3).toFixed(2)} GB`
-const folder = mkdtempSync(join(tmpdir(), 'scanruler-large-'))
+const folder = mkdtempSync(join(tmpdir(), 'banana-scan-large-'))
 const results = []
 let opened = null
 try {

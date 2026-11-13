@@ -13,7 +13,7 @@ import { httpServer } from '../src/serve.js'
 import { fakePage } from './fakePage.js'
 
 const TOKEN = 'a-token-for-the-relay-tests'
-const TOO_OLD = 'Your ScanRuler connector is out of date: the scanruler-mcp your AI app started is older than 0.4.0.'
+const TOO_OLD = 'Your Banana Scan connector is out of date: the banana-scan-mcp your AI app started is older than 0.4.0.'
 
 /** A holding copy of the given version on a port of its own. */
 const holding = async (version) => {
@@ -63,13 +63,13 @@ const status = async () => {
     cwd: '.',
     outDir: '.',
     connectHelp: () => 'Pair it.',
-    serverInfo: () => ({ name: 'scanruler-mcp', version: '0.4.1', role, ...(role === 'relay' ? { holder: { version: null } } : {}) }),
+    serverInfo: () => ({ name: 'banana-scan-mcp', version: '0.4.1', role, ...(role === 'relay' ? { holder: { version: null } } : {}) }),
     pageTimeoutMs: 50,
   })
   const [a, b] = InMemoryTransport.createLinkedPair()
   const client = new Client({ name: 'test', version: '0.0.0' })
   await Promise.all([server.connect(a), client.connect(b)])
-  const r = await client.callTool({ name: 'scanruler_status', arguments: {} })
+  const r = await client.callTool({ name: 'bananascan_status', arguments: {} })
   await client.close()
   return JSON.parse(r.content[0].text)
 }
@@ -79,7 +79,7 @@ test('while relaying, the out-of-date warning names the holding copy and says to
   const s = await status()
   assert.equal(s.server.role, 'relay')
   assert.deepEqual(s.server.holder, { version: null })
-  assert.match(s.serverTooOld, /^This server \(0\.4\.1\) is current; it sends its calls through another copy of scanruler-mcp, from before 0\.4\.1/)
+  assert.match(s.serverTooOld, /^This server \(0\.4\.1\) is current; it sends its calls through another copy of banana-scan-mcp, from before 0\.4\.1/)
   assert.match(s.serverTooOld, /quit that app completely/)
   assert.ok(s.serverTooOld.endsWith(TOO_OLD), 'the page’s own words follow')
 })

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Benchmark: an agent's edits on saved projects, through the commands as an
 // agent runs them, the kernel in this thread behind the worker's own service
-// (reLocal.ts). Each project named in RE_SPEED (paths to .scanruler files,
+// (reLocal.ts). Each project named in RE_SPEED (paths to .bananascan files,
 // ';'-separated) is opened and then, RE_SPEED_REPS times over: a fillet
 // appended on the part's longest straight edge that takes one, its radius
 // edited, set back, the fillet removed, the rollback bar moved ten features

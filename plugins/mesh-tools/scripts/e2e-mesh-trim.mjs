@@ -133,13 +133,13 @@ const trim = async () => {
   await sleep(300)
   return number(await text('[data-test=trim-volume] b'))
 }
-const ghosted = () => re(() => window.__scanruler.scene().scanGhost === true)
+const ghosted = () => re(() => window.__bananascan.scene().scanGhost === true)
 /** What the viewport draws: the scan, the piece — the one mesh in two
  *  materials — and the lent bodies, each a group of a fill, its pass through
  *  the part and its edges. */
 const drawn = () =>
   re(() => {
-    const scene = window.__scanruler.scene()
+    const scene = window.__bananascan.scene()
     const kids = scene.partGroup.children
     return {
       scan: scene.mesh.visible,
@@ -191,15 +191,15 @@ console.log('break:', breakLine)
 const breakArea = Number(/([\d.]+) mm²/.exec(breakLine)?.[1] ?? 0)
 const inset = fractureArea(W / 2 - (0.3 - OVER))
 check(Math.abs(breakArea - inset) < 0.01 * inset, `the break is the block's top, a tenth in from its edges (${breakArea} mm² of ${inset.toFixed(1)})`)
-const marked = await re(() => window.__scanruler.scene().paintedVertices().length)
+const marked = await re(() => window.__bananascan.scene().paintedVertices().length)
 check(marked > 3000, `and is marked on the part (${marked} points)`)
 // The marking rubbed out leaves nothing to trim with; Find again marks it.
 await click(page, '[data-test=mark-clear]')
 await sleep(300)
 check(await page.$eval('[data-test=trim-run]', (el) => el.disabled), 'with the marking cleared there is nothing to trim with')
 await click(page, '[data-test=trim-find-again]')
-await page.waitForFunction((n) => window.__scanruler.scene().paintedVertices().length === n, { timeout: 60_000 }, marked).catch(() => {})
-check((await re(() => window.__scanruler.scene().paintedVertices().length)) === marked, 'Find again marks the break as it was found')
+await page.waitForFunction((n) => window.__bananascan.scene().paintedVertices().length === n, { timeout: 60_000 }, marked).catch(() => {})
+check((await re(() => window.__bananascan.scene().paintedVertices().length)) === marked, 'Find again marks the break as it was found')
 check(/The break where Solid 1 reaches into the part is marked in teal/.test(await text('.strip .msg')), 'the status line says the break is marked')
 check(!(await page.$eval('[data-test=trim-run]', (el) => el.disabled)), 'the box can be trimmed')
 check((await text('[data-test=trim-run]')) === 'Trim Solid 1 to the break', 'the button names the body')
@@ -232,7 +232,7 @@ await sleep(200)
 check(!(await page.$('[data-test=trim-gap-legend]')), 'and Piece puts the legend away')
 
 // ---- exported as an STL, read back ------------------------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-trim-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-trim-'))
 const cdp = await downloadsTo(page, dir)
 await click(page, '[data-test=export-trimmed-mesh]')
 await click(page, '[data-test=export-trimmed-mesh-stl]')
@@ -263,7 +263,7 @@ if (stl) {
 await click(page, '[data-test=trim-view-break]')
 await sleep(300)
 check(!(await ghosted()), 'Break shows the scan again, not ghosted')
-check((await re(() => window.__scanruler.scene().paintedVertices().length)) === marked, 'the break still marked as it was')
+check((await re(() => window.__bananascan.scene().paintedVertices().length)) === marked, 'the break still marked as it was')
 await setField('[data-test=trim-offset]', 0.15)
 check(Boolean(await page.$('[data-test=trim-stale]')), 'an offset changed says the piece on hand is from before it')
 const offset = await trim()

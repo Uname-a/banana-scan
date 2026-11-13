@@ -13,7 +13,7 @@ import { usePrefs } from '../state/prefsStore'
 export type AgentLinkStatus = 'off' | 'waiting' | 'connected' | 'refused'
 
 /** The agent's server as its welcome said: `{ version }`, `{ version: null }`
- *  for a scanruler-mcp before 0.4.0, whose welcome carries no version, or
+ *  for a banana-scan-mcp before 0.4.0, whose welcome carries no version, or
  *  null before a welcome (or from a server that does not say it is one). */
 export interface AgentServer {
   version: string | null
@@ -25,7 +25,7 @@ export const useAgentLink = create<{ status: AgentLinkStatus; detail: string | n
   server: null,
 }))
 
-/** The oldest scanruler-mcp whose behaviour this page's commands assume.
+/** The oldest banana-scan-mcp whose behaviour this page's commands assume.
  *  Set by hand, when a release changes what the server has to do. */
 export const WANTS_SERVER = '0.4.0'
 
@@ -47,7 +47,7 @@ export function olderVersion(a: string, b: string): boolean {
  *  connector: it says the setting, for an agent that has not read the page,
  *  and the restart, which the agent cannot do itself. */
 export const CONNECTOR_ASK =
-  'Update the scanruler MCP server in this app to scanruler-mcp@latest, then tell me to quit the app completely and open it again.'
+  'Update the banana-scan MCP server in this app to banana-scan-mcp@latest, then tell me to quit the app completely and open it again.'
 
 /** One step per AI app to update the connector, copy-ready: the setting
  *  with `@latest`, which has npx fetch the newest at each start. */
@@ -55,17 +55,17 @@ export const CONNECTOR_STEPS: { app: string; how: string; text: string }[] = [
   {
     app: 'Claude Code',
     how: 'run in a terminal',
-    text: 'claude mcp remove scanruler\nclaude mcp add --scope user scanruler -- npx -y scanruler-mcp@latest',
+    text: 'claude mcp remove banana-scan\nclaude mcp add --scope user banana-scan -- npx -y banana-scan-mcp@latest',
   },
   {
     app: 'Codex',
     how: 'run in a terminal',
-    text: 'codex mcp remove scanruler\ncodex mcp add scanruler -- npx -y scanruler-mcp@latest',
+    text: 'codex mcp remove banana-scan\ncodex mcp add banana-scan -- npx -y banana-scan-mcp@latest',
   },
   {
     app: 'Claude Desktop',
-    how: 'in Settings → Developer → Edit Config, change "scanruler-mcp" in the scanruler entry to "scanruler-mcp@latest", so the line reads',
-    text: '"args": ["-y", "scanruler-mcp@latest"]',
+    how: 'in Settings → Developer → Edit Config, change "banana-scan-mcp" in the banana-scan entry to "banana-scan-mcp@latest", so the line reads',
+    text: '"args": ["-y", "banana-scan-mcp@latest"]',
   },
 ]
 
@@ -78,7 +78,7 @@ export function serverTooOld(server: AgentServer | null = useAgentLink.getState(
   const which = server.version ? `version ${server.version}` : `older than ${WANTS_SERVER}`
   const steps = CONNECTOR_STEPS.map((s) => `${s.app} — ${s.how}: ${s.text.split('\n').map((line) => `\`${line}\``).join(', then ')}`).join('; ')
   return (
-    `Your ScanRuler connector is out of date: the scanruler-mcp your AI app started is ${which}, and this ScanRuler needs ${WANTS_SERVER} or newer — some of what the agent asks may not work. ` +
+    `Your Banana Scan connector is out of date: the banana-scan-mcp your AI app started is ${which}, and this Banana Scan needs ${WANTS_SERVER} or newer — some of what the agent asks may not work. ` +
     `To update it, ask the agent to, or change its setting to the @latest one. ${steps}. Then quit the app completely and open it again. ` +
     'With more than one AI app open, the old connector may be another app’s — one left open in the background holds the connection for all of them: quit it.'
   )
@@ -92,7 +92,7 @@ export const AGENT_STATUS: Record<AgentLinkStatus, string> = {
   refused: 'Turned away by the agent',
 }
 
-/** `#agent=<port>:<token>` in the address — the pairing link scanruler-mcp
+/** `#agent=<port>:<token>` in the address — the pairing link banana-scan-mcp
  *  hands out — switches the connection on with that port and token (the first
  *  time, once the warning about the person's data is accepted: prefsStore's
  *  agentDataOk), and is taken out of the address again. True when there was one. */

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// The app run headless (src/headless/engine.ts), as scanruler-mcp runs it
+// The app run headless (src/headless/engine.ts), as banana-scan-mcp runs it
 // with --engine: started in this process with no page, it offers only the
 // commands marked to run so, runs them, and turns any other away as
 // needing the page — whatever plugins the build has.
@@ -27,7 +27,7 @@ describe('the app headless', () => {
     expect(offered).not.toContain('scan.open')
     // Every command is one or the other.
     expect(new Set([...offered, ...engine.pageCommands()])).toEqual(new Set(listCommands().map((c) => c.name)))
-    expect(engine.app).toBe('ScanRuler')
+    expect(engine.app).toBe('Banana Scan')
   })
 
   it('runs them, and turns a command that needs the page away, naming it', async () => {
@@ -40,7 +40,7 @@ describe('the app headless', () => {
     )
     expect(refused).toBeInstanceOf(CommandError)
     expect((refused as CommandError).code).toBe('unavailable')
-    expect((refused as CommandError).message).toMatch(/^view\.render needs the ScanRuler page .*headless/)
+    expect((refused as CommandError).message).toMatch(/^view\.render needs the Banana Scan page .*headless/)
     const unknown = await engine.run('no.such', {}).then(
       () => null,
       (e: unknown) => e,

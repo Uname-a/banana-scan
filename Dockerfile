@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# ScanRuler as a container: the static Vite build (dist/) served by nginx,
+# Banana Scan as a container: the static Vite build (dist/) served by nginx,
 # running unprivileged on port 8080. The app runs entirely in the browser;
 # the container only hands out files. See docs/docker.md.
 #
-#   docker build -t scanruler .
-#   docker run --rm -p 8080:8080 scanruler
+#   docker build -t banana-scan .
+#   docker run --rm -p 8080:8080 banana-scan
 
 FROM node:22-alpine AS build
 WORKDIR /app

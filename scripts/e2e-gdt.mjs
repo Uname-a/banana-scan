@@ -86,7 +86,7 @@ function steppedShaft(segments = 240) {
   return { positions: Float64Array.from(pos), indices: Uint32Array.from(idx) }
 }
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-gdt-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-gdt-'))
 const SHAFT = join(dir, 'shaft.stl')
 writeFileSync(SHAFT, Buffer.from(writeBinarySTL(steppedShaft())))
 

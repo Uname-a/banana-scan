@@ -184,7 +184,7 @@ export function buildScanMesh(scene: SceneManager | null, format: MeshFormat): B
     format,
     [{ name: stem, positions, indices: index ?? null, colors: colors ?? null }],
     align?.transform ?? null,
-    `ScanRuler scan export - ${stem}`,
+    `Banana Scan scan export - ${stem}`,
   )
   if (!file) return null
   // Never the name it came in under, however little has happened to it: the
@@ -239,7 +239,7 @@ export async function buildScanPointCloud(scene: SceneManager | null, format: Cl
   const transform = align?.transform ?? null
   const bytes =
     format === 'ply'
-      ? new Uint8Array(buildPointCloudPly(positions, normals, transform, `ScanRuler point cloud - ${stem}`))
+      ? new Uint8Array(buildPointCloudPly(positions, normals, transform, `Banana Scan point cloud - ${stem}`))
       : buildPointCloudXyz(positions, normals, transform)
   const points = positions.length / 3
   return {

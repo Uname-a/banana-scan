@@ -63,7 +63,7 @@ test('a command that hands a file back takes where to write it', () => {
 })
 
 test('the path is read into the bytes, and a returned file written where asked', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
   await writeFile(join(dir, 'part.stl'), Buffer.from([1, 2, 3]))
   const open = command('scan.open')
   const { input, binaryKey } = await inputFor(open, { path: 'part.stl', units: 'mm' }, { cwd: dir })
@@ -91,7 +91,7 @@ test('the path is read into the bytes, and a returned file written where asked',
 })
 
 test('pictures written at once each get a file of their own', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
   const picture = (n) => ({ file: { name: 'part-view.png', mimeType: 'image/png', bytes: new Uint8Array([0x89, n]) } })
   // Ten side by side into the output folder, and ten into a folder path.
   const loose = await Promise.all(Array.from({ length: 10 }, (_, n) => batchedPicture(picture(n), {}, { cwd: dir, outDir: dir })))
@@ -117,7 +117,7 @@ test('a picture comes back as an image, and is written to a file only when asked
   const { input } = await inputFor(render, { width: 200, path: 'x.png' }, { cwd: '/' })
   assert.deepEqual(input, { width: 200 })
 
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
   const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
   const result = { file: { name: 'part-view.png', mimeType: 'image/png', bytes: png }, width: 200, height: 100 }
   const shown = await imageContent(result, {}, { cwd: dir, outDir: dir })
@@ -139,7 +139,7 @@ test('a picture comes back as an image, and is written to a file only when asked
 })
 
 test('a picture in a batch, where it cannot be shown, is written to a file all the same', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
   const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
   const result = { file: { name: 'part-view.png', mimeType: 'image/png', bytes: png }, width: 200, height: 100 }
   const first = await batchedPicture(result, {}, { cwd: '/elsewhere', outDir: dir })

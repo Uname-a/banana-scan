@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   release:
-    if: ${{ github.repository == 'CNCKitchen/scanruler' }}
+    if: ${{ github.repository == 'Uname-a/banana-scan' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -58,5 +58,5 @@ jobs:
               echo "::warning::$tag has no section in its CHANGELOG.md; no release made."
               continue
             fi
-            gh release create "$tag" --verify-tag --title "ScanRuler ${tag#v}" --notes-file "$RUNNER_TEMP/notes.md"
+            gh release create "$tag" --verify-tag --title "Banana Scan ${tag#v}" --notes-file "$RUNNER_TEMP/notes.md"
           done

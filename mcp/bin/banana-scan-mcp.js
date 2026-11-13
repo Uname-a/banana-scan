@@ -10,7 +10,7 @@ if (code !== null) process.exit(code)
 
 const { main } = await import('../src/main.js')
 main().catch((error) => {
-  process.stderr.write(`[scanruler-mcp] ${error instanceof Error ? error.message : String(error)}\n`)
+  process.stderr.write(`[banana-scan-mcp] ${error instanceof Error ? error.message : String(error)}\n`)
   // What main refuses is its arguments or settings; a launcher that handed
   // off to this copy reads the code as such, not as a copy that is broken.
   process.exit(USAGE_EXIT)

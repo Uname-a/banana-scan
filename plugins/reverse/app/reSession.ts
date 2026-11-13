@@ -779,7 +779,7 @@ export function createReverseSession({
   const meshFile = async (bodies: { id: number; name: string }[], chord: number, format: MeshFormat, angleDeg?: number): Promise<(MeshFile & { name: string }) | null> => {
     const meshes = await requireClient().referenceMeshes(bodies.map((b) => b.id), chord, false, angleDeg !== undefined ? (angleDeg * Math.PI) / 180 : undefined, true)
     const parts = meshes.map((m, i) => ({ name: meshes.length === bodies.length ? bodies[i].name : `Body ${i + 1}`, positions: m.positions, indices: withoutCollapsed(m.positions, m.indices) }))
-    const file = buildMeshFile(format, parts, null, 'ScanRuler - bodies from Reverse engineer')
+    const file = buildMeshFile(format, parts, null, 'Banana Scan - bodies from Reverse engineer')
     return file && { ...file, name: `${exportStem('model')}-body.${file.extension}` }
   }
 

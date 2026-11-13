@@ -21,7 +21,7 @@ check(await fitFilletTorus(page, { R, r }, { click, previewReady, sleep }), 'a c
 const rowText = await page.$eval('[data-test=element-row]', (el) => el.textContent)
 console.log('row:', rowText)
 check(/R 3\.0\d\d mm/.test(rowText), `the torus row reads the tube radius (${rowText})`)
-const fit = await page.evaluate(() => window.__scanruler.measure.getState().elements[0]?.fit ?? null)
+const fit = await page.evaluate(() => window.__bananascan.measure.getState().elements[0]?.fit ?? null)
 console.log('fit:', JSON.stringify(fit && { R: fit.majorRadius, r: fit.minorRadius, axis: fit.axis, sigma: fit.sigma, tube: fit.tubeCoverage, spine: fit.spineCoverage }))
 check(fit && Math.abs(fit.majorRadius - R) < 0.05 && Math.abs(fit.minorRadius - r) < 0.05 && Math.abs(Math.abs(fit.axis[2]) - 1) < 1e-3, 'with the ring’s radii and axis')
 check(fit && fit.spineCoverage > 350 && fit.tubeCoverage < 120, 'over the whole ring and a quarter of the tube')

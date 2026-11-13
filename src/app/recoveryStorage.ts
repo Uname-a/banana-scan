@@ -13,7 +13,7 @@ import type { ArchiveMember } from '../core/project/archive'
 export interface CheckpointInfo { id: string; name: string; savedAt: number }
 interface Checkpoint extends CheckpointInfo { manifest: ProjectManifest }
 
-const lockName = (id: string) => `scanruler-recovery:${id}`
+const lockName = (id: string) => `banana-scan-recovery:${id}`
 
 /** How many checkpoints left by closed pages are kept, and for how long.
  *  Every page writes a slot of its own, each with a copy of its source
@@ -38,7 +38,7 @@ export class RecoveryStorage {
 
   private open(): Promise<IDBDatabase> {
     return this.db ??= new Promise((resolve, reject) => {
-      const request = indexedDB.open('scanruler-recovery', 1)
+      const request = indexedDB.open('banana-scan-recovery', 1)
       request.onupgradeneeded = () => {
         for (const name of ['checkpoints', 'sources', 'info']) request.result.createObjectStore(name)
       }

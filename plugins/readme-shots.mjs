@@ -11,7 +11,7 @@ import { join } from 'node:path'
 import { requireFixture } from '../scripts/e2e-lib.mjs'
 import { SCAN, session } from '../scripts/readme-shots.mjs'
 
-const RE_PROJECT = process.env.RE_PROJECT ?? join(homedir(), 'Desktop', 'reverseengineer', '14_joycon', '14_joycon_CAD.scanruler')
+const RE_PROJECT = process.env.RE_PROJECT ?? join(homedir(), 'Desktop', 'reverseengineer', '14_joycon', '14_joycon_CAD.bananascan')
 for (const f of [SCAN, RE_PROJECT]) requireFixture(f)
 
 const SHOTS = {

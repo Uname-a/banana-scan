@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The lamp run's saved project (RE_LAMP: the path to its
-// 16_lamp_02-stuck-split.scanruler; skipped without): the split that kept
+// 16_lamp_02-stuck-split.bananascan; skipped without): the split that kept
 // what lies between two fitted skins never came back — the skins, carried
 // on over the outline prism's box, swung kilometres wide. Their sheets
 // meet inside the prism, and the split says so in seconds.

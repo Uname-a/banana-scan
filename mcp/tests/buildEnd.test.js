@@ -63,14 +63,14 @@ const changes = (n) => Array.from({ length: n }, (_, i) => ({ tool: 'demo_change
 
 test('the batch takes build', async () => {
   const { tools } = await client.listTools()
-  const batch = tools.find((t) => t.name === 'scanruler_batch')
+  const batch = tools.find((t) => t.name === 'bananascan_batch')
   assert.deepEqual(batch.inputSchema.properties.build.enum, ['each', 'end'])
   assert.match(batch.description, /build: "end"/)
 })
 
 test('build: "end" sends every call but the last deferred', async () => {
   page.runs.length = 0
-  const r = await call('scanruler_batch', { calls: changes(9), build: 'end', rollback: false })
+  const r = await call('bananascan_batch', { calls: changes(9), build: 'end', rollback: false })
   assert.equal(r.json.ran, 9)
   const runs = page.runs.filter((m) => m.name === 'demo.change')
   assert.deepEqual(
@@ -85,13 +85,13 @@ test('build: "end" sends every call but the last deferred', async () => {
 
 test('without it, no call is deferred', async () => {
   page.runs.length = 0
-  await call('scanruler_batch', { calls: changes(3), rollback: false })
+  await call('bananascan_batch', { calls: changes(3), rollback: false })
   assert.ok(page.runs.every((m) => m.deferred === undefined))
 })
 
 test('stopped before its last call, the page is read for idle, which builds what was held', async () => {
   page.runs.length = 0
-  const r = await call('scanruler_batch', { calls: [...changes(2), { tool: 'demo_change', arguments: { fail: true } }, ...changes(1)], build: 'end', rollback: false })
+  const r = await call('bananascan_batch', { calls: [...changes(2), { tool: 'demo_change', arguments: { fail: true } }, ...changes(1)], build: 'end', rollback: false })
   assert.equal(r.json.stopped, 2)
   assert.deepEqual(
     page.runs.map((m) => [m.name, m.deferred === true]),

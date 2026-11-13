@@ -1,4 +1,4 @@
-# ScanRuler manual
+# Banana Scan manual
 
 Everything the [README](../README.md) leaves out: each workspace's options,
 what every number means, and how it is computed. The panels' ⓘ buttons
@@ -436,7 +436,7 @@ remembered per browser and none of it saved with a project:
   chains the curves are fitted to, found in the scan or cut by a section.
 - **Guided hints** — the amber ring around the control to press next.
 - **Agents** — **Local agent connection** lets an AI agent on this computer
-  drive the tab through the scanruler-mcp server, with the **Port** and
+  drive the tab through the banana-scan-mcp server, with the **Port** and
   **Token** it connects on — see [Agents](../README.md#agents). The first time
   it comes on, here or by a pairing link, a warning says that what the agent
   reads goes to the agent and its model, and nothing connects until you accept.
@@ -966,7 +966,7 @@ takes one click.)
 A photogrammetry scan — from Meshroom, RealityCapture or any other
 structure-from-motion program — is right in shape but has no size of its
 own: the program picks whatever units it likes, and the scan opens as a part
-a few millimetres across, or a few metres. ScanRuler says so when a scan
+a few millimetres across, or a few metres. Banana Scan says so when a scan
 looks like that (Meshroom's `texturedMesh.obj`, or anything under 5 mm or
 over 5 m across), on the status line and under **Alignment**.
 
@@ -1021,7 +1021,7 @@ scan.
 
 ### Projects
 
-**Save Project** in the top bar writes the whole session to one `.scanruler`
+**Save Project** in the top bar writes the whole session to one `.bananascan`
 file: the scan, the reference part and the flatbed image exactly as they were
 opened, and `project.json` with every element, dimension, alignment, count,
 calibration and display setting from all four workspaces. The file is a plain
@@ -1030,7 +1030,7 @@ can be pulled back out with any archive tool. Only what the user decided is
 stored: deviation and thickness maps, edge chains and fits are measured again
 on load from the same inputs, which keeps the file small and means a better
 algorithm in a later version improves old projects rather than stranding
-them. **Load Project** (or dropping a `.scanruler` anywhere) replaces the
+them. **Load Project** (or dropping a `.bananascan` anywhere) replaces the
 session, asking first when it holds unsaved measurements; the same button
 takes a plain scan or image to start fresh. Per-browser preferences — the
 interface theme, colour mode, navigation scheme, line widths, STEP style,
@@ -1065,7 +1065,7 @@ remain available until discarded; nothing is uploaded to a server.
 ### Opening a file from a link
 
 A file named in the page's address opens when the app starts, exactly as if
-it had been dropped: a `.scanruler` project replaces the session and lands in
+it had been dropped: a `.bananascan` project replaces the session and lands in
 the workspace it was saved from, a mesh becomes the scan, an image opens the
 2D workspace. Two forms:
 
@@ -1078,7 +1078,7 @@ the workspace it was saved from, a mesh becomes the scan, an image opens the
   is nearly always that header missing.
 - `https://scanruler.com/s/hinge` is the short form for a file in the
   deployment's own file store: the name is looked up under the store's
-  address, as `hinge.scanruler` unless the name ends in a format the app
+  address, as `hinge.bananascan` unless the name ends in a format the app
   opens (`/s/scans/ballbar.stl`). Names may have folders in them. Which store
   is a build setting (see [Deploying to Cloudflare](development.md#deploying-to-cloudflare)); a build without one
   says so.

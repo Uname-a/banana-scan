@@ -439,13 +439,13 @@ interface AppState {
   openImprint: (v: boolean) => void
 }
 
-const NAV_SCHEME_KEY = 'scanruler.navscheme'
-const VIEW_THEME_KEY = 'scanruler.viewtheme'
-const PROJECTION_KEY = 'scanruler.projection'
-const STEP_STYLE_KEY = 'scanruler.stepstyle'
-const CLOUD_FORMAT_KEY = 'scanruler.cloudformat'
-const CREASE_KEY = 'scanruler.crease'
-const CREASE_ANGLE_KEY = 'scanruler.creaseangle'
+const NAV_SCHEME_KEY = 'bananascan.navscheme'
+const VIEW_THEME_KEY = 'bananascan.viewtheme'
+const PROJECTION_KEY = 'bananascan.projection'
+const STEP_STYLE_KEY = 'bananascan.stepstyle'
+const CLOUD_FORMAT_KEY = 'bananascan.cloudformat'
+const CREASE_KEY = 'bananascan.crease'
+const CREASE_ANGLE_KEY = 'bananascan.creaseangle'
 
 /** Falls back to the built-in default when storage is unavailable (private
  *  mode, blocked cookies) or holds an id that no longer exists. */

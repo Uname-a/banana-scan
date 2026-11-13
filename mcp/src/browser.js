@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Opening the pairing link in the user's default browser, so that
-// scanruler_open can bring up a ScanRuler tab that is already paired with
+// bananascan_open can bring up a Banana Scan tab that is already paired with
 // this server — nothing for the user to copy or click but the browser's own
 // question whether the site may reach this computer.
 

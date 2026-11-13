@@ -51,14 +51,14 @@ export function filletRingScan({ R = 25, r = 3, radial = 240, tube = 24 } = {}) 
       tris.push(a, b, c, a, c, d)
     }
   }
-  const path = join(mkdtempSync(join(tmpdir(), 'scanruler-torus-')), 'fillet-ring.stl')
-  writeFileSync(path, stl('ScanRuler e2e fillet ring', tris))
+  const path = join(mkdtempSync(join(tmpdir(), 'banana-scan-torus-')), 'fillet-ring.stl')
+  writeFileSync(path, stl('Banana Scan e2e fillet ring', tris))
   return path
 }
 
 /** Fit a torus in Measure from one click on the middle of the fillet ring's
  *  round, seen from the top, and create it. Returns whether the click gave a
- *  preview. Needs the app's development hook, window.__scanruler. */
+ *  preview. Needs the app's development hook, window.__bananascan. */
 export async function fitFilletTorus(page, { R = 25, r = 3 } = {}, { click, previewReady, sleep }) {
   await click(page, '[data-test=fit-torus]')
   const rect = await page.$eval('.viewslot canvas', (el) => {
@@ -68,7 +68,7 @@ export async function fitFilletTorus(page, { R = 25, r = 3 } = {}, { click, prev
   const screenOf = (p) =>
     page.evaluate(
       (p, rect) => {
-        const cam = window.__scanruler.scene().viewport.camera
+        const cam = window.__bananascan.scene().viewport.camera
         cam.updateMatrixWorld()
         const v = cam.position.clone().set(p[0], p[1], p[2]).project(cam)
         return [rect.left + ((v.x + 1) / 2) * rect.w, rect.top + ((1 - v.y) / 2) * rect.h]
@@ -76,7 +76,7 @@ export async function fitFilletTorus(page, { R = 25, r = 3 } = {}, { click, prev
       p,
       rect,
     )
-  await page.evaluate(() => window.__scanruler.scene().viewFrom?.('top'))
+  await page.evaluate(() => window.__bananascan.scene().viewFrom?.('top'))
   await sleep(800)
   // The middle of the round, on the side of the ring facing the camera.
   const mid = Math.PI / 4
@@ -108,8 +108,8 @@ export function ballPairScan({ distance = 148.64, r = 7.96, rings = 48, segments
       }
     }
   }
-  const path = join(mkdtempSync(join(tmpdir(), 'scanruler-balls-')), 'ball-pair.stl')
-  writeFileSync(path, stl('ScanRuler e2e ball pair', tris))
+  const path = join(mkdtempSync(join(tmpdir(), 'banana-scan-balls-')), 'ball-pair.stl')
+  writeFileSync(path, stl('Banana Scan e2e ball pair', tris))
   return path
 }
 
@@ -194,7 +194,7 @@ export function turnedBlockScan() {
  *  draws, `seed` where they start) but its edges true; with `holes`, two
  *  3 mm square holes in its top at X −7 and X 7. The STL's bytes and its
  *  triangle count. */
-export function noisyBoxScan({ seed = 7, noise: spread = 0.02, holes = false, header = 'ScanRuler e2e closed box' } = {}) {
+export function noisyBoxScan({ seed = 7, noise: spread = 0.02, holes = false, header = 'Banana Scan e2e closed box' } = {}) {
   const rand = () => {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff
     return seed / 0x7fffffff
@@ -281,7 +281,7 @@ export function notchedBlockScan() {
             corners.push(q[0], q[1], q[2], q[0], q[2], q[3])
           }
       }
-  const path = join(mkdtempSync(join(tmpdir(), 'scanruler-shadow-')), 'notched-block.stl')
-  writeFileSync(path, stl('ScanRuler e2e notched block', corners))
+  const path = join(mkdtempSync(join(tmpdir(), 'banana-scan-shadow-')), 'notched-block.stl')
+  writeFileSync(path, stl('Banana Scan e2e notched block', corners))
   return path
 }

@@ -2,7 +2,7 @@
 // A file named in the page's address, to be opened as if it had been dropped:
 // `?open=<url>` fetches any file a server lets this site read, and `/s/<name>`
 // is the short form for a file in the deployment's own store — the base URL
-// the build was given as VITE_FILES_URL, the name under it, `.scanruler`
+// the build was given as VITE_FILES_URL, the name under it, `.bananascan`
 // appended unless the name ends in a format the app opens. `workspace=<name>`
 // says which workspace to land in, by the names the command layer uses,
 // after the file is open — or on its own.

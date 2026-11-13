@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Benchmark: an agent's edits on a saved project in the browser, through
-// scanruler-mcp as an agent makes them. The project in BENCH_PROJECT is
+// banana-scan-mcp as an agent makes them. The project in BENCH_PROJECT is
 // opened, and then, BENCH_REPS times over: a fillet appended on the part's
 // longest straight edge that takes one, its radius edited, set back, the
 // fillet removed, the rollback bar moved ten features up and back down,
@@ -22,7 +22,7 @@ import { APP_URL, CHROME, OUT_DIR, repoFile, sleep } from '../../../scripts/e2e-
 
 const PROJECT = process.env.BENCH_PROJECT
 const REPS = Number(process.env.BENCH_REPS ?? 5)
-if (!PROJECT) throw new Error('BENCH_PROJECT names the .scanruler file.')
+if (!PROJECT) throw new Error('BENCH_PROJECT names the .bananascan file.')
 
 const { startAgent } = await import(`file://${repoFile('mcp/tests/client.js').replace(/\\/g, '/')}`)
 const { createServer } = await import('node:net')
@@ -34,7 +34,7 @@ const port = await new Promise((resolve) => {
 })
 const agent = await startAgent({
   args: ['--port', String(port), '--out', OUT_DIR, '--app', APP_URL],
-  env: { SCANRULER_MCP_TOKEN: `bench-${Date.now().toString(36)}`, SCANRULER_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'scanruler-mcp-')) },
+  env: { BANANA_SCAN_MCP_TOKEN: `bench-${Date.now().toString(36)}`, BANANA_SCAN_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'banana-scan-mcp-')) },
   stderr: 'ignore',
 })
 const ok = async (name, input) => {
@@ -42,13 +42,13 @@ const ok = async (name, input) => {
   if (r.error) throw new Error(`${name}: ${r.text}`)
   return r.json
 }
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await ok('scanruler_status')).howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await ok('bananascan_status')).howToConnect ?? '')?.[1]
 
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--window-size=1500,950', '--no-sandbox'], defaultViewport: { width: 1500, height: 950 }, protocolTimeout: 3_600_000 })
 const page = await browser.newPage()
 await page.evaluateOnNewDocument(() => {
-  try { localStorage.setItem('scanruler.askstlunits', '0') } catch { /* no storage */ }
-  try { localStorage.setItem('scanruler.agentdataok', '1') } catch { /* no storage */ }
+  try { localStorage.setItem('bananascan.askstlunits', '0') } catch { /* no storage */ }
+  try { localStorage.setItem('bananascan.agentdataok', '1') } catch { /* no storage */ }
   const tally = (window.__bench = { gpu: 0, gpuCalls: 0, worker: 0, workerMessages: 0, displayMs: 0 })
   for (const C of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
     if (!C) continue
@@ -92,14 +92,14 @@ await page.evaluateOnNewDocument(() => {
   }
 })
 await page.goto(link, { waitUntil: 'networkidle0' })
-await ok('scanruler_wait', { for: 'page', timeoutSeconds: 120 })
+await ok('bananascan_wait', { for: 'page', timeoutSeconds: 120 })
 
 const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 100)))))
 const counters = () => page.evaluate(() => ({ ...window.__bench }))
 
 const t0 = Date.now()
 await ok('project_load', { path: PROJECT, discard: true })
-await ok('scanruler_wait', { for: 'idle', timeoutSeconds: 3600 })
+await ok('bananascan_wait', { for: 'idle', timeoutSeconds: 3600 })
 await ok('workspace_set', { workspace: 'reverse' })
 await ok('reverse_build', {})
 const openMs = Date.now() - t0
@@ -128,7 +128,7 @@ let edge = null
 for (const e of described.bodies[0].edgeList.filter((x) => x.kind === 'line').slice(0, 15)) {
   const a = await ok('reverse_feature_add', { feature: { kind: 'fillet', body: body.id, edges: [e.index], radius: 0.4 }, detail: 'none' })
   await ok('history_undo', {})
-  await ok('scanruler_wait', { for: 'idle', timeoutSeconds: 600 })
+  await ok('bananascan_wait', { for: 'idle', timeoutSeconds: 600 })
   if (a.status === 'ok') {
     edge = e.index
     break

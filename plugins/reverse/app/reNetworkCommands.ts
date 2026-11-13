@@ -129,7 +129,7 @@ function scanPaths(s: ReverseSession): ScanPaths {
   if (!st.fileName) throw new CommandError('no_scan', 'A patch network is drawn on the scan, and none is open.')
   const scene = s.sceneRef.current
   const positions = scene?.scanPositions() ?? null
-  if (!scene || !positions) throw new CommandError('unavailable', 'A patch network is drawn on the scan as the viewport holds it — this needs the ScanRuler page with the scan shown.')
+  if (!scene || !positions) throw new CommandError('unavailable', 'A patch network is drawn on the scan as the viewport holds it — this needs the Banana Scan page with the scan shown.')
   const key = [st.fileName, st.triangleCount, st.appliedAlignment, positions.buffer, positions.byteOffset, positions.length]
   if (paths && paths.key.length === key.length && paths.key.every((k, i) => k === key[i])) return paths.paths
   const indices = scene.scanIndices()

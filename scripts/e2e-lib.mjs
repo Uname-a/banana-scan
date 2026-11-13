@@ -100,23 +100,23 @@ export async function launchApp({ width = 1500, height = 950, protocolTimeout, u
   // again" leaves it. A script that wants the question sets the preference
   // back on itself (e2e-import does).
   await page.evaluateOnNewDocument(() => {
-    try { localStorage.setItem('scanruler.askstlunits', '0') } catch { /* private mode: the question is answered by hand */ }
+    try { localStorage.setItem('bananascan.askstlunits', '0') } catch { /* private mode: the question is answered by hand */ }
     // Every workspace still in beta switched on, as Settings would: the
     // checks cover them too.
-    try { localStorage.setItem('scanruler.beta', 'all') } catch { /* as above */ }
+    try { localStorage.setItem('bananascan.beta', 'all') } catch { /* as above */ }
     // The big support card would take the next click after any export.
     // e2e-support-ask switches it back on in Settings.
-    try { localStorage.setItem('scanruler.supportask', '0') } catch { /* as above */ }
+    try { localStorage.setItem('bananascan.supportask', '0') } catch { /* as above */ }
     // And the small card in the stage's corner, off as Settings turns it
     // off: it sits in the middle of the stage the navigation checks read
     // for the part, and its buttons read as part.
-    try { localStorage.setItem('scanruler.supportcard', '0') } catch { /* as above */ }
+    try { localStorage.setItem('bananascan.supportcard', '0') } catch { /* as above */ }
   })
   // The agent connection's warning, accepted the way a person would have:
   // every pairing link would stall on it. e2e-agent-warning asks to see it.
   if (agentDataOk) {
     await page.evaluateOnNewDocument(() => {
-      try { localStorage.setItem('scanruler.agentdataok', '1') } catch { /* as above */ }
+      try { localStorage.setItem('bananascan.agentdataok', '1') } catch { /* as above */ }
     })
   }
   try {
@@ -413,7 +413,7 @@ export const freePort = () =>
     })
   })
 
-/** scanruler-mcp started the way an agent's client starts it — `startAgent`
+/** banana-scan-mcp started the way an agent's client starts it — `startAgent`
  *  is mcp/tests/client.js's, imported by the script once it has checked the
  *  server's dependencies are there — on a free port, with a token and a
  *  config folder of its own, writing files to OUT_DIR and pairing with the
@@ -423,7 +423,7 @@ export async function launchAgent(startAgent) {
   const token = `e2e-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`
   const options = {
     args: ['--port', String(port), '--out', OUT_DIR, '--app', APP_URL],
-    env: { SCANRULER_MCP_TOKEN: token, SCANRULER_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'scanruler-mcp-')) },
+    env: { BANANA_SCAN_MCP_TOKEN: token, BANANA_SCAN_MCP_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'banana-scan-mcp-')) },
   }
   const agent = await startAgent(options)
   return { agent, port, token, options }

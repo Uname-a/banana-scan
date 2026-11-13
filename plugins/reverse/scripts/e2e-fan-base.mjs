@@ -62,7 +62,7 @@ function turned(p, deg) {
 
 function stlOf(tris) {
   const buf = Buffer.alloc(84 + (tris.length / 3) * 50)
-  buf.write('ScanRuler e2e fan base', 0, 'ascii')
+  buf.write('Banana Scan e2e fan base', 0, 'ascii')
   buf.writeUInt32LE(tris.length / 3, 80)
   let at = 84
   for (let t = 0; t < tris.length; t += 3) {
@@ -79,7 +79,7 @@ function stlOf(tris) {
   return buf
 }
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-fanbase-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-fanbase-'))
 const scanPath = join(dir, 'fan-base.stl')
 writeFileSync(scanPath, stlOf(fanBase()))
 

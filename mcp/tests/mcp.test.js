@@ -23,7 +23,7 @@ let client
 let close
 let dir
 let listChanged = 0
-// What scanruler_open's opening of the browser does, set by a test.
+// What bananascan_open's opening of the browser does, set by a test.
 let opener = async () => false
 
 /** A server on a link and a port of its own, and a client connected to it. */
@@ -38,7 +38,7 @@ async function serve(options = {}) {
     version: '0.0.0',
     cwd: dir,
     outDir: dir,
-    connectHelp: () => 'Open ScanRuler and pair it.',
+    connectHelp: () => 'Open Banana Scan and pair it.',
     serverInfo: () => ({ port }),
     pageTimeoutMs: 50,
     ...options,
@@ -55,7 +55,7 @@ async function serve(options = {}) {
 }
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
+  dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
   ;({ link, http, port, client, close } = await serve({ openPage: () => opener(), openGraceMs: 50, openWaitMs: 5_000 }))
   client.setNotificationHandler(ToolListChangedNotificationSchema, () => {
     listChanged++
@@ -72,20 +72,20 @@ const call = async (name, args = {}, on = client) => {
 test('before a page connects: the app’s tools are listed, status says how to connect, calls say no page', async () => {
   const { tools } = await client.listTools()
   const names = tools.map((t) => t.name)
-  assert.ok(names.includes('scanruler_status'))
-  assert.ok(names.includes('scanruler_wait'))
-  assert.ok(names.includes('scanruler_open'))
+  assert.ok(names.includes('bananascan_status'))
+  assert.ok(names.includes('bananascan_wait'))
+  assert.ok(names.includes('bananascan_open'))
   assert.ok(names.includes('scan_open'))
   assert.equal(tools.length, SNAPSHOT.length + 7)
-  assert.ok(!names.includes('scanruler_tools'), 'listed in full, the tools need no catalogue')
-  assert.equal((await call('scanruler_tools')).text, 'unknown_command: There is no tool scanruler_tools.')
-  const status = await call('scanruler_status')
+  assert.ok(!names.includes('bananascan_tools'), 'listed in full, the tools need no catalogue')
+  assert.equal((await call('bananascan_tools')).text, 'unknown_command: There is no tool bananascan_tools.')
+  const status = await call('bananascan_status')
   assert.equal(status.json.connected, false)
-  assert.equal(status.json.howToConnect, 'Open ScanRuler and pair it.')
+  assert.equal(status.json.howToConnect, 'Open Banana Scan and pair it.')
   const refused = await call('session_state')
   assert.equal(refused.error, true)
-  assert.match(refused.text, /^unavailable: No ScanRuler page is connected; scanruler_open opens one\. Open ScanRuler/)
-  const waited = await call('scanruler_wait', { timeoutSeconds: 0.05 })
+  assert.match(refused.text, /^unavailable: No Banana Scan page is connected; bananascan_open opens one\. Open Banana Scan/)
+  const waited = await call('bananascan_wait', { timeoutSeconds: 0.05 })
   assert.equal(waited.json.connected, false)
 })
 
@@ -104,7 +104,7 @@ test('with a page: tools run on it — files read from paths and written to path
       throw { code: 'invalid_input', message: `${name} refused.` }
     },
   })
-  const status = await call('scanruler_wait', { timeoutSeconds: 5 })
+  const status = await call('bananascan_wait', { timeoutSeconds: 5 })
   assert.equal(status.json.connected, true)
   assert.equal(status.json.page.version, '0.0.0-test')
   assert.equal(status.json.howToConnect, undefined)
@@ -135,7 +135,7 @@ test('with a page: tools run on it — files read from paths and written to path
 
   // Several tools in one call, in order; a refusal stops the rest unless
   // told otherwise, and the server's own tools are not batched.
-  const batch = await call('scanruler_batch', { calls: [{ tool: 'session_state' }, { tool: 'view_render', arguments: { width: 320 } }, { tool: 'element_fit', arguments: { kind: 'sphere', at: { vertex: 1 } } }, { tool: 'session_state' }] })
+  const batch = await call('bananascan_batch', { calls: [{ tool: 'session_state' }, { tool: 'view_render', arguments: { width: 320 } }, { tool: 'element_fit', arguments: { kind: 'sphere', at: { vertex: 1 } } }, { tool: 'session_state' }] })
   assert.equal(batch.error, false)
   assert.equal(batch.json.ran, 3)
   assert.equal(batch.json.of, 4)
@@ -149,32 +149,32 @@ test('with a page: tools run on it — files read from paths and written to path
   const first = batch.json.results[1].result.file
   assert.deepEqual(first, { name: 'ballbar-view.png', mimeType: 'image/png', size: 4, path: join(dir, 'ballbar-view.png') })
   assert.equal((await readFile(first.path)).subarray(1, 4).toString(), 'PNG')
-  const two = await call('scanruler_batch', { calls: [{ tool: 'view_render', arguments: {} }, { tool: 'view_render', arguments: { path: 'kept.png' } }] })
+  const two = await call('bananascan_batch', { calls: [{ tool: 'view_render', arguments: {} }, { tool: 'view_render', arguments: { path: 'kept.png' } }] })
   assert.equal(two.images.length, 0)
   assert.equal(two.json.results[0].result.file.path, join(dir, 'ballbar-view-2.png'))
   assert.equal(two.json.results[1].result.file.path, join(dir, 'kept.png'), 'a path given is where it goes')
   assert.equal((await readFile(join(dir, 'kept.png'))).subarray(1, 4).toString(), 'PNG')
   assert.deepEqual(batch.json.results[2], { tool: 'element_fit', ok: false, error: { code: 'invalid_input', message: 'element.fit refused.' } })
-  const all = await call('scanruler_batch', { stopOnError: false, calls: [{ tool: 'element_fit', arguments: {} }, { tool: 'no_such_tool' }, { tool: 'scanruler_status' }, { tool: 'session_state' }] })
+  const all = await call('bananascan_batch', { stopOnError: false, calls: [{ tool: 'element_fit', arguments: {} }, { tool: 'no_such_tool' }, { tool: 'bananascan_status' }, { tool: 'session_state' }] })
   assert.equal(all.json.ran, 4)
   assert.equal(all.json.stopped, undefined)
   assert.equal(all.json.results[1].error.code, 'unknown_command')
   assert.equal(all.json.results[2].error.code, 'invalid_input')
   assert.equal(all.json.results[3].ok, true)
-  assert.equal((await call('scanruler_batch', { calls: [] })).error, true)
+  assert.equal((await call('bananascan_batch', { calls: [] })).error, true)
   // A run a script wrote, read from its file: by the command's own name too.
   await writeFile(join(dir, 'calls.json'), JSON.stringify({ steps: [{ name: 'session.state', input: {} }, { tool: 'session_state' }] }))
-  const fromFile = await call('scanruler_batch', { file: 'calls.json' })
+  const fromFile = await call('bananascan_batch', { file: 'calls.json' })
   assert.equal(fromFile.error, false)
   assert.equal(fromFile.json.ran, 2)
   assert.deepEqual(fromFile.json.results.map((r) => r.tool), ['session_state', 'session_state'])
-  assert.equal((await call('scanruler_batch', { file: 'no-such.json' })).error, true)
-  assert.equal((await call('scanruler_batch', { file: 'calls.json', calls: [{ tool: 'session_state' }] })).error, true)
+  assert.equal((await call('bananascan_batch', { file: 'no-such.json' })).error, true)
+  assert.equal((await call('bananascan_batch', { file: 'calls.json', calls: [{ tool: 'session_state' }] })).error, true)
 
   assert.ok(listChanged >= 1, 'the client is told the list changed')
   const { tools } = await client.listTools()
   assert.ok(tools.some((t) => t.name === 'demo_thing'))
-  assert.ok(tools.some((t) => t.name === 'scanruler_batch'))
+  assert.ok(tools.some((t) => t.name === 'bananascan_batch'))
   page.page.close()
 })
 
@@ -191,7 +191,7 @@ test('a session someone left: the status says what it holds, scan_open with save
       if (name === 'session.state') return { busy: null, running: null, scan: held ? { fileName: 'other.stl' } : null, project: { name: held ? 'Their housing' : null, unsaved: held, holds: held ? { features: 12, notes: 3 } : {} } }
       if (name === 'project.save') {
         if (!held) throw { code: 'failed', message: 'There is nothing to save yet — no scan, image or work.' }
-        return { file: { name: 'Their housing.scanruler', mimeType: 'application/zip', bytes: new Uint8Array([0x50, 0x4b, 3, 4]) }, status: 'Project saved.' }
+        return { file: { name: 'Their housing.bananascan', mimeType: 'application/zip', bytes: new Uint8Array([0x50, 0x4b, 3, 4]) }, status: 'Project saved.' }
       }
       if (name === 'scan.open') {
         if (held && !input.discard) throw { code: 'invalid_state', message: 'The session holds 12 features.' }
@@ -202,12 +202,12 @@ test('a session someone left: the status says what it holds, scan_open with save
     },
   })
   try {
-    assert.equal((await on('scanruler_wait', { timeoutSeconds: 5 })).json.connected, true)
-    const before = await on('scanruler_status')
+    assert.equal((await on('bananascan_wait', { timeoutSeconds: 5 })).json.connected, true)
+    const before = await on('bananascan_status')
     assert.deepEqual(before.json.session, { scan: 'other.stl', project: 'Their housing', unsaved: true, features: 12, notes: 3 })
 
     // Nowhere to write a report yet: no scan was opened from a folder.
-    const early = await on('scanruler_write', { path: 'report.md', text: '# Sigma' })
+    const early = await on('bananascan_write', { path: 'report.md', text: '# Sigma' })
     assert.equal(early.error, true)
     assert.match(early.text, /^invalid_state: .*scan_open/)
 
@@ -221,20 +221,20 @@ test('a session someone left: the status says what it holds, scan_open with save
     assert.deepEqual(runs.slice(runs.indexOf('project.save')), ['project.save', 'scan.open'], 'saved, then opened')
     assert.equal(page.page.runs.find((r) => r.name === 'scan.open').input.discard, true)
     assert.equal(page.page.runs.find((r) => r.name === 'scan.open').input.saveTo, undefined, 'the page is not told the path')
-    assert.deepEqual((await on('scanruler_status')).json.session, { scan: null, unsaved: false })
+    assert.deepEqual((await on('bananascan_status')).json.session, { scan: null, unsaved: false })
 
     // With nothing to save, the open goes on.
-    const again = await on('scan_open', { path: join(folder, 'sigma.stl'), saveTo: join(dir, 'empty.scanruler') })
+    const again = await on('scan_open', { path: join(folder, 'sigma.stl'), saveTo: join(dir, 'empty.bananascan') })
     assert.equal(again.json.savedTo, null)
 
     // The report, beside the scan — and nowhere else.
-    const wrote = await on('scanruler_write', { path: 'report.md', text: '# Sigma\n\nRMS 0.067 mm' })
+    const wrote = await on('bananascan_write', { path: 'report.md', text: '# Sigma\n\nRMS 0.067 mm' })
     assert.deepEqual(wrote.json, { path: join(folder, 'report.md'), size: 21 })
     assert.equal(await readFile(join(folder, 'report.md'), 'utf8'), '# Sigma\n\nRMS 0.067 mm')
-    assert.equal((await on('scanruler_write', { path: 'out/readings.csv', text: 'a,b' })).json.path, join(folder, 'out', 'readings.csv'), 'a folder under it')
-    assert.equal((await on('scanruler_write', { path: join(dir, 'beside-the-project.txt'), text: 'x' })).error, false, 'the folder a project was saved into')
+    assert.equal((await on('bananascan_write', { path: 'out/readings.csv', text: 'a,b' })).json.path, join(folder, 'out', 'readings.csv'), 'a folder under it')
+    assert.equal((await on('bananascan_write', { path: join(dir, 'beside-the-project.txt'), text: 'x' })).error, false, 'the folder a project was saved into')
     for (const [path, why] of [['report.exe', /only \.md/], ['../escape.md', /"\.\."/], [join(tmpdir(), 'elsewhere.md'), /outside/]]) {
-      const refused = await on('scanruler_write', { path, text: 'x' })
+      const refused = await on('bananascan_write', { path, text: 'x' })
       assert.equal(refused.error, true, path)
       assert.match(refused.text, why)
     }
@@ -244,14 +244,14 @@ test('a session someone left: the status says what it holds, scan_open with save
   }
 })
 
-test('scanruler_open opens the paired page when none comes back by itself, and leaves a connected one be', async () => {
+test('bananascan_open opens the paired page when none comes back by itself, and leaves a connected one be', async () => {
   for (let i = 0; link.connected && i < 100; i++) await new Promise((resolve) => setTimeout(resolve, 20))
   assert.equal(link.connected, false)
 
-  const failed = await call('scanruler_open')
+  const failed = await call('bananascan_open')
   assert.equal(failed.json.connected, false)
   assert.equal(failed.json.opened, false)
-  assert.equal(failed.json.howToConnect, 'Open ScanRuler and pair it.')
+  assert.equal(failed.json.howToConnect, 'Open Banana Scan and pair it.')
 
   let opens = 0
   let page
@@ -263,12 +263,12 @@ test('scanruler_open opens the paired page when none comes back by itself, and l
     }, 20)
     return true
   }
-  const opened = await call('scanruler_open')
+  const opened = await call('bananascan_open')
   assert.equal(opened.json.connected, true)
   assert.equal(opened.json.opened, true)
   assert.equal(opens, 1)
 
-  const again = await call('scanruler_open')
+  const again = await call('bananascan_open')
   assert.equal(again.json.connected, true)
   assert.equal(again.json.opened, false)
   assert.equal(opens, 1, 'a connected page is not opened a second time')
@@ -276,12 +276,12 @@ test('scanruler_open opens the paired page when none comes back by itself, and l
   opener = async () => false
 })
 
-const OWN = ['scanruler_batch', 'scanruler_files', 'scanruler_open', 'scanruler_read', 'scanruler_status', 'scanruler_tools', 'scanruler_wait', 'scanruler_write']
+const OWN = ['bananascan_batch', 'bananascan_files', 'bananascan_open', 'bananascan_read', 'bananascan_status', 'bananascan_tools', 'bananascan_wait', 'bananascan_write']
 /** The tools listed in compact mode beside the server's own: the commands
  *  that return a picture, by their flag. */
 const pictures = (commands) => commands.filter((c) => c.returnsImage).map(toolName)
 
-test('compact: the eight and the picture tools listed, the rest read through scanruler_tools as the full list would give them', async () => {
+test('compact: the eight and the picture tools listed, the rest read through bananascan_tools as the full list would give them', async () => {
   const compact = await serve({ tools: 'compact' })
   const on = (name, args) => call(name, args, compact.client)
   try {
@@ -293,7 +293,7 @@ test('compact: the eight and the picture tools listed, the rest read through sca
     for (const name of shown) assert.deepEqual(tools.find((t) => t.name === name), full.find((t) => t.name === name), `${name} as the full list gives it`)
 
     // The list: every command, a line each.
-    const list = await on('scanruler_tools')
+    const list = await on('bananascan_tools')
     assert.equal(list.json.count, SNAPSHOT.length)
     assert.deepEqual(Object.keys(list.json.tools), SNAPSHOT.map(toolName))
     for (const c of SNAPSHOT) assert.equal(list.json.tools[toolName(c)], c.title, c.name)
@@ -301,13 +301,13 @@ test('compact: the eight and the picture tools listed, the rest read through sca
     // Definitions, the full list's own — its paths in place of bytes, its
     // folder for exports — and names it does not know set apart.
     const names = ['scan_open', 'export_step', 'view_render', 'element_fit']
-    const read = await on('scanruler_tools', { names: [...names, 'no_such_tool', 'element.fit'] })
+    const read = await on('bananascan_tools', { names: [...names, 'no_such_tool', 'element.fit'] })
     assert.equal(read.error, false)
     assert.deepEqual(read.json.tools, names.map((name) => full.find((t) => t.name === name)))
     assert.deepEqual(read.json.unknown, ['no_such_tool', 'element.fit'])
-    assert.deepEqual((await on('scanruler_tools', { names: ['nothing_here'] })).json, { tools: [], unknown: ['nothing_here'] })
-    assert.deepEqual((await on('scanruler_tools', { names: 'scan_open, element_fit' })).json.tools.map((t) => t.name), ['scan_open', 'element_fit'], 'a string of names is read as a list')
-    const many = await on('scanruler_tools', { names: SNAPSHOT.map(toolName) })
+    assert.deepEqual((await on('bananascan_tools', { names: ['nothing_here'] })).json, { tools: [], unknown: ['nothing_here'] })
+    assert.deepEqual((await on('bananascan_tools', { names: 'scan_open, element_fit' })).json.tools.map((t) => t.name), ['scan_open', 'element_fit'], 'a string of names is read as a list')
+    const many = await on('bananascan_tools', { names: SNAPSHOT.map(toolName) })
     assert.equal(many.error, true)
     assert.match(many.text, /^invalid_input: names: at most 20 at a time/)
 
@@ -329,18 +329,18 @@ test('compact: the list follows the page that connects, and its tools run in a b
   const extra = { name: 'demo.thing', description: 'Something a plugin adds. It has no title of its own.', input: { type: 'object', properties: {} }, readOnly: false, returnsFile: false, returnsImage: false }
   let page
   try {
-    assert.equal((await on('scanruler_tools')).json.tools.demo_thing, undefined)
+    assert.equal((await on('bananascan_tools')).json.tools.demo_thing, undefined)
     page = await fakePage(compact.port, { token: TOKEN, commands: [...SNAPSHOT, extra], answer: (name) => ({ ran: name }) })
-    assert.equal((await on('scanruler_wait', { timeoutSeconds: 5 })).json.connected, true)
+    assert.equal((await on('bananascan_wait', { timeoutSeconds: 5 })).json.connected, true)
 
-    const list = await on('scanruler_tools')
+    const list = await on('bananascan_tools')
     assert.deepEqual(Object.keys(list.json.tools), [...SNAPSHOT, extra].map(toolName), 'every command the page lists')
     assert.equal(list.json.tools.demo_thing, 'Something a plugin adds.', 'untitled, the first sentence')
-    assert.deepEqual((await on('scanruler_tools', { names: ['demo_thing'] })).json.tools, [JSON.parse(JSON.stringify(toolFor(extra, { outDir: dir })))])
+    assert.deepEqual((await on('bananascan_tools', { names: ['demo_thing'] })).json.tools, [JSON.parse(JSON.stringify(toolFor(extra, { outDir: dir })))])
     assert.equal((await compact.client.listTools()).tools.length, OWN.length + pictures(SNAPSHOT).length, 'a command with no picture stays unlisted')
     assert.equal(changed, 0, 'and so the list is not said to have changed')
 
-    const batch = await on('scanruler_batch', { calls: [{ tool: 'demo_thing' }, { tool: 'scanruler_tools' }] })
+    const batch = await on('bananascan_batch', { calls: [{ tool: 'demo_thing' }, { tool: 'bananascan_tools' }] })
     assert.deepEqual(batch.json.results[0], { tool: 'demo_thing', ok: true, result: { ran: 'demo.thing' } })
     assert.equal(batch.json.results[1].error.code, 'invalid_input', 'the server’s own are not batched')
     assert.deepEqual((await on('session_state')).json, { ran: 'session.state' }, 'a direct call to a tool not listed')
@@ -374,7 +374,7 @@ test('compact: a page with a new picture command has the client list the tools a
     const shown = await on('demo_picture')
     assert.equal(shown.images.length, 1, 'called directly, the picture is shown')
     assert.equal(shown.json.ran, 'demo.picture')
-    const batched = await on('scanruler_batch', { calls: [{ tool: 'demo_picture' }] })
+    const batched = await on('bananascan_batch', { calls: [{ tool: 'demo_picture' }] })
     assert.equal(batched.images.length, 0)
     assert.deepEqual(batched.json.results[0].result, { ran: 'demo.picture', file: { name: 'thing.png', mimeType: 'image/png', size: 4, path: join(dir, 'thing.png') } }, 'in a batch, its text, and the picture in a file')
   } finally {
@@ -384,8 +384,8 @@ test('compact: a page with a new picture command has the client list the tools a
 })
 
 /** The server's own tools in full mode and with namespaces: the eight but
- *  scanruler_tools, which only compact adds. */
-const SEVEN = OWN.filter((n) => n !== 'scanruler_tools')
+ *  bananascan_tools, which only compact adds. */
+const SEVEN = OWN.filter((n) => n !== 'bananascan_tools')
 const namespaceOf = (name) => name.split('_')[0]
 /** A command a page adds, in a namespace of its own. */
 const DEMO = { name: 'demo.thing', description: 'Something a plugin adds.', input: { type: 'object', properties: {} }, readOnly: false, returnsFile: false, returnsImage: false }
@@ -402,7 +402,7 @@ test('namespaces listed: only those, beside the server’s seven; a tool left ou
     assert.ok(expected.length > SEVEN.length + 1, 'the app has scan and view commands')
     assert.deepEqual(tools.map((t) => t.name).sort(), expected.sort())
     for (const t of tools.filter((t) => !SEVEN.includes(t.name))) assert.deepEqual(t, full.find((f) => f.name === t.name), `${t.name} as the full list gives it`)
-    assert.ok(!tools.some((t) => t.name === 'scanruler_tools'), 'no scanruler_tools: each listed command is its own tool')
+    assert.ok(!tools.some((t) => t.name === 'bananascan_tools'), 'no bananascan_tools: each listed command is its own tool')
 
     // Left out, a tool is unknown — called directly or in a batch — while
     // a listed one needs only the page.
@@ -410,7 +410,7 @@ test('namespaces listed: only those, beside the server’s seven; a tool left ou
     assert.match(refused.text, /^unknown_command: There is no tool element_fit here: this server was started with --tools scan,view,nothing, which leaves the element_ tools out\./)
     assert.match((await on('session_state')).text, /^unknown_command: /)
     assert.match((await on('scan_query')).text, /^unavailable: /)
-    const batch = await on('scanruler_batch', { stopOnError: false, calls: [{ tool: 'element_fit' }, { tool: 'no_such_tool' }] })
+    const batch = await on('bananascan_batch', { stopOnError: false, calls: [{ tool: 'element_fit' }, { tool: 'no_such_tool' }] })
     assert.equal(batch.json.results[0].error.code, 'unknown_command')
     assert.match(batch.json.results[0].error.message, /leaves the element_ tools out/)
     assert.equal(batch.json.results[1].error.code, 'unknown_command')
@@ -419,10 +419,10 @@ test('namespaces listed: only those, beside the server’s seven; a tool left ou
     // matches none of the page's namespaces named once on connection.
     assert.deepEqual(lines, [], 'nothing said before a page')
     page = await fakePage(some.port, { token: TOKEN, commands: [...SNAPSHOT, DEMO], answer: (name) => ({ ran: name }) })
-    assert.equal((await on('scanruler_wait', { timeoutSeconds: 5 })).json.connected, true)
+    assert.equal((await on('bananascan_wait', { timeoutSeconds: 5 })).json.connected, true)
     assert.ok(!(await some.client.listTools()).tools.some((t) => t.name === 'demo_thing'))
     assert.equal(lines.length, 1, lines.join('\n'))
-    assert.match(lines[0], /^--tools scan,view,nothing: no tool of the page \(ScanRuler 0\.0\.0-test\) is in nothing; its namespaces are align, demo, deviation, /)
+    assert.match(lines[0], /^--tools scan,view,nothing: no tool of the page \(Banana Scan 0\.0\.0-test\) is in nothing; its namespaces are align, demo, deviation, /)
     assert.match((await on('demo_thing')).text, /^unknown_command: /)
     assert.deepEqual((await on('scan_query', { point: [0, 0, 0] })).json, { ran: 'scan.query' }, 'a listed tool runs on the page')
   } finally {
@@ -445,11 +445,11 @@ test('namespaces left out: all but those, a page’s own namespace among them, a
     const kept = SNAPSHOT.map(toolName).filter((n) => !['flat', 'thickness'].includes(namespaceOf(n)))
     assert.ok(kept.length < SNAPSHOT.length, 'the app has flat and thickness commands')
     assert.deepEqual(tools.map((t) => t.name).sort(), [...SEVEN, ...kept].sort())
-    assert.equal((await on('scanruler_status')).json.server.tools, '-flat,-thickness')
+    assert.equal((await on('bananascan_status')).json.server.tools, '-flat,-thickness')
     assert.match((await on('flat_render')).text, /^unknown_command: There is no tool flat_render here: this server was started with --tools -flat,-thickness, which leaves the flat_ tools out\./)
 
     page = await fakePage(most.port, { token: TOKEN, commands: [...SNAPSHOT, DEMO], answer: (name) => ({ ran: name }) })
-    assert.equal((await on('scanruler_wait', { timeoutSeconds: 5 })).json.connected, true)
+    assert.equal((await on('bananascan_wait', { timeoutSeconds: 5 })).json.connected, true)
     for (let i = 0; i < 100 && changed === 0; i++) await new Promise((r) => setTimeout(r, 10))
     assert.equal(changed, 1, 'a page with a new namespace has the client list the tools again')
     assert.ok((await most.client.listTools()).tools.some((t) => t.name === 'demo_thing'), 'the page’s own namespace is listed, not being left out')
@@ -464,7 +464,7 @@ test('namespaces left out: all but those, a page’s own namespace among them, a
 
 test('namespaces: a list that mixes the two forms, or is empty, is refused; full and compact stay as they are', () => {
   assert.throws(() => parseToolMode('scan,-flat'), /^Error: --tools scan,-flat mixes namespaces to list \(scan\) with namespaces to leave out \(-flat\): give one form/)
-  assert.throws(() => parseToolMode('', 'SCANRULER_MCP_TOOLS'), /^Error: SCANRULER_MCP_TOOLS is empty: give full, compact, namespaces to list \(scan,view\) or namespaces to leave out \(-flat,-thickness\)\./)
+  assert.throws(() => parseToolMode('', 'BANANA_SCAN_MCP_TOOLS'), /^Error: BANANA_SCAN_MCP_TOOLS is empty: give full, compact, namespaces to list \(scan,view\) or namespaces to leave out \(-flat,-thickness\)\./)
   assert.throws(() => parseToolMode('scan,,view'), /^Error: --tools scan,,view: "" is no namespace/)
   assert.throws(() => parseToolMode('-'), /"-" is no namespace/)
   assert.throws(() => createMcpServer({ link: new PageLink({ token: TOKEN }), version: '0.0.0', cwd: dir, outDir: dir, connectHelp: () => '', serverInfo: () => ({}), tools: 'scan,-flat' }), /mixes namespaces/)

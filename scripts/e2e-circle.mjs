@@ -39,7 +39,7 @@ import {
 } from './e2e-lib.mjs'
 
 const SIZE = 20
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-circle-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-circle-'))
 const CUBE = join(dir, 'cube.stl')
 writeFileSync(
   CUBE,
@@ -152,7 +152,7 @@ check(
 )
 // The ghost is drawn at the assumed Ø as soon as it is entered; the readout
 // above it stays the measurement.
-const ghostRadius = await page.evaluate(() => window.__scanruler.scene().overlays.previewFit?.radius ?? null)
+const ghostRadius = await page.evaluate(() => window.__bananascan.scene().overlays.previewFit?.radius ?? null)
 check(ghostRadius === 6.25, `the preview is drawn at the assumed Ø 12.5 (radius ${ghostRadius})`)
 await click(page, '[data-test=create-element]')
 await sleep(400)
@@ -218,7 +218,7 @@ check(
 // ---- STEP export: assumed where given, measured everywhere else -------------
 const cdp = await page.createCDPSession()
 const exportStep = async (label) => {
-  const dir = mkdtempSync(join(tmpdir(), `scanruler-circle-${label}-`))
+  const dir = mkdtempSync(join(tmpdir(), `banana-scan-circle-${label}-`))
   await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })
   await click(page, '[data-test=export-step]')
   const f = await awaitDownload(dir, '.step')

@@ -68,7 +68,7 @@ function cylinder(segments = 240) {
   return { positions: Float64Array.from(pos), indices: Uint32Array.from(idx) }
 }
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-units-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-units-'))
 const STL = join(dir, 'cylinder.stl')
 writeFileSync(STL, Buffer.from(writeBinarySTL(cylinder())))
 
@@ -100,7 +100,7 @@ const setText = async (sel, value) => {
 // ---- inches, chosen in Settings -----------------------------------------------
 await withSettings(page, () => click(page, '[data-test="units-in"]'))
 check(
-  await page.evaluate(() => localStorage.getItem('scanruler.units') === 'in'),
+  await page.evaluate(() => localStorage.getItem('bananascan.units') === 'in'),
   'the choice is remembered in this browser',
 )
 
@@ -172,7 +172,7 @@ check(pins.length > 0 && pins.every(inInches), 'the pin on the part reads in inc
 await page.screenshot({ path: shotPath('e2e-units-inches.png') })
 
 // ---- the scan as an STL in inches ------------------------------------------------
-const downloads = mkdtempSync(join(tmpdir(), 'scanruler-units-stl-'))
+const downloads = mkdtempSync(join(tmpdir(), 'banana-scan-units-stl-'))
 await downloadsTo(page, downloads)
 await click(page, '[data-test="export-mesh"]')
 await click(page, '[data-test="export-mesh-stl-in"]')

@@ -3,7 +3,7 @@
 
     python slice.py 5.3,8,13 [--plane z] [--box u0,v0,u1,v1] [--out data/slices.png] [--data data]
 
-Sheet coordinates as ScanRuler's world planes: z -> (X, Y); x -> (Y, Z); y -> (Z, X).
+Sheet coordinates as Banana Scan's world planes: z -> (X, Y); x -> (Y, Z); y -> (Z, X).
 Open the PNG with the Read tool. Exact numbers come from profile.py, not from the picture.
 """
 import argparse, os, sys

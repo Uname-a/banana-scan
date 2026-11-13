@@ -175,7 +175,7 @@ function describe(): string {
     .map((g) => `${g.id} — ${g.when}${g.with?.length ? ` (read with ${g.with.join(' and ')}, first)` : ''}`)
     .join('; ')
   return [
-    'How to do a task with ScanRuler: the workflow, the judgement and the traps the tools’ own descriptions do not carry, written for this build — read the guide for your task, whole, before its first step, and a section again when you need it.',
+    'How to do a task with Banana Scan: the workflow, the judgement and the traps the tools’ own descriptions do not carry, written for this build — read the guide for your task, whole, before its first step, and a section again when you need it.',
     index ? `The guides: ${index}.` : 'This build has no guides.',
     `topic: a guide, or several read in order (a guide and the ones it is read with, in one call) — as many as fit in about ${Math.round(GUIDES_READ_MOST / 1000)} k characters, the rest named in next, to read in the next call. A guide longer than that by itself answers its sections in order while they fit, and names the rest in sectionsLeft, each to read by section.`,
     'A guide’s sections for one moment of the task — measuring, building — are not in the whole read: later names each with when to read it, and the note says how; read it by section when that moment comes, before the step it is for.',

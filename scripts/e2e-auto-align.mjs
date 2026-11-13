@@ -17,7 +17,7 @@ import { turnedBlockScan } from './e2e-fixtures.mjs'
 
 // ---- the scan: a gridded block, turned and moved -----------------------------
 const { bytes: stl } = turnedBlockScan()
-const scanPath = join(mkdtempSync(join(tmpdir(), 'scanruler-auto-align-')), 'block.stl')
+const scanPath = join(mkdtempSync(join(tmpdir(), 'banana-scan-auto-align-')), 'block.stl')
 writeFileSync(scanPath, stl)
 
 const { browser, page, consoleErrors } = await launchApp()

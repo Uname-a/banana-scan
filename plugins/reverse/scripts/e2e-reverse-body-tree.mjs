@@ -31,7 +31,7 @@ doc.addShape(occt.translate(occt.makeBox(10, 10, 20), 40, 5, 0), { name: 'Shaft'
 doc.addShape(occt.translate(occt.makeBox(16, 16, 6), 60, 2, 0), { name: 'Cap' })
 const stepText = doc.exportSTEP()
 doc.close()
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-body-tree-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-body-tree-'))
 const stepPath = join(dir, 'assembly.step')
 writeFileSync(stepPath, stepText)
 

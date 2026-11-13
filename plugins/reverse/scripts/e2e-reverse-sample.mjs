@@ -41,7 +41,7 @@ await page.evaluate(async () => {
   const { buildSamplePart } = await import('/src/core/geometry/samplePart.ts')
   const { buildBinaryStl } = await import('/src/core/exportStl.ts')
   const part = buildSamplePart()
-  const file = new File([buildBinaryStl(part.positions, part.indices, null, 'ScanRuler sample bracket')], 'sample-bracket.stl')
+  const file = new File([buildBinaryStl(part.positions, part.indices, null, 'Banana Scan sample bracket')], 'sample-bracket.stl')
   const input = document.querySelector('[data-test=slot-scan] input[type=file]')
   const dt = new DataTransfer()
   dt.items.add(file)

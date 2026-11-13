@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Exact loop -> ScanRuler sketch entities, with design edits, nominal radii and optional mirroring.
+"""Exact loop -> Banana Scan sketch entities, with design edits, nominal radii and optional mirroring.
 
     python build_plan.py spec.json
 
@@ -49,7 +49,7 @@ Edits:
                                         point instead of drawing a line to it
   {"op": "radius", "piece": sel, "r": 11.4}   set a radius outright (a value the snap rule wouldn't reach)
 
-Arcs come out as ScanRuler wants them: {c, r, start, sweep} in radians, sweep counter-clockwise positive
+Arcs come out as Banana Scan wants them: {c, r, start, sweep} in radians, sweep counter-clockwise positive
 (negative sweeps normalised: start += sweep, sweep = -sweep). The mirrored copy uses start' = -(start+sweep)
 (about v) or pi-(start+sweep) (about u), same sweep, line ends swapped.
 """

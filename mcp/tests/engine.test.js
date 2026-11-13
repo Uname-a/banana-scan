@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// The server headless: ScanRuler run in this process from an engine in
+// The server headless: Banana Scan run in this process from an engine in
 // place of the page — here a stand-in engine with two commands that run
 // headless and one that needs the page — with a real MCP client over an
 // in-memory transport; and the engine looked for where it is not.
@@ -23,7 +23,7 @@ function standIn() {
   const calls = []
   return {
     calls,
-    app: 'ScanRuler',
+    app: 'Banana Scan',
     version: '9.9.9',
     plugins: ['demo'],
     listCommands: () => [
@@ -56,7 +56,7 @@ let client
 let dir
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-engine-'))
+  dir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-engine-'))
   engine = standIn()
   link = new EngineLink(engine, '/where/engine.mjs')
   const server = createMcpServer({
@@ -87,14 +87,14 @@ test('headless: the server says so, lists the engine’s tools, and runs them in
   assert.match(client.getInstructions(), /headless/)
   assert.doesNotMatch(client.getInstructions(), /browser tab the user has open/)
   const names = (await client.listTools()).tools.map((t) => t.name)
-  assert.deepEqual(names.filter((n) => !n.startsWith('scanruler_')), ['session_state', 'demo_parameter_add', 'demo_export'])
-  const status = await call('scanruler_status')
+  assert.deepEqual(names.filter((n) => !n.startsWith('bananascan_')), ['session_state', 'demo_parameter_add', 'demo_export'])
+  const status = await call('bananascan_status')
   assert.equal(status.json.backend, 'headless')
   assert.equal(status.json.connected, true)
   assert.equal(status.json.page.version, '9.9.9')
   assert.equal(status.json.server.engine, '/where/engine.mjs')
   assert.equal(status.json.howToConnect, undefined)
-  const opened = await call('scanruler_open')
+  const opened = await call('bananascan_open')
   assert.equal(opened.json.opened, false)
   assert.match(opened.json.note, /headless/)
   assert.deepEqual((await call('demo_parameter_add', { name: 'l1' })).json, { added: 'l1' })
@@ -110,30 +110,30 @@ test('headless: the server says so, lists the engine’s tools, and runs them in
 test('headless: a tool that needs the page answers unavailable, naming the page mode; one that does not exist is unknown', async () => {
   const page = await call('view_render', {})
   assert.equal(page.error, true)
-  assert.match(page.text, /^unavailable: view_render needs the ScanRuler page .* page mode/)
+  assert.match(page.text, /^unavailable: view_render needs the Banana Scan page .* page mode/)
   const none = await call('nothing_here', {})
   assert.equal(none.error, true)
   assert.match(none.text, /^unknown_command:/)
   assert.ok(!engine.calls.includes('view.render'))
   // A batch is run in the engine the same way.
-  const batch = await call('scanruler_batch', { calls: [{ tool: 'demo_parameter_add', arguments: { name: 'q' } }, { tool: 'view_render' }] })
+  const batch = await call('bananascan_batch', { calls: [{ tool: 'demo_parameter_add', arguments: { name: 'q' } }, { tool: 'view_render' }] })
   assert.equal(batch.json.results[0].ok, true)
   assert.equal(batch.json.results[1].error.code, 'unavailable')
 })
 
 test('an engine is looked for where it is, and a file that is none is refused', async () => {
-  await assert.rejects(loadEngine(join(dir, 'missing.mjs')), /There is no ScanRuler engine at .*missing\.mjs\. Build one with "npm run build:engine"/)
+  await assert.rejects(loadEngine(join(dir, 'missing.mjs')), /There is no Banana Scan engine at .*missing\.mjs\. Build one with "npm run build:engine"/)
   const notOne = join(dir, 'not-an-engine.mjs')
   await writeFile(notOne, 'export const x = 1\n')
-  await assert.rejects(loadEngine(notOne), /is not a ScanRuler engine/)
+  await assert.rejects(loadEngine(notOne), /is not a Banana Scan engine/)
   const fake = join(dir, 'engine.mjs')
-  await writeFile(fake, `export async function startEngine() { return { app: 'ScanRuler', version: '1.2.3', plugins: [], listCommands: () => [], pageCommands: () => [], run: async () => ({}), stop: async () => {} } }\n`)
+  await writeFile(fake, `export async function startEngine() { return { app: 'Banana Scan', version: '1.2.3', plugins: [], listCommands: () => [], pageCommands: () => [], run: async () => ({}), stop: async () => {} } }\n`)
   const started = await loadEngine(fake)
   assert.equal(started.version, '1.2.3')
   assert.ok(pathToFileURL(fake).href.startsWith('file:'))
 })
 
-test('headless and compact: the server’s own tools listed, the engine’s read through scanruler_tools and run in a batch', async () => {
+test('headless and compact: the server’s own tools listed, the engine’s read through bananascan_tools and run in a batch', async () => {
   const compactLink = new EngineLink(standIn(), '/where/engine.mjs')
   const server = createMcpServer({
     link: compactLink,
@@ -150,11 +150,11 @@ test('headless and compact: the server’s own tools listed, the engine’s read
   await Promise.all([server.connect(a), small.connect(b)])
   try {
     assert.match(small.getInstructions(), /headless/)
-    assert.match(small.getInstructions(), /scanruler_tools/)
-    assert.deepEqual((await small.listTools()).tools.map((t) => t.name).sort(), ['scanruler_batch', 'scanruler_open', 'scanruler_status', 'scanruler_tools', 'scanruler_wait'])
-    const listed = JSON.parse((await small.callTool({ name: 'scanruler_tools', arguments: {} })).content[0].text)
+    assert.match(small.getInstructions(), /bananascan_tools/)
+    assert.deepEqual((await small.listTools()).tools.map((t) => t.name).sort(), ['bananascan_batch', 'bananascan_open', 'bananascan_status', 'bananascan_tools', 'bananascan_wait'])
+    const listed = JSON.parse((await small.callTool({ name: 'bananascan_tools', arguments: {} })).content[0].text)
     assert.deepEqual(Object.keys(listed.tools), ['session_state', 'demo_parameter_add', 'demo_export'])
-    const batch = JSON.parse((await small.callTool({ name: 'scanruler_batch', arguments: { calls: [{ tool: 'demo_parameter_add', arguments: { name: 'c1' } }, { tool: 'session_state' }] } })).content[0].text)
+    const batch = JSON.parse((await small.callTool({ name: 'bananascan_batch', arguments: { calls: [{ tool: 'demo_parameter_add', arguments: { name: 'c1' } }, { tool: 'session_state' }] } })).content[0].text)
     assert.deepEqual(batch.results[1].result.parameters, ['c1'])
   } finally {
     await small.close()

@@ -457,7 +457,7 @@ export async function sessionState() {
   const history = useHistory.getState()
   const running = useCommandActivity.getState().running
   return {
-    app: { name: 'ScanRuler', version: APP_VERSION, plugins: plugins().map((p) => p.id), viewport: session.sceneRef.current !== null },
+    app: { name: 'Banana Scan', version: APP_VERSION, plugins: plugins().map((p) => p.id), viewport: session.sceneRef.current !== null },
     // The agent's server older than this page's commands assume: what the
     // banner tells the person, for an agent to pass on.
     ...withServerTooOld(),

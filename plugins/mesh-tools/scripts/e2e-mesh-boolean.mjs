@@ -145,28 +145,28 @@ await page.screenshot({ path: shotPath('mesh-boolean-done.png') })
 // Shown in the scan's place, the copy is what the viewport's shading copies
 // are of: none with every edge smooth, the block's and the bore's rims
 // split again from 60°.
-const shadingCopies = () => re(() => window.__scanruler.scene().copyOf.length)
-await re(() => window.__scanruler.measure.getState().setCreaseMode('off'))
-await page.waitForFunction(() => window.__scanruler.scene().copyOf.length === 0, { timeout: 15_000 }).catch(() => {})
+const shadingCopies = () => re(() => window.__bananascan.scene().copyOf.length)
+await re(() => window.__bananascan.measure.getState().setCreaseMode('off'))
+await page.waitForFunction(() => window.__bananascan.scene().copyOf.length === 0, { timeout: 15_000 }).catch(() => {})
 check((await shadingCopies()) === 0, 'Always smooth, the copy is drawn smooth')
 await re(() => {
-  const m = window.__scanruler.measure.getState()
+  const m = window.__bananascan.measure.getState()
   m.setCreaseMode('on')
   m.setCreaseAngle(60)
 })
-await page.waitForFunction(() => window.__scanruler.scene().copyOf.length > 0, { timeout: 15_000 }).catch(() => {})
+await page.waitForFunction(() => window.__bananascan.scene().copyOf.length > 0, { timeout: 15_000 }).catch(() => {})
 const split60 = await shadingCopies()
-check(split60 > 0 && (await re(() => window.__scanruler.scene().showingEdited())), `Always sharp from 60°, the copy shown has its rims split (${split60} copies)`)
+check(split60 > 0 && (await re(() => window.__bananascan.scene().showingEdited())), `Always sharp from 60°, the copy shown has its rims split (${split60} copies)`)
 await page.screenshot({ path: shotPath('mesh-boolean-sharp.png') })
 await re(() => {
-  const m = window.__scanruler.measure.getState()
+  const m = window.__bananascan.measure.getState()
   m.setCreaseMode('on')
   m.setCreaseAngle(30)
 })
 await sleep(600)
 
 // ---- the copy exported as an STL, read back --------------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-boolean-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-boolean-'))
 const cdp = await downloadsTo(page, dir)
 await click(page, '[data-test=export-edited]')
 const stlFile = await awaitDownload(dir, '.stl')
@@ -196,7 +196,7 @@ check((await page.$$('[data-test=pending-edit]')).length === 0, 'Ctrl+Z takes th
 // out through the top: no body is made of it, and the bore it cuts is
 // Ø 5, from z 12 up — in the same edit as the modelled cylinder's.
 await re(() => {
-  const m = window.__scanruler.measure
+  const m = window.__bananascan.measure
   m.setState({
     elements: [
       ...m.getState().elements,

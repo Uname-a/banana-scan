@@ -22,7 +22,7 @@ import { noisyBoxScan } from '../../../scripts/e2e-fixtures.mjs'
 // holes in its top, at X −7 and X 7 ----------------------------------------------
 
 mkdirSync(OUT_DIR, { recursive: true })
-const fixture = noisyBoxScan({ seed: 11, noise: 0.03, holes: true, header: 'ScanRuler e2e box with a hole' })
+const fixture = noisyBoxScan({ seed: 11, noise: 0.03, holes: true, header: 'Banana Scan e2e box with a hole' })
 const SCAN = join(OUT_DIR, 'mesh-edits-box.stl')
 writeFileSync(SCAN, fixture.bytes)
 

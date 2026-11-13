@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The SDK does not check a call's arguments against the tool's schema, so
-// the server checks its own tools': a scanruler_wait with a timeoutSeconds
+// the server checks its own tools': a bananascan_wait with a timeoutSeconds
 // that is no number, or not above zero, is refused rather than waiting no
 // time at all.
 import assert from 'node:assert/strict'
@@ -10,7 +10,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { PageLink } from '../src/link.js'
 import { createMcpServer } from '../src/mcp.js'
 
-test('scanruler_wait refuses a timeoutSeconds its schema does not take', async () => {
+test('bananascan_wait refuses a timeoutSeconds its schema does not take', async () => {
   const link = new PageLink({ token: 'a-token-for-the-input-tests' })
   const server = createMcpServer({ link, version: '0.0.0', cwd: '.', outDir: '.', connectHelp: () => 'Pair it.', serverInfo: () => ({}), pageTimeoutMs: 50 })
   const [a, b] = InMemoryTransport.createLinkedPair()
@@ -18,15 +18,15 @@ test('scanruler_wait refuses a timeoutSeconds its schema does not take', async (
   await Promise.all([server.connect(a), client.connect(b)])
   try {
     for (const timeoutSeconds of ['abc', -5, 0, 601]) {
-      const reply = await client.callTool({ name: 'scanruler_wait', arguments: { timeoutSeconds } })
+      const reply = await client.callTool({ name: 'bananascan_wait', arguments: { timeoutSeconds } })
       assert.equal(reply.isError, true, String(timeoutSeconds))
       assert.match(reply.content[0].text, /^invalid_input: timeoutSeconds/)
     }
-    const bad = await client.callTool({ name: 'scanruler_wait', arguments: { for: 'nothing' } })
+    const bad = await client.callTool({ name: 'bananascan_wait', arguments: { for: 'nothing' } })
     assert.match(bad.content[0].text, /^invalid_input: for/)
     // A client that sends every argument as a string: a number in a string
     // is taken as that number, as it was before the check.
-    const typed = await client.callTool({ name: 'scanruler_wait', arguments: { timeoutSeconds: '0.05' } })
+    const typed = await client.callTool({ name: 'bananascan_wait', arguments: { timeoutSeconds: '0.05' } })
     assert.doesNotMatch(typed.content[0].text, /^invalid_input/)
   } finally {
     await client.close()

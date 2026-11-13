@@ -29,11 +29,11 @@ const freePort = () =>
 const start = async (port) =>
   startAgent({
     args: ['--port', String(port)],
-    env: { SCANRULER_MCP_TOKEN: TOKEN, SCANRULER_MCP_CONFIG_DIR: await mkdtemp(join(tmpdir(), 'scanruler-mcp-')) },
+    env: { BANANA_SCAN_MCP_TOKEN: TOKEN, BANANA_SCAN_MCP_CONFIG_DIR: await mkdtemp(join(tmpdir(), 'banana-scan-mcp-')) },
     stderr: 'pipe',
   })
 
-const status = async (agent) => (await agent.call('scanruler_status')).json
+const status = async (agent) => (await agent.call('bananascan_status')).json
 
 /** Ask `check` until it says yes; fails after `ms`. */
 async function until(what, check, ms = 10_000) {
@@ -98,46 +98,46 @@ test('copies on one port: the second sends its calls through the first, and take
   }
 })
 
-test('--tools compact, or SCANRULER_MCP_TOOLS, lists the server’s own eight and the picture tools; a mixed or an empty list is refused', { timeout: 30_000 }, async () => {
-  const configDir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
-  const env = { SCANRULER_MCP_TOKEN: TOKEN, SCANRULER_MCP_CONFIG_DIR: configDir }
-  for (const how of [{ args: ['--tools', 'compact'] }, { env: { SCANRULER_MCP_TOOLS: 'compact' } }]) {
+test('--tools compact, or BANANA_SCAN_MCP_TOOLS, lists the server’s own eight and the picture tools; a mixed or an empty list is refused', { timeout: 30_000 }, async () => {
+  const configDir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
+  const env = { BANANA_SCAN_MCP_TOKEN: TOKEN, BANANA_SCAN_MCP_CONFIG_DIR: configDir }
+  for (const how of [{ args: ['--tools', 'compact'] }, { env: { BANANA_SCAN_MCP_TOOLS: 'compact' } }]) {
     const agent = await startAgent({ args: ['--port', String(await freePort()), ...(how.args ?? [])], env: { ...env, ...how.env }, stderr: 'pipe' })
     try {
       const { tools } = await agent.client.listTools()
       assert.equal(tools.length, 8 + SNAPSHOT.filter((c) => c.returnsImage).length, JSON.stringify(how))
-      assert.ok(tools.some((t) => t.name === 'scanruler_tools'))
+      assert.ok(tools.some((t) => t.name === 'bananascan_tools'))
       assert.equal((await status(agent)).server.tools, 'compact')
     } finally {
       await agent.close()
     }
   }
-  const bin = fileURLToPath(new URL('../bin/scanruler-mcp.js', import.meta.url))
+  const bin = fileURLToPath(new URL('../bin/banana-scan-mcp.js', import.meta.url))
   const mixed = spawnSync(process.execPath, [bin, '--tools', 'scan,-flat'], { env: { ...process.env, ...env }, encoding: 'utf8' })
   assert.equal(mixed.status, 2)
   assert.match(mixed.stderr, /--tools scan,-flat mixes namespaces to list \(scan\) with namespaces to leave out \(-flat\)/)
   const empty = spawnSync(process.execPath, [bin, '--tools', ''], { env: { ...process.env, ...env }, encoding: 'utf8' })
   assert.equal(empty.status, 2)
   assert.match(empty.stderr, /--tools is empty: give full, compact, namespaces to list/)
-  const bad = spawnSync(process.execPath, [bin], { env: { ...process.env, ...env, SCANRULER_MCP_TOOLS: 'scan,,view' }, encoding: 'utf8' })
+  const bad = spawnSync(process.execPath, [bin], { env: { ...process.env, ...env, BANANA_SCAN_MCP_TOOLS: 'scan,,view' }, encoding: 'utf8' })
   assert.equal(bad.status, 2)
-  assert.match(bad.stderr, /SCANRULER_MCP_TOOLS scan,,view: "" is no namespace/)
+  assert.match(bad.stderr, /BANANA_SCAN_MCP_TOOLS scan,,view: "" is no namespace/)
 })
 
 test('--tools with namespaces lists those, or all but those, beside the server’s own seven, and reports the list as given', { timeout: 30_000 }, async () => {
-  const configDir = await mkdtemp(join(tmpdir(), 'scanruler-mcp-'))
-  const env = { SCANRULER_MCP_TOKEN: TOKEN, SCANRULER_MCP_CONFIG_DIR: configDir }
+  const configDir = await mkdtemp(join(tmpdir(), 'banana-scan-mcp-'))
+  const env = { BANANA_SCAN_MCP_TOKEN: TOKEN, BANANA_SCAN_MCP_CONFIG_DIR: configDir }
   const namespace = (name) => name.split('_')[0]
   for (const how of [
     { args: ['--tools', 'scan,view'], keep: (ns) => ['scan', 'view'].includes(ns) },
-    { env: { SCANRULER_MCP_TOOLS: '-flat,-thickness' }, keep: (ns) => !['flat', 'thickness'].includes(ns) },
+    { env: { BANANA_SCAN_MCP_TOOLS: '-flat,-thickness' }, keep: (ns) => !['flat', 'thickness'].includes(ns) },
   ]) {
     const agent = await startAgent({ args: ['--port', String(await freePort()), ...(how.args ?? [])], env: { ...env, ...how.env }, stderr: 'pipe' })
     try {
       const { tools } = await agent.client.listTools()
-      const expected = ['scanruler_batch', 'scanruler_files', 'scanruler_open', 'scanruler_read', 'scanruler_status', 'scanruler_wait', 'scanruler_write', ...SNAPSHOT.map((c) => c.name.replace(/\./g, '_')).filter((n) => how.keep(namespace(n)))]
+      const expected = ['bananascan_batch', 'bananascan_files', 'bananascan_open', 'bananascan_read', 'bananascan_status', 'bananascan_wait', 'bananascan_write', ...SNAPSHOT.map((c) => c.name.replace(/\./g, '_')).filter((n) => how.keep(namespace(n)))]
       assert.deepEqual(tools.map((t) => t.name).sort(), expected.sort(), JSON.stringify(how.args ?? how.env))
-      assert.equal((await status(agent)).server.tools, how.args ? how.args[1] : how.env.SCANRULER_MCP_TOOLS)
+      assert.equal((await status(agent)).server.tools, how.args ? how.args[1] : how.env.BANANA_SCAN_MCP_TOOLS)
     } finally {
       await agent.close()
     }

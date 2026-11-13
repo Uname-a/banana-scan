@@ -89,7 +89,7 @@ describe('deviation', () => {
     await undo()
     expect(useDeviation.getState().tolerance).not.toBe(0.05)
     const text = (await run<{ text: string }>('report.get', { format: 'text', workspace: 'deviation' })).text
-    expect(text.startsWith('ScanRuler — deviation from nominal')).toBe(true)
+    expect(text.startsWith('Banana Scan — deviation from nominal')).toBe(true)
     expect(text).toContain('Reference: nominal.stl')
   })
 
@@ -264,7 +264,7 @@ describe('wall thickness', () => {
     await run('thickness.measure')
     expect(undoLabels()).toEqual(['Agent: measure wall thickness'])
     const text = (await run<{ text: string }>('report.get', { format: 'text', workspace: 'thickness' })).text
-    expect(text.startsWith('ScanRuler — wall thickness')).toBe(true)
+    expect(text.startsWith('Banana Scan — wall thickness')).toBe(true)
     expect((await refused('thickness.measure', { method: 'cone' })).code).toBe('invalid_input')
   })
 

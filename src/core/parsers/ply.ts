@@ -31,13 +31,13 @@ const TYPE_SIZE: Record<string, number> = {
 
 /**
  * The header comment by which a PLY says its triangles already face the way
- * they are meant to — written by ScanRuler for a mesh it read once and had
+ * they are meant to — written by Banana Scan for a mesh it read once and had
  * the winding of settled then. Read back, the winding is kept as written
  * instead of guessed again (see geometry/normals): a piece of a part, open
  * on every side — the top of a round wall with its inner face — can look
  * inside-out to the guess although it is not.
  */
-export const PLY_KEEP_WINDING = 'ScanRuler: keep winding'
+export const PLY_KEEP_WINDING = 'Banana Scan: keep winding'
 
 function checkType(type: string | undefined): void {
   if (type === undefined || !Object.hasOwn(TYPE_SIZE, type)) throw new Error(`Unsupported PLY type "${type}".`)

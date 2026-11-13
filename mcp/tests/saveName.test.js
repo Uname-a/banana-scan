@@ -10,7 +10,7 @@ import { test } from 'node:test'
 import { saveFileResult } from '../src/tools.js'
 
 test('a name with a colon or other reserved characters is written as a plain file', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-name-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-name-'))
   const saved = await saveFileResult({ file: { name: 'Bracket v2: final?.stl', bytes: new Uint8Array([1, 2, 3, 4]) } }, {}, { cwd: dir, outDir: dir })
   assert.deepEqual(await readdir(dir), ['Bracket v2_ final_.stl'])
   assert.equal(saved.file.path, join(dir, 'Bracket v2_ final_.stl'))
@@ -18,7 +18,7 @@ test('a name with a colon or other reserved characters is written as a plain fil
 })
 
 test('a reserved device name is not written as one', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'scanruler-name-'))
+  const dir = await mkdtemp(join(tmpdir(), 'banana-scan-name-'))
   await saveFileResult({ file: { name: 'CON.stl', bytes: new Uint8Array([1]) } }, {}, { cwd: dir, outDir: dir })
   assert.deepEqual(await readdir(dir), ['_CON.stl'])
 })

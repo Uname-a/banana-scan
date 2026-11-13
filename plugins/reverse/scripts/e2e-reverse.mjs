@@ -30,7 +30,7 @@ import { check, click, enterTyper, fail, finish, launchApp, loadScan, pickOption
 const SIZE = 20
 
 // ---- the scan: a dense cube centred on the origin -----------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-reverse-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-reverse-'))
 const dense = importStep(cubeStep(SIZE), { surfaceDeviation: 0.001, maxEdge: 1.0 })
 const p = dense.mesh.positions
 for (let i = 0; i < p.length; i++) p[i] -= SIZE / 2

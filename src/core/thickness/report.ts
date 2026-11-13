@@ -40,7 +40,7 @@ export function buildThicknessReport(
         : 'ray along the inward surface normal'
 
   return [
-    'ScanRuler — wall thickness',
+    'Banana Scan — wall thickness',
     ...unitsHeading(units),
     `Part: ${scanName}`,
     '',

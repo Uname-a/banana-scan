@@ -2,7 +2,7 @@
 // The call trace: one JSON line per tool call into a file of the session's
 // own, for measuring a run afterwards — how long each call took, how much
 // went each way, what was refused, and whether the tab was hidden. Off
-// unless asked for (--trace <dir>, SCANRULER_MCP_TRACE); local only; an
+// unless asked for (--trace <dir>, BANANA_SCAN_MCP_TRACE); local only; an
 // argument's contents, and the head of each answer, are written only with
 // --trace-args, their sizes always.
 // scripts/trace-summary.mjs reads the files.
@@ -52,7 +52,7 @@ export function createTrace(dir, { args = false, now = () => Date.now(), pid = p
   if (!dir) return null
   mkdirSync(dir, { recursive: true })
   const stamp = new Date(now()).toISOString().replace(/[:.]/g, '-').replace(/Z$/, '')
-  const file = join(dir, `scanruler-mcp-${stamp}-${pid}.jsonl`)
+  const file = join(dir, `banana-scan-mcp-${stamp}-${pid}.jsonl`)
   let broken = false
   const write = (line) => {
     if (broken) return
@@ -63,7 +63,7 @@ export function createTrace(dir, { args = false, now = () => Date.now(), pid = p
     } catch (e) {
       // A trace that cannot be written is not a reason to fail the call.
       broken = true
-      process.stderr.write(`[scanruler-mcp] The trace stopped: ${e?.message ?? e}\n`)
+      process.stderr.write(`[banana-scan-mcp] The trace stopped: ${e?.message ?? e}\n`)
     }
   }
   return { file, args, now, write }

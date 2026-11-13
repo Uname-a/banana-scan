@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The pictures in the README, taken again: the app driven through the agent
-// commands (the scanruler-mcp server, as an agent drives it) and each
+// commands (the banana-scan-mcp server, as an agent drives it) and each
 // workspace photographed with its panel, into docs/images/. Runs the build
 // without plugins, so only the app's own workspaces show in these pictures.
 // Each picture gets a session of its own — a fresh server, browser and page;
@@ -22,8 +22,8 @@ import { launchAgent, launchApp, repoFile, requireFixture, sleep } from './e2e-l
 
 export const SCAN = repoFile('block-marius.stl')
 const NOMINAL = repoFile('side bracket left.stl')
-const MEASURE_PROJECT = process.env.MEASURE_PROJECT ?? join(homedir(), 'Downloads', 'para-std-03.scanruler')
-const THICKNESS_PROJECT = process.env.THICKNESS_PROJECT ?? join(homedir(), 'Downloads', 'prusa_hood (1).scanruler')
+const MEASURE_PROJECT = process.env.MEASURE_PROJECT ?? join(homedir(), 'Downloads', 'para-std-03.bananascan')
+const THICKNESS_PROJECT = process.env.THICKNESS_PROJECT ?? join(homedir(), 'Downloads', 'prusa_hood (1).bananascan')
 const OUT = repoFile('docs/images')
 
 /** A server, a browser paired with it, and the helpers a picture is taken
@@ -43,17 +43,17 @@ export async function session(name, shot, { plugins = false, idleSeconds = 300 }
     if (r.error) throw new Error(`${tool}: ${r.text}`)
     return r.json
   }
-  const link = /(\S+#agent=\d+:[\w-]+)/.exec((await agent.call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+  const link = /(\S+#agent=\d+:[\w-]+)/.exec((await agent.call('bananascan_status')).json?.howToConnect ?? '')?.[1]
   const { browser, page } = await launchApp({ url: plugins ? link : link.replace('#', '?plugins=none#'), width: 1440, height: 860 })
   try {
     // The thank-you card and the hint ring stay out of the pictures.
     await page.evaluate(() => {
-      localStorage.setItem('scanruler.supportcard', '0')
-      localStorage.setItem('scanruler.hints', JSON.stringify({ on: false, runs: {} }))
+      localStorage.setItem('bananascan.supportcard', '0')
+      localStorage.setItem('bananascan.hints', JSON.stringify({ on: false, runs: {} }))
     })
     await page.reload({ waitUntil: 'networkidle0' })
-    await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
-    const idle = () => call('scanruler_wait', { for: 'idle', timeoutSeconds: idleSeconds })
+    await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
+    const idle = () => call('bananascan_wait', { for: 'idle', timeoutSeconds: idleSeconds })
     await shot({ agent, call, idle, page })
     await idle()
     await page.mouse.move(1, 1)

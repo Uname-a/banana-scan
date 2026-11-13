@@ -2,8 +2,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and ideas
-    url: https://github.com/CNCKitchen/scanruler/discussions
+    url: https://github.com/Uname-a/banana-scan/discussions
     about: How do I measure this? Is this result right? Ask here, not as an issue.
   - name: Commercial licensing
-    url: https://github.com/CNCKitchen/scanruler/blob/main/COMMERCIAL.md
-    about: Embedding ScanRuler in a closed-source product? Read about commercial exceptions here.
+    url: https://github.com/Uname-a/banana-scan/blob/main/COMMERCIAL.md
+    about: Embedding Banana Scan in a closed-source product? Read about commercial exceptions here.

@@ -69,7 +69,7 @@ describe.skipIf(!FILE.exists)('ballbar.stl through the commands', () => {
     expect(json.report.traceability.frame).toMatch(/scan’s own/)
 
     const text = await run<{ text: string }>('report.get', { format: 'text' })
-    expect(text.text.startsWith('ScanRuler — ballbar.stl')).toBe(true)
+    expect(text.text.startsWith('Banana Scan — ballbar.stl')).toBe(true)
     expect(text.text).toContain(`${dim.dimension.name} (${a.element.name} → ${b.element.name}) — Center distance: ${dim.dimension.display}`)
 
     const undone = await run<{ undone: string }>('history.undo')

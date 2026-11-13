@@ -48,7 +48,7 @@ function playedSince(from: number) {
  *  steps: how many were played (recomputed) and how many taken up from a
  *  state the kernel held (restored) — a value set back, the rollback bar
  *  moved, plays none — and which were played, each with its milliseconds
- *  (played; scanruler-mcp hands those on only to a batch asked for its
+ *  (played; banana-scan-mcp hands those on only to a batch asked for its
  *  timings). Only when it built. */
 function withSteps(command: Command<never>): Command<never> {
   if (command.readOnly) return command

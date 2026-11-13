@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The app without a browser, for an agent's server to run in its own
-// process (scanruler-mcp --engine): the session headless — no viewport, no
+// process (banana-scan-mcp --engine): the session headless — no viewport, no
 // page — its mesh worker in this thread, the commands registered, the
 // plugins installed and each started headless where it can be. Only the
 // commands marked to run so (Command.headless) are offered; any other
@@ -13,10 +13,10 @@
 
 import type { CommandInfo } from '../commands/types'
 
-/** The app as a headless engine — what scanruler-mcp's engine link talks
+/** The app as a headless engine — what banana-scan-mcp's engine link talks
  *  to. The same commands, inputs and answers as the page's. */
 export interface HeadlessEngine {
-  app: 'ScanRuler'
+  app: 'Banana Scan'
   version: string
   /** The plugins installed, by id. */
   plugins: string[]
@@ -88,14 +88,14 @@ async function start(): Promise<HeadlessEngine> {
   registerCoreCommands()
   for (const p of plugins) if (p.headless) stops.push(await p.headless())
   return {
-    app: 'ScanRuler',
+    app: 'Banana Scan',
     version: APP_VERSION,
     plugins: plugins.map((p) => p.id),
     listCommands: () => registry.listCommands().filter((c) => registry.runsHeadless(c.name)),
     pageCommands: () => registry.listCommands().flatMap((c) => (registry.runsHeadless(c.name) ? [] : [c.name])),
     run: (name, input, onProgress) => {
       if (registry.listCommands().some((c) => c.name === name) && !registry.runsHeadless(name)) {
-        return Promise.reject(new CommandError('unavailable', `${name} needs the ScanRuler page — a scan, the viewport or the browser — and this session runs without one (headless). Use the page mode for it: the agent’s server started without an engine, paired with a ScanRuler tab.`))
+        return Promise.reject(new CommandError('unavailable', `${name} needs the Banana Scan page — a scan, the viewport or the browser — and this session runs without one (headless). Use the page mode for it: the agent’s server started without an engine, paired with a Banana Scan tab.`))
       }
       return registry.runCommand(name, input, onProgress)
     },

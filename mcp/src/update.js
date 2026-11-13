@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The server keeps itself current. A config written as `npx -y
-// scanruler-mcp` is rarely changed again, and a copy installed or copied by
+// banana-scan-mcp` is rarely changed again, and a copy installed or copied by
 // hand never updates at all; so the server does it by itself, in two halves
 // that never hold up the start:
 //
 // - In the background, once it serves, it asks npm's registry which version
 //   is latest — once a day, 2 s at most, the answer kept in update.json
 //   beside tools.json — and when that is newer than itself, has npm fetch it
-//   into npm's cache: `npm exec --yes --package=scanruler-mcp@<v> --
-//   scanruler-mcp --version`, which runs the fetched copy once, so a copy
+//   into npm's cache: `npm exec --yes --package=banana-scan-mcp@<v> --
+//   banana-scan-mcp --version`, which runs the fetched copy once, so a copy
 //   that does not start is never taken. The session in progress goes on.
-// - At the next start the launcher (bin/scanruler-mcp.js) finds that copy in
+// - At the next start the launcher (bin/banana-scan-mcp.js) finds that copy in
 //   update.json (`ready: { version, bin }` — a contract every later version
 //   keeps, since the copy that reads it may be an old one) and runs it in its
 //   own place: the same arguments, stdio passed straight through, its exit
@@ -18,8 +18,8 @@
 //
 // Every failure leaves the copy that is running: offline, registry down,
 // fetch or start failed. Off for a copy run from a git checkout (the dev
-// server), with --no-update or SCANRULER_MCP_NO_UPDATE=1, and for a spec
-// pinned in the config (`npx -y scanruler-mcp@0.4.0` is taken as meant).
+// server), with --no-update or BANANA_SCAN_MCP_NO_UPDATE=1, and for a spec
+// pinned in the config (`npx -y banana-scan-mcp@0.4.0` is taken as meant).
 // The hand-off is marked in the environment, so a handed-to copy never hands
 // off again in the same start.
 //
@@ -36,12 +36,12 @@ import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { configDir } from './config.js'
 
-export const PACKAGE = 'scanruler-mcp'
+export const PACKAGE = 'banana-scan-mcp'
 /** Set on the copy handed to: the version that handed off. */
-export const HANDED_OFF_ENV = 'SCANRULER_MCP_HANDED_OFF'
+export const HANDED_OFF_ENV = 'BANANA_SCAN_MCP_HANDED_OFF'
 /** The launcher's process id, for the copy handed to to stop with it. */
-export const PARENT_ENV = 'SCANRULER_MCP_PARENT_PID'
-export const NO_UPDATE_ENV = 'SCANRULER_MCP_NO_UPDATE'
+export const PARENT_ENV = 'BANANA_SCAN_MCP_PARENT_PID'
+export const NO_UPDATE_ENV = 'BANANA_SCAN_MCP_NO_UPDATE'
 export const CHECK_EVERY_MS = 24 * 60 * 60 * 1000
 export const CHECK_WITHIN_MS = 2000
 /** A handed-to copy that fails sooner than this is taken as not starting. */
@@ -112,7 +112,7 @@ export function installOf(packageDir = PACKAGE_DIR, exists = existsSync) {
 }
 
 /** Whether this copy keeps itself current: `updates` is `on`, `off`
- *  (--no-update, SCANRULER_MCP_NO_UPDATE), `checkout` or `pinned`. A copy
+ *  (--no-update, BANANA_SCAN_MCP_NO_UPDATE), `checkout` or `pinned`. A copy
  *  handed to goes by the launcher's decision, not its own folder — which is
  *  a pinned spec's. */
 export function updatePolicy({ argv = [], env = process.env, install }) {
@@ -214,11 +214,11 @@ export function runHandOff({ plan, argv, version, env = process.env, spawnFn = s
  *  null on any failure. */
 export async function launch(argv, { env = process.env, packageDir = PACKAGE_DIR, dir, log = stderrLog } = {}) {
   try {
-    const version = versionAt(join(packageDir, 'bin', 'scanruler-mcp.js'))
+    const version = versionAt(join(packageDir, 'bin', 'banana-scan-mcp.js'))
     const where = dir ?? configDir(env)
     const plan = launchPlan({ argv, env, version, install: installOf(packageDir), state: loadState(where) })
     if (plan.run !== 'handoff') return null
-    log(`Starting scanruler-mcp ${plan.version}, fetched earlier, in place of ${version}.`)
+    log(`Starting banana-scan-mcp ${plan.version}, fetched earlier, in place of ${version}.`)
     const out = await runHandOff({
       plan,
       argv,
@@ -230,7 +230,7 @@ export async function launch(argv, { env = process.env, packageDir = PACKAGE_DIR
       },
     })
     if ('code' in out) return out.code
-    log(`scanruler-mcp ${plan.version} did not start (${out.fallback}); running ${version}.`)
+    log(`banana-scan-mcp ${plan.version} did not start (${out.fallback}); running ${version}.`)
     return null
   } catch {
     return null
@@ -258,7 +258,7 @@ function processAlive(pid) {
   }
 }
 
-const stderrLog = (line) => process.stderr.write(`[scanruler-mcp] ${line}\n`)
+const stderrLog = (line) => process.stderr.write(`[banana-scan-mcp] ${line}\n`)
 
 // ---- the background check ---------------------------------------------------------
 
@@ -292,7 +292,7 @@ export function npmCommand(env = process.env, execPath = process.execPath, exist
 /** The folder npm runs in: an empty one of this user's, in the config
  *  folder, that only they can write to. `npm exec` takes a package from the
  *  folder's own node_modules before the registry, so a shared one — the
- *  temp folder on Linux — would run a scanruler-mcp anyone planted there,
+ *  temp folder on Linux — would run a banana-scan-mcp anyone planted there,
  *  as this user. The home folder when that one cannot be made. */
 export function npmFolder(env = process.env, make = mkdirSync) {
   const dir = join(configDir(env), 'npm-run')
@@ -350,7 +350,7 @@ export async function prefetch(version, { env = process.env, install = { kind: '
   const spec = `${PACKAGE}@${version}`
   const ran = await npm(['exec', '--yes', `--package=${spec}`, '--', PACKAGE, '--version'], { env })
   if (ran.code !== 0 || ran.stdout.trim() !== version) return null
-  const binIn = (cache) => join(cache, '_npx', npxHash(spec), 'node_modules', PACKAGE, 'bin', 'scanruler-mcp.js')
+  const binIn = (cache) => join(cache, '_npx', npxHash(spec), 'node_modules', PACKAGE, 'bin', 'banana-scan-mcp.js')
   const caches = [install.npmCache, env.npm_config_cache, defaultNpmCache(env)].filter(Boolean)
   for (const cache of caches) if (readVersion(binIn(cache)) === version) return binIn(cache)
   const asked = await npm(['config', 'get', 'cache'], { env, within: 30_000 })
@@ -389,7 +389,7 @@ export function startUpdates({ version, argv = [], env = process.env, packageDir
           .then(() => check({ version, dir, env, install }))
           .then((s) => {
             state = s
-            if (newer(s.ready?.version, version)) log(`scanruler-mcp ${s.ready.version} is fetched; it starts in place of ${version} next time.`)
+            if (newer(s.ready?.version, version)) log(`banana-scan-mcp ${s.ready.version} is fetched; it starts in place of ${version} next time.`)
           })
           .catch(() => {})
       : Promise.resolve()

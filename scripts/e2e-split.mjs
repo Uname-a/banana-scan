@@ -23,7 +23,7 @@ import { check, fail, finish, launchApp, loadScan, setViewTheme, shotPath, sleep
 const SIZE = 20
 
 // ---- the pair --------------------------------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-split-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-split-'))
 const stepText = cubeStep(SIZE)
 const stepPath = join(dir, 'cube.step')
 writeFileSync(stepPath, stepText)

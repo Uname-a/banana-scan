@@ -52,7 +52,7 @@ quad([-PATCH, PATCH, 0], [PATCH, PATCH, 0], [PATCH, H, 0], [-PATCH, H, 0])
 const buf = Buffer.alloc(84 + tris.length * 50)
 buf.writeUInt32LE(tris.length, 80)
 tris.forEach((t, i) => t.forEach((p, k) => p.forEach((x, j) => buf.writeFloatLE(x, 84 + i * 50 + 12 + k * 12 + j * 4))))
-const scan = join(mkdtempSync(join(tmpdir(), 'scanruler-small-')), 'frame.stl')
+const scan = join(mkdtempSync(join(tmpdir(), 'banana-scan-small-')), 'frame.stl')
 writeFileSync(scan, buf)
 
 const { browser, page, consoleErrors } = await launchApp({ width: 1400, height: 1000 })
@@ -62,26 +62,26 @@ try {
   // The support card, which would stand over the part in the pictures.
   await page.$$eval('button', (buttons) => buttons.find((b) => b.closest('[class*=support]') && /×|close/i.test(`${b.textContent}${b.title}${b.ariaLabel}`))?.click())
   const closeUp = async () => {
-    await page.evaluate(() => window.__scanruler.scene().fitBox([-30, -30, -30], [30, 30, 5]))
+    await page.evaluate(() => window.__bananascan.scene().fitBox([-30, -30, -30], [30, 30, 5]))
     await sleep(500)
   }
   const closeToPoint = async () => {
-    await page.evaluate(() => window.__scanruler.scene().fitBox([290, -240, -30], [350, -180, 5]))
+    await page.evaluate(() => window.__bananascan.scene().fitBox([290, -240, -30], [350, -180, 5]))
     await sleep(500)
   }
   const allIn = async () => {
-    await page.evaluate(() => window.__scanruler.scene().fitBox([-1000, -700, -30], [1000, 700, 5]))
+    await page.evaluate(() => window.__bananascan.scene().fitBox([-1000, -700, -30], [1000, 700, 5]))
     await sleep(500)
   }
   /** The grips on the stage, in pixels. */
   const gripSizes = () => page.evaluate(() => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     const pixel = s.viewport.worldPerPixel()
     return s.grips.handles.map((h) => ({ side: h.side, length: h.mesh.scale.y / pixel, across: h.mesh.scale.x / pixel }))
   })
   /** The marks of an element, in pixels, by what they are. */
   const marksOf = (id) => page.evaluate((id) => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     const pixel = s.viewport.worldPerPixel()
     const out = {}
     for (const mesh of s.overlays.pickTargets()) {
@@ -97,14 +97,14 @@ try {
   }, id)
   /** The place on the screen a point of the part is drawn at. */
   const toClient = (p) => page.evaluate((q) => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     const c = s.viewport.renderer.domElement.getBoundingClientRect()
     const v = s.overlays.pickTargets()[0].position.clone().set(q[0], q[1], q[2])
     s.overlays.pickTargets()[0].parent.localToWorld(v)
     v.project(s.viewport.camera)
     return [c.left + ((v.x + 1) / 2) * c.width, c.top + ((1 - v.y) / 2) * c.height]
   }, p)
-  const strokes = () => page.evaluate(() => window.__scanruler.scene().overlays.selectionGroup.children.length)
+  const strokes = () => page.evaluate(() => window.__bananascan.scene().overlays.selectionGroup.children.length)
 
   // The camera leans a little, so the bore reads as one.
   await page.mouse.move(rect.x + rect.w * 0.5, rect.y + rect.h * 0.5)
@@ -154,14 +154,14 @@ try {
   await sleep(400)
   await page.screenshot({ path: shotPath(`${prefix}-3-brushing.png`) })
   const brushing = await page.evaluate(() => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     return { armed: s.marking.gestureArmed(), grips: s.grips.handles.length, shown: s.grips.handleGroup.visible, ghost: s.overlays.previewShape?.material.opacity ?? null }
   })
   console.log('after a stroke of the brush', JSON.stringify(brushing))
   check(brushing.armed && (!brushing.shown || brushing.grips === 0), 'with the brush in hand the grips stand in the way of nothing')
   check(brushing.ghost === null || brushing.ghost <= 0.1, `and the ghost of the fit stands back: opacity ${brushing.ghost}`)
   const rimPx = await page.evaluate(() => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     const rims = s.overlays.previewEnds.children
     return rims.length ? Math.max(...rims.map((m) => m.geometry.parameters.tube * m.scale.x)) / s.viewport.worldPerPixel() : null
   })
@@ -170,7 +170,7 @@ try {
   await click(page, '[data-test="cancel-draft"]')
   await sleep(300)
   await page.evaluate(() => {
-    const m = window.__scanruler.measure
+    const m = window.__bananascan.measure
     const base = { color: '#ff8800', source: { type: 'picked' }, status: 'done', visible: true }
     m.setState({
       elements: [
@@ -189,7 +189,7 @@ try {
   const pointNear = await marksOf(901)
   const lineNear = await marksOf(902)
   const cylinder = await page.evaluate(() => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     const mesh = s.overlays.pickTargets().find((m) => m.userData.elementId === 900 && m.geometry.type === 'CylinderGeometry')
     return { radius: mesh.scale.x, length: mesh.scale.y }
   })
@@ -212,7 +212,7 @@ try {
   /** How far the pin's lower edge stands above the top of the point's ball
    *  on the screen, pixels: below zero, it covers the ball. */
   const pinClearance = () => page.evaluate(() => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     const pixel = s.viewport.worldPerPixel()
     const ball = s.overlays.pickTargets().filter((m) => m.userData.elementId === 901 && m.geometry.type === 'SphereGeometry').sort((a, b) => b.scale.x - a.scale.x)[0]
     const c = s.viewport.renderer.domElement.getBoundingClientRect()
@@ -223,7 +223,7 @@ try {
   })
   await closeUp()
   for (const view of ['iso', 'front', 'right', 'top']) {
-    await page.evaluate((v) => window.__scanruler.scene().viewFrom(v), view)
+    await page.evaluate((v) => window.__bananascan.scene().viewFrom(v), view)
     await sleep(900)
     const clear = await pinClearance()
     check(clear >= 2, `from the ${view}, the point's pin stands clear of it: ${clear.toFixed(1)} px`)
@@ -233,14 +233,14 @@ try {
   // ---- Settings → Points and grips grows what is held on the screen ---------------------
   const ballAt = async () => big(await marksOf(901))
   const plain = await ballAt()
-  await page.evaluate(() => window.__scanruler.scene().setMarkSize(2))
+  await page.evaluate(() => window.__bananascan.scene().setMarkSize(2))
   await sleep(300)
   const doubled = await ballAt()
   check(Math.abs(doubled - 2 * plain) < 0.5, `twice the size, the point is twice as large: ${plain.toFixed(1)} → ${doubled.toFixed(1)} px`)
   check((await pinClearance()) >= 2, 'and its pin still stands clear of it')
-  await page.evaluate(() => window.__scanruler.scene().setMarkSize(1))
+  await page.evaluate(() => window.__bananascan.scene().setMarkSize(1))
   await sleep(300)
-  await page.evaluate(() => window.__scanruler.scene().viewFrom('iso'))
+  await page.evaluate(() => window.__bananascan.scene().viewFrom('iso'))
   await sleep(900)
   await allIn()
 
@@ -256,7 +256,7 @@ try {
   check((await strokes()) === 1, 'zoomed all the way out, a click on the point takes it into a dimension')
   await page.screenshot({ path: shotPath(`${prefix}-6-point-selected-far.png`) })
   const strokeAt = () => page.evaluate(() => {
-    const s = window.__scanruler.scene()
+    const s = window.__bananascan.scene()
     return s.overlays.selectionGroup.children[0].scale.x / s.viewport.worldPerPixel()
   })
   const strokeFar = await strokeAt()

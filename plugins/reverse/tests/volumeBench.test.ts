@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Benchmark (temporary): the deviation as volumes (core/deviation/volume)
-// on the projects named in VOL_BENCH (paths to .scanruler files,
+// on the projects named in VOL_BENCH (paths to .bananascan files,
 // ';'-separated). Each project is run
 // as it is, without the no-scan patch, with planted errors, and as a scan
 // opened up (its bottom and three discs cut away) with and without the

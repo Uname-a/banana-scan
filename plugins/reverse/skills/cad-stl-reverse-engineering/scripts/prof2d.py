@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 """Exact 2D profiles: lines and arcs with exact carriers (from the faces that make them), joined at
-exact corners, written out as ScanRuler sketch entities.
+exact corners, written out as Banana Scan sketch entities.
 
 A piece has a carrier and a direction of travel:
   line  dict(kind='line', p=point on it, d=unit direction of travel, a=start, b=end)
@@ -118,7 +118,7 @@ def corner(p, q, near):
 
 
 def arc_angles(pc):
-    """start, sweep (radians, sweep > 0 counter-clockwise) of an arc piece as ScanRuler wants it."""
+    """start, sweep (radians, sweep > 0 counter-clockwise) of an arc piece as Banana Scan wants it."""
     a0 = np.arctan2(pc['a'][1] - pc['c'][1], pc['a'][0] - pc['c'][0])
     a1 = np.arctan2(pc['b'][1] - pc['c'][1], pc['b'][0] - pc['c'][0])
     if pc['ccw']:
@@ -203,7 +203,7 @@ def region_point(outer, holes):
 
 
 def entities(loops, first_id=1):
-    """ScanRuler sketch entities (fixed) for closed loops of pieces, ends shared exactly."""
+    """Banana Scan sketch entities (fixed) for closed loops of pieces, ends shared exactly."""
     ents = []; nid = first_id
     for loop in loops:
         for pc in loop:

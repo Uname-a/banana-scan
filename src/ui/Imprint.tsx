@@ -30,7 +30,7 @@ export function ImprintModal() {
           </button>
         </div>
         <p className="dim" data-test="imprint-version">
-          ScanRuler v{APP_VERSION} — quote the number when reporting a problem.
+          Banana Scan v{APP_VERSION} — quote the number when reporting a problem.
         </p>
 
         <h3>Imprint (Impressum)</h3>
@@ -95,12 +95,12 @@ export function ImprintModal() {
             are processed entirely in your browser and are never uploaded. So that unsaved work
             survives a closed or crashed tab, a recovery copy of it, the files included, is kept
             on your device in your browser’s IndexedDB storage. Copies left by closed tabs are
-            offered back when you open ScanRuler again, and are deleted when you discard them,
+            offered back when you open Banana Scan again, and are deleted when you discard them,
             after 14 days, once more than ten have built up, or when you clear this site’s data
             in your browser.
             The one exception is the optional agent connection: if you switch it on and accept its warning,
             what the AI agent you connected reads is processed by that agent and, unless its model
-            runs on your computer, by the model’s provider, under that provider’s terms. ScanRuler
+            runs on your computer, by the model’s provider, under that provider’s terms. Banana Scan
             itself sends none of this anywhere and has no part in that processing.
           </li>
           <li>

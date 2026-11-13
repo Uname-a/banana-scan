@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The Mesh Tools workspace driven by an agent, end to end: an MCP client —
 // the SDK's own, as Claude Code and the others use it — starts the
-// scanruler-mcp server, the app in headless Chrome is paired with it, and a
+// banana-scan-mcp server, the app in headless Chrome is paired with it, and a
 // generated scan is cleaned up through the tools alone: a cube with a speck
 // beside it opened from a file, the speck taken off, the top face marked
 // (and looked at), deleted and filled again, the part cut and reduced. The
@@ -57,7 +57,7 @@ function stl(tris) {
   return out
 }
 
-const scanDir = mkdtempSync(join(tmpdir(), 'scanruler-mesh-'))
+const scanDir = mkdtempSync(join(tmpdir(), 'banana-scan-mesh-'))
 const SCAN = join(scanDir, 'cube.stl')
 const CUBE = 20
 writeFileSync(SCAN, stl([...cuboid([-10, -10, -10], [10, 10, 10], CUBE), ...cuboid([30, 0, 0], [30.5, 0.5, 0.5], 1)]))
@@ -79,11 +79,11 @@ function pictured(r) {
   return png?.mimeType === 'image/png' && bytes.subarray(1, 4).toString() === 'PNG' ? [bytes.readUInt32BE(16), bytes.readUInt32BE(20)] : null
 }
 
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('bananascan_status')).json?.howToConnect ?? '')?.[1]
 check(Boolean(link), `the server hands out a pairing link (${link})`)
 const { browser, page, consoleErrors } = await launchApp({ url: link, protocolTimeout: 300_000 })
 try {
-  const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+  const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
   check(waited.json?.connected === true && waited.json.page.plugins.includes('mesh-tools'), `the page connected with its plugins (${waited.json?.page?.plugins})`)
   const tools = (await agent.client.listTools()).tools
   const names = tools.map((t) => t.name)

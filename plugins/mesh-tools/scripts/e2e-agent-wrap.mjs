@@ -58,7 +58,7 @@ const plate = cuboid([0, 0, 0], [40, 20, 4], 8)
 const left = cuboid([0, 0, 3], [15, 20, 12], 6)
 const right = cuboid([16, 0, 3], [40, 20, 12], 6)
 const inner = cuboid([4, 4, 5], [10, 10, 9], 4)
-const scanDir = mkdtempSync(join(tmpdir(), 'scanruler-wrap-'))
+const scanDir = mkdtempSync(join(tmpdir(), 'banana-scan-wrap-'))
 const SCAN = join(scanDir, 'blocks.stl')
 writeFileSync(SCAN, stl([...plate, ...left, ...right, ...inner]))
 
@@ -71,11 +71,11 @@ async function ok(name, input, what) {
   return r
 }
 
-const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('scanruler_status')).json?.howToConnect ?? '')?.[1]
+const link = /(\S+#agent=\d+:[\w-]+)/.exec((await call('bananascan_status')).json?.howToConnect ?? '')?.[1]
 check(Boolean(link), `the server hands out a pairing link (${link})`)
 const { browser, page, consoleErrors } = await launchApp({ url: link, protocolTimeout: 600_000 })
 try {
-  const waited = await call('scanruler_wait', { for: 'page', timeoutSeconds: 60 })
+  const waited = await call('bananascan_wait', { for: 'page', timeoutSeconds: 60 })
   check(waited.json?.connected === true && waited.json.page.plugins.includes('mesh-tools'), 'the page connected with Mesh Tools')
   const names = (await agent.client.listTools()).tools.map((t) => t.name)
   check(names.includes('mesh_wrap') && names.includes('mesh_apply_wrap'), 'mesh_wrap and mesh_apply_wrap are listed')

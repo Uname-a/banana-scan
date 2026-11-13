@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // A project saved over a file of the same name came down as
-// `MyProject.scanruler-2`, which the app would not open (issue 83). A
+// `MyProject.bananascan-2`, which the app would not open (issue 83). A
 // project is known by its name with the count a browser adds after the
 // extension, and, under any other name, by what it holds: a zip whose first
 // member is the manifest.
@@ -12,20 +12,20 @@ import { packProject } from '../src/core/project/archive'
 import { isProjectName, PROJECT_ACCEPT, startsAsProject } from '../src/core/project/manifest'
 
 describe('a project by its name', () => {
-  it('takes .scanruler with the count a browser puts after it', () => {
-    for (const name of ['MyProject.scanruler', 'MyProject.SCANRULER', 'MyProject.scanruler-2', 'MyProject.scanruler-12', 'MyProject.scanruler (2)', 'MyProject.scanruler(3)', 'MyProject (1).scanruler']) {
+  it('takes .bananascan with the count a browser puts after it', () => {
+    for (const name of ['MyProject.bananascan', 'MyProject.BANANASCAN', 'MyProject.bananascan-2', 'MyProject.bananascan-12', 'MyProject.bananascan (2)', 'MyProject.bananascan(3)', 'MyProject (1).bananascan']) {
       expect(isProjectName(name), name).toBe(true)
     }
   })
 
   it('takes no other name', () => {
-    for (const name of ['MyProject.scanruler.zip', 'MyProject.scanruler-', 'MyProject.scanruler-x', 'MyProject.stl', 'scanruler', 'MyProject.scanrulers']) {
+    for (const name of ['MyProject.bananascan.zip', 'MyProject.bananascan-', 'MyProject.bananascan-x', 'MyProject.stl', 'bananascan', 'MyProject.bananascans']) {
       expect(isProjectName(name), name).toBe(false)
     }
   })
 
   it('is offered by the Open dialog with the counts too', () => {
-    expect(PROJECT_ACCEPT.split(',')).toEqual(expect.arrayContaining(['.scanruler', '.scanruler-2', '.scanruler-9']))
+    expect(PROJECT_ACCEPT.split(',')).toEqual(expect.arrayContaining(['.bananascan', '.bananascan-2', '.bananascan-9']))
   })
 })
 

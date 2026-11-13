@@ -38,7 +38,7 @@ export function buildTrimmedMesh(scene: SceneManager | null, format: MeshFormat,
     [{ name: `${made.name} trimmed`, positions, indices: index }],
     align?.transform ?? null,
     // units-ok: the title written into the file, in the file's own unit.
-    `ScanRuler trimmed piece - ${stem} - ${made.name} - ${made.report.offset} mm off the break`,
+    `Banana Scan trimmed piece - ${stem} - ${made.name} - ${made.report.offset} mm off the break`,
   )
   if (!file) return null
   const name = `${stem}-${body}-trimmed${moved ? '-aligned' : ''}.${file.extension}`

@@ -2,7 +2,7 @@
 // The Reverse engineer workspace, as the app finds it: see
 // src/plugins/api.ts for what each part of this is to the app.
 
-import { registerBusy, registerCommands, registerMapReport, registerSectionLayers, registerSettle, registerSheetPlanes, registerStateSection, registerViewToggles, type ScanRulerPlugin } from '../../src/plugins/api'
+import { registerBusy, registerCommands, registerMapReport, registerSectionLayers, registerSettle, registerSheetPlanes, registerStateSection, registerViewToggles, type BananaScanPlugin } from '../../src/plugins/api'
 import { onScan } from '../../src/app/scanEvents'
 import { pick, registerHistory } from '../../src/state/historyStore'
 import { registerProjectSection } from '../../src/app/projectSections'
@@ -53,7 +53,7 @@ function bodiesWhy(): string | null {
   return null
 }
 
-const plugin: ScanRulerPlugin = {
+const plugin: BananaScanPlugin = {
   id: 'reverse',
   name: 'Reverse engineer',
   workspace: {

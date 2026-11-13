@@ -15,7 +15,7 @@ import { canvasRect, check, drag, finish, launchApp, loadScan, OUT_DIR, previewR
 import { noisyBoxScan } from '../../../scripts/e2e-fixtures.mjs'
 
 mkdirSync(OUT_DIR, { recursive: true })
-const fixture = noisyBoxScan({ seed: 11, noise: 0.03, header: 'ScanRuler e2e box to flip' })
+const fixture = noisyBoxScan({ seed: 11, noise: 0.03, header: 'Banana Scan e2e box to flip' })
 const SCAN = join(OUT_DIR, 'mesh-flip-box.stl')
 writeFileSync(SCAN, fixture.bytes)
 
@@ -116,7 +116,7 @@ check(patch.mauve > 2000 && patch.mauve < flipped.mauve * 0.8, 'the patch alone 
  *  it, and the scan's own colours — wherever it is — summed. */
 const surface = () =>
   page.evaluate(() => {
-    const scene = window.__scanruler.scene()
+    const scene = window.__bananascan.scene()
     const edited = scene.showingEdited()
     const painted = scene.mapPainted().scan
     // The scan's vertices and colours, whichever slot it is in: both read

@@ -3,7 +3,7 @@
 
     python two_way.py original.stl model.stl [--step 0.3] [--suspect 0.01] [--cap 20000]
 
-mesh -> model is what ScanRuler's compare reads (the mesh vertices only). model -> mesh catches what
+mesh -> model is what Banana Scan's compare reads (the mesh vertices only). model -> mesh catches what
 vertex sampling cannot: model material in the middle of a large mesh triangle (CAD exports are full of
 long slivers with no vertex inside a flat face). Both meshes are sampled by area AND by edge length,
 distances are exact point-to-triangle, and every suspect over --suspect is settled by an exact search

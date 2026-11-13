@@ -70,7 +70,7 @@ function halvesPng(w = 64, h = 64) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-textured-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-textured-'))
 const obj = join(dir, 'plate.obj')
 const mtl = join(dir, 'plate.mtl')
 const png = join(dir, 'plate_tex.png')
@@ -143,10 +143,10 @@ const [redOn] = await hues()
 check(redOn > 500, `and back on it wears them again (red ${redOn} px)`)
 
 // Saved as a project — reopened further down, over a plain scan.
-const downloads = mkdtempSync(join(tmpdir(), 'scanruler-textured-dl-'))
+const downloads = mkdtempSync(join(tmpdir(), 'banana-scan-textured-dl-'))
 await downloadsTo(page, downloads)
 await click(page, '[data-test="save-project"]')
-const project = await awaitDownload(downloads, '.scanruler')
+const project = await awaitDownload(downloads, '.bananascan')
 check(Boolean(project), `the textured scan saves as a project: ${project}`)
 
 // The OBJ alone: plain, and the status says what it still wants.

@@ -22,7 +22,7 @@ const R = 40, T = 4 // the disc
 const WIN = { x0: 10, x1: 34, y0: -8, y1: 8 } // one window, the others a quarter turn on
 const VOLUME = Math.PI * R * R * T - 4 * (WIN.x1 - WIN.x0) * (WIN.y1 - WIN.y0) * T
 
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-wheelcap-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-wheelcap-'))
 const { browser, page, consoleErrors } = await launchApp({ width: 1600, height: 1000, protocolTimeout: 600_000 })
 const cdp = await page.createCDPSession()
 await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })

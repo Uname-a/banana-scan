@@ -27,7 +27,7 @@ const doc = occt.createXCAFDocument()
 doc.addShape(occt.makeBox(20, 10, 5), { name: 'Bracket' })
 const stepText = doc.exportSTEP()
 doc.close()
-const dir = mkdtempSync(join(tmpdir(), 'scanruler-import-move-'))
+const dir = mkdtempSync(join(tmpdir(), 'banana-scan-import-move-'))
 const stepPath = join(dir, 'bracket.step')
 writeFileSync(stepPath, stepText)
 

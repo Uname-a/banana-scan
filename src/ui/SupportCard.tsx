@@ -80,7 +80,7 @@ export function SupportCard() {
   return (
     <aside className="supportcard" data-test="support-card">
       <div className="sc-head">
-        <b>Thanks for using ScanRuler!</b>
+        <b>Thanks for using Banana Scan!</b>
         <button className="sc-x" onClick={close} title="Close" aria-label="Close">
           ×
         </button>
@@ -144,7 +144,7 @@ export function SupportAsk() {
         aria-labelledby="support-ask-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="support-ask-title">Thanks for using ScanRuler by CNC Kitchen!</h2>
+        <h2 id="support-ask-title">Thanks for using Banana Scan!</h2>
         <p>
           This tool is provided <b>completely free</b> by CNC Kitchen. Your file is on its way —
           why not check out the{' '}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The clamp's base as one sketch of four levels, on the real scan: run when
 // RE_CLAMP names the project the scan is taken from
-// (Desktop/reverseengineer/15_clamp/15_clamp_05-before-master-plan.scanruler).
+// (Desktop/reverseengineer/15_clamp/15_clamp_05-before-master-plan.bananascan).
 // The deck fitted at z 5.2, then the wing (z 4.35), the barb (z 4.2) and the
 // notch roof (z 4.0) fitted into the same sketch with fit.level; four
 // regions extruded to their heights and joined, and the body checked for

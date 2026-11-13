@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // How many bytes the workspace's commands cost an agent as tool
-// definitions, in the shape scanruler-mcp hands them over (toolFor):
+// definitions, in the shape banana-scan-mcp hands them over (toolFor):
 // description, schema and the whole, per command and in all. Runs only
 // with RE_TOOL_BYTES set — to a folder, where it writes the full dump as
 // tools.json beside the table it prints.

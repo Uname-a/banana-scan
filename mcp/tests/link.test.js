@@ -15,8 +15,8 @@ let http
 let port
 
 before(async () => {
-  link = new PageLink({ token: TOKEN, origins: ['https://scanruler.example'] })
-  http = httpServer({ allowOrigin: (o) => originAllowed(o, ['https://scanruler.example']), version: '9.9.9' })
+  link = new PageLink({ token: TOKEN, origins: ['https://banana-scan.example'] })
+  http = httpServer({ allowOrigin: (o) => originAllowed(o, ['https://banana-scan.example']), version: '9.9.9' })
   link.attach(http)
   await new Promise((resolve) => http.listen(0, '127.0.0.1', resolve))
   port = http.address().port
@@ -30,7 +30,7 @@ test('pages are let in from the hosted app, loopback, and origins named', () => 
   assert.ok(originAllowed('https://scanruler.com'))
   assert.ok(originAllowed('http://localhost:5187'))
   assert.ok(originAllowed('http://127.0.0.1:7317'))
-  assert.ok(originAllowed('https://scanruler.example', ['https://scanruler.example']))
+  assert.ok(originAllowed('https://banana-scan.example', ['https://banana-scan.example']))
   assert.ok(originAllowed(undefined), 'no Origin: not a browser page; the token decides')
   assert.equal(originAllowed('https://evil.example'), false)
   assert.equal(originAllowed('http://scanruler.com'), false, 'not the hosted app over plain http')
@@ -53,11 +53,11 @@ test('the hello a page fetches first answers an allowed origin, and only that on
   assert.equal(ok.status, 200)
   assert.equal(ok.headers['access-control-allow-origin'], 'https://scanruler.com')
   assert.equal(ok.headers['access-control-allow-private-network'], 'true')
-  assert.deepEqual(JSON.parse(ok.body), { server: 'scanruler-mcp', version: '9.9.9' })
+  assert.deepEqual(JSON.parse(ok.body), { server: 'banana-scan-mcp', version: '9.9.9' })
   const other = await fetchWithOrigin(HELLO_PATH, 'https://evil.example')
   assert.equal(other.headers['access-control-allow-origin'], undefined)
   const root = await fetchWithOrigin('/', 'https://scanruler.com')
-  assert.match(root.body, /waiting for the ScanRuler page/)
+  assert.match(root.body, /waiting for the Banana Scan page/)
 })
 
 test('a malformed URL path is refused without leaving the request hanging', async () => {

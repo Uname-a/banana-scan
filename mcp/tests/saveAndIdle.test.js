@@ -39,7 +39,7 @@ let aligned = false
 let changes = 0
 
 before(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'scanruler-save-idle-'))
+  dir = mkdtempSync(join(tmpdir(), 'banana-scan-save-idle-'))
   link = new PageLink({ token: TOKEN })
   http = httpServer({})
   link.attach(http)
@@ -62,7 +62,7 @@ before(async () => {
         changes++
         return { changed: changes }
       }
-      if (name === 'project.save') return { file: { name: 'part.scanruler', mimeType: 'application/zip', bytes: new Uint8Array([0x50, 0x4b]) }, holds: held, aligned }
+      if (name === 'project.save') return { file: { name: 'part.bananascan', mimeType: 'application/zip', bytes: new Uint8Array([0x50, 0x4b]) }, holds: held, aligned }
       throw { code: 'unknown_command', message: name }
     },
   }))
@@ -84,7 +84,7 @@ test('a wait for idle waits for a read still being answered', async () => {
   const reading = call('demo_slowread', { ms: 300 })
   await new Promise((r) => setTimeout(r, 30))
   const at = Date.now()
-  const idle = await call('scanruler_wait', { for: 'idle', timeoutSeconds: 5 })
+  const idle = await call('bananascan_wait', { for: 'idle', timeoutSeconds: 5 })
   assert.equal(idle.json.state, 'idle')
   assert.ok(Date.now() - at >= 200, 'idle came before the read was done')
   await reading
@@ -93,7 +93,7 @@ test('a wait for idle waits for a read still being answered', async () => {
 test('a wait for idle that runs out while a read goes on says running', async () => {
   const reading = call('demo_slowread', { ms: 1500 })
   await new Promise((r) => setTimeout(r, 30))
-  const idle = await call('scanruler_wait', { for: 'idle', timeoutSeconds: 0.2 })
+  const idle = await call('bananascan_wait', { for: 'idle', timeoutSeconds: 0.2 })
   assert.equal(idle.json.state, 'running')
   await reading
 })
@@ -110,21 +110,21 @@ test('a change refused busy runs again once the page is idle, once', async () =>
 test('a save says what it holds, and what fell away since the last', async () => {
   held = { elements: 37, features: 59 }
   aligned = true
-  const first = await call('project_save', { path: join(dir, 'a.scanruler') })
+  const first = await call('project_save', { path: join(dir, 'a.bananascan') })
   assert.deepEqual(first.json.holds, { elements: 37, features: 59 })
   assert.equal(first.json.warning, undefined)
 
-  const more = await call('project_save', { path: join(dir, 'b.scanruler') })
+  const more = await call('project_save', { path: join(dir, 'b.bananascan') })
   assert.equal(more.json.warning, undefined, 'the same work again says nothing')
 
   // The page reset between them: hand-fitted elements, no model, no alignment.
   held = { elements: 22 }
   aligned = false
-  const reset = await call('project_save', { path: join(dir, 'c.scanruler') })
+  const reset = await call('project_save', { path: join(dir, 'c.bananascan') })
   assert.match(reset.json.warning, /holds less than the last save/)
   assert.match(reset.json.warning, /59 features/)
   assert.match(reset.json.warning, /the alignment/)
-  assert.match(reset.json.warning, /b\.scanruler/)
+  assert.match(reset.json.warning, /b\.bananascan/)
   assert.doesNotMatch(reset.json.warning, /elements/, 'elements are still there, fewer')
 })
 

@@ -67,8 +67,8 @@ export function scaleLine(r: FlatReportInput): string {
 /** The first line: what the sheet is. */
 export function titleLine(r: FlatReportInput): string {
   return r.section
-    ? `ScanRuler 2D measurement — ${r.section.name}: ${r.section.scanName} ${r.section.kind === 'shadow' ? '' : 'cut '}${r.section.cut}`
-    : `ScanRuler 2D measurement — ${r.imageName} (${r.imageWidth} × ${r.imageHeight} px)`
+    ? `Banana Scan 2D measurement — ${r.section.name}: ${r.section.scanName} ${r.section.kind === 'shadow' ? '' : 'cut '}${r.section.cut}`
+    : `Banana Scan 2D measurement — ${r.imageName} (${r.imageWidth} × ${r.imageHeight} px)`
 }
 
 function frameLine(r: FlatReportInput): string {

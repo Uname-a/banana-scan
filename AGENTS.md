@@ -7,7 +7,7 @@ they win.
 
 ## What this is
 
-ScanRuler is a browser app (React 19, Vite 6, TypeScript, Three.js) for
+Banana Scan is a browser app (React 19, Vite 6, TypeScript, Three.js) for
 measuring 3D scans against CAD. It deploys as static assets on Cloudflare
 (`wrangler.jsonc`, output in `dist/`). Heavy work runs in module Web Workers,
 some of it in WebAssembly (`manifold-3d`, `occt-wasm`). `mcp/` is a separate

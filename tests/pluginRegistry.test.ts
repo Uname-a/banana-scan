@@ -2,10 +2,10 @@
 // Which plugins installPlugins puts in use: only the enabled ones are checked
 // for a shared id, and one whose install() throws is left out of the list.
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ScanRulerPlugin } from '../src/plugins/api'
+import type { BananaScanPlugin } from '../src/plugins/api'
 import { installEnabled } from '../src/plugins/registry'
 
-const plugin = (id: string, install?: () => void) => ({ id, name: id, install }) as unknown as ScanRulerPlugin
+const plugin = (id: string, install?: () => void) => ({ id, name: id, install }) as unknown as BananaScanPlugin
 
 afterEach(() => vi.unstubAllGlobals())
 

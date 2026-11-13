@@ -35,7 +35,7 @@ try {
     'built project worker downloads an archive containing the original mesh')
 
   await page.reload({ waitUntil: 'networkidle0' })
-  await drop(bytes, 'roundtrip.scanruler')
+  await drop(bytes, 'roundtrip.bananascan')
   await page.waitForFunction(() => document.querySelector('.file-info')?.textContent.includes('production.obj'))
   await page.waitForFunction(() => !document.querySelector('[data-test="save-project"]').disabled)
   check(await page.$eval('.file-info', (el) => el.textContent.includes('1 triangles')),
@@ -66,7 +66,7 @@ try {
     sheet.nextId = 2
   }
   archive['project.json'] = strToU8(JSON.stringify(manifest))
-  await drop(Array.from(zipSync(archive)), 'export-fixture.scanruler')
+  await drop(Array.from(zipSync(archive)), 'export-fixture.bananascan')
   await page.waitForFunction(() => document.querySelector('[data-test="export-step"]')?.disabled === false)
   await page.waitForFunction(() => !document.querySelector('[data-test="save-project"]').disabled)
   await page.evaluate(() => {

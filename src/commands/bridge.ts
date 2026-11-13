@@ -2,13 +2,13 @@
 // The page's end of the link to an AI agent, loaded once the link is
 // switched on (see agentLink.ts). With "Local agent connection" on
 // (Settings → Agents), the page connects to the agent's local server —
-// scanruler-mcp, started by the agent — at ws://127.0.0.1:<port>/, presents
+// banana-scan-mcp, started by the agent — at ws://127.0.0.1:<port>/, presents
 // the pairing token, says which commands it has, and runs what the agent
 // sends, one command at a time, in front of the person, who can undo each
 // step. The connection is to this computer and nowhere else.
 //
 // Before it opens the socket the page fetches the server's hello,
-// http://127.0.0.1:<port>/scanruler-mcp, marked as a request to this
+// http://127.0.0.1:<port>/banana-scan-mcp, marked as a request to this
 // computer (`targetAddressSpace: 'loopback'`). From the hosted site that is
 // what has Chrome and Edge ask the person, once, whether the site may reach
 // apps on this computer — their Local Network Access, which turns a
@@ -60,9 +60,9 @@ export const BROWSER_ASKING =
 
 /** What the link says while nothing answers the hello. */
 export const nothingAnswers = (port: number): string =>
-  `Nothing answers on port ${port} on this computer yet. Is the AI app running, with ScanRuler's connector (scanruler-mcp) on that port? ` +
-  '"npx -y scanruler-mcp@latest --pair" prints the port and the token. In Safari, or where the browser will not let this site reach this computer, ' +
-  'open the page "scanruler-mcp --serve" gives instead.'
+  `Nothing answers on port ${port} on this computer yet. Is the AI app running, with Banana Scan's connector (banana-scan-mcp) on that port? ` +
+  '"npx -y banana-scan-mcp@latest --pair" prints the port and the token. In Safari, or where the browser will not let this site reach this computer, ' +
+  'open the page "banana-scan-mcp --serve" gives instead.'
 
 export interface BridgeOptions {
   port: number
@@ -157,9 +157,9 @@ export function startBridge({ port, token, socket = (url) => new WebSocket(url),
       attempt = 0
       refusal = null
       // The server's version, for the page to tell an out of date one: a
-      // scanruler-mcp before 0.4.0 says what it is, but not its version.
+      // banana-scan-mcp before 0.4.0 says what it is, but not its version.
       const welcome = message.welcome as { server?: unknown; version?: unknown }
-      const server = typeof welcome.version === 'string' ? { version: welcome.version } : welcome.server === 'scanruler-mcp' ? { version: null } : null
+      const server = typeof welcome.version === 'string' ? { version: welcome.version } : welcome.server === 'banana-scan-mcp' ? { version: null } : null
       useAgentLink.setState({ status: 'connected', detail: null, server })
     } else if (typeof message.refused === 'string') {
       refusal = message.refused
@@ -183,7 +183,7 @@ export function startBridge({ port, token, socket = (url) => new WebSocket(url),
     const slow = setTimeout(() => {
       if (stillWaiting()) useAgentLink.setState({ detail: BROWSER_ASKING })
     }, slowMs)
-    const answered = onThisComputer() || (await reach(`http://127.0.0.1:${port}/scanruler-mcp`))
+    const answered = onThisComputer() || (await reach(`http://127.0.0.1:${port}/banana-scan-mcp`))
     clearTimeout(slow)
     if (stopped) return
     if (answered && useAgentLink.getState().detail === BROWSER_ASKING) useAgentLink.setState({ detail: null })
@@ -208,7 +208,7 @@ export function startBridge({ port, token, socket = (url) => new WebSocket(url),
     here.onopen = () =>
       send({
         hello: {
-          app: 'ScanRuler',
+          app: 'Banana Scan',
           version: APP_VERSION,
           token,
           commands: listCommands(),

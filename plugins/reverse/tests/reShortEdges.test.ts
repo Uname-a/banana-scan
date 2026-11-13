@@ -138,7 +138,7 @@ describe('a curve ending off its corner', () => {
 // off its corner; in one round over the three edges at R1.4, 1.5 µm long
 // at (15.092, 6.188, 19.143), 3.4 µm off. The project as saved (the crease
 // rounded with them) reads back whole and is left as written.
-// RE_SHORT_EDGE_PROJECT names 13_rumblePack_07-hump-rework.scanruler.
+// RE_SHORT_EDGE_PROJECT names 13_rumblePack_07-hump-rework.bananascan.
 const project = process.env.RE_SHORT_EDGE_PROJECT ?? ''
 
 type Nose = 'two rounds' | 'one round' | 'saved'

@@ -367,7 +367,7 @@ check(picked, 'a click still picks after navigating')
 // the scan's box has to lie between the near and far planes.
 const depthSpan = () =>
   page.evaluate(() => {
-    const scene = window.__scanruler.scene()
+    const scene = window.__bananascan.scene()
     const cam = scene.viewport.camera
     const dir = cam.getWorldDirection(cam.position.clone())
     const box = scene.movedScanBox()
@@ -386,7 +386,7 @@ const spanText = (s) => `near ${s.near.toFixed(1)}, far ${s.far.toFixed(1)}; the
 
 // A place at one end of the part, a twentieth of it across.
 await page.evaluate(() => {
-  const scene = window.__scanruler.scene()
+  const scene = window.__bananascan.scene()
   const box = scene.movedScanBox()
   const size = box.min.distanceTo(box.max) / 20
   const at = box.min.clone().lerp(box.max, 0.1)

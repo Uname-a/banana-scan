@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // What a plugin is, to the app: a module at plugins/<id>/plugin.ts whose
-// default export is a ScanRulerPlugin. The app never imports a plugin by
+// default export is a BananaScanPlugin. The app never imports a plugin by
 // name — it finds them (see registry.ts) and reads them through the shapes
 // here, so a build with no plugins/ folder is the same app with nothing
 // added to it.
@@ -243,7 +243,7 @@ export interface KeyboardContribution {
   confirmable?(): (() => void) | null
 }
 
-export interface ScanRulerPlugin {
+export interface BananaScanPlugin {
   /** Unique among the plugins, and stable: project files and preferences
    *  are keyed by it. */
   id: string

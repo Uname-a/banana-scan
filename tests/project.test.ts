@@ -126,11 +126,11 @@ describe('the project archive', () => {
   })
 
   it('refuses what is not a project', () => {
-    expect(() => unpackProject(new Uint8Array([1, 2, 3]))).toThrow('Not a ScanRuler project')
+    expect(() => unpackProject(new Uint8Array([1, 2, 3]))).toThrow('Not a Banana Scan project')
     expect(() => validateManifest({ app: 'filaSim', schemaVersion: 1 })).toThrow(
-      'Not a ScanRuler project',
+      'Not a Banana Scan project',
     )
-    expect(() => validateManifest({ app: 'ScanRuler', schemaVersion: PROJECT_SCHEMA + 1 })).toThrow(
+    expect(() => validateManifest({ app: 'Banana Scan', schemaVersion: PROJECT_SCHEMA + 1 })).toThrow(
       'newer version',
     )
   })

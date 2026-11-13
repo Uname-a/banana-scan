@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// The headless backend: ScanRuler itself run in this process, with no
+// The headless backend: Banana Scan itself run in this process, with no
 // browser — no scan, no viewport, nobody watching — in place of the page.
 // The engine is a build of the app for Node (npm run build:engine in a
-// ScanRuler checkout writes dist-engine/engine.mjs), found by its path and
+// Banana Scan checkout writes dist-engine/engine.mjs), found by its path and
 // loaded as it is: this package names nothing in it and imports nothing from
 // the app. It offers the commands that run without the page, with the same
 // names, inputs and answers as the page's; the rest answer `unavailable`,
@@ -14,16 +14,16 @@ import { existsSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { toolName } from './tools.js'
 
-/** Where --headless looks: the engine built in the ScanRuler checkout this
+/** Where --headless looks: the engine built in the Banana Scan checkout this
  *  package is part of. */
 export const CHECKOUT_ENGINE = fileURLToPath(new URL('../../dist-engine/engine.mjs', import.meta.url))
 
 /** Load and start the engine at `file`. Throws, saying what to do, when
  *  there is none there or it is no engine. */
 export async function loadEngine(file) {
-  if (!existsSync(file)) throw new Error(`There is no ScanRuler engine at ${file}. Build one with "npm run build:engine" in the ScanRuler checkout, or give --engine the path of one.`)
+  if (!existsSync(file)) throw new Error(`There is no Banana Scan engine at ${file}. Build one with "npm run build:engine" in the Banana Scan checkout, or give --engine the path of one.`)
   const mod = await import(pathToFileURL(file).href)
-  if (typeof mod.startEngine !== 'function') throw new Error(`${file} is not a ScanRuler engine: it has no startEngine().`)
+  if (typeof mod.startEngine !== 'function') throw new Error(`${file} is not a Banana Scan engine: it has no startEngine().`)
   return mod.startEngine()
 }
 

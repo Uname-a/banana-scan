@@ -153,7 +153,7 @@ await click(page, '[data-test="save-project"]')
 let file = null
 for (let i = 0; i < 100 && !file; i++) {
   await sleep(200)
-  const done = readdirSync(DL_DIR).filter((f) => f.endsWith('.scanruler'))
+  const done = readdirSync(DL_DIR).filter((f) => f.endsWith('.bananascan'))
   if (done.length) file = join(DL_DIR, done[0])
 }
 check(!!file, 'a project with no scan in it is saved')

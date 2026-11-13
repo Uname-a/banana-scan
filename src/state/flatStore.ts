@@ -38,7 +38,7 @@ export { type CalibrationProfile, type CalMode, type CalSource, flatBlockedRefs,
 
 export type { HandleEnd }
 
-const PROFILE_KEY = 'scanruler.flat.profiles.v1'
+const PROFILE_KEY = 'bananascan.flat.profiles.v1'
 
 function loadProfiles(): CalibrationProfile[] {
   try {

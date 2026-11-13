@@ -70,8 +70,8 @@ export function reportJson() {
   const thickness = describeThickness()
   const f = useFlat.getState()
   return {
-    title: 'ScanRuler report',
-    app: { name: 'ScanRuler', version: APP_VERSION },
+    title: 'Banana Scan report',
+    app: { name: 'Banana Scan', version: APP_VERSION },
     project: s.projectName,
     created: new Date().toISOString(),
     scan: s.fileName ? { fileName: s.fileName, vertices: s.vertexCount, triangles: s.triangleCount } : null,

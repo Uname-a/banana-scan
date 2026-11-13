@@ -171,7 +171,7 @@ function Workbench() {
   // reachable from the console and the browser checks — nothing in a
   // production build.
   if (import.meta.env.DEV) {
-    ;(window as unknown as { __scanruler?: unknown }).__scanruler = {
+    ;(window as unknown as { __bananascan?: unknown }).__bananascan = {
       scene: () => sceneRef.current,
       client: () => clientRef.current,
       measure: useStore,
