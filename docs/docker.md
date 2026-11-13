@@ -21,8 +21,7 @@ docker run --rm -p 8080:8080 banana-scan
 
 **Short links.** `/s/<name>` opens a file from a file store (see
 [Opening a file from a link](manual.md#opening-a-file-from-a-link)). The image
-is built without one, so it does not point into scanruler.com's store; give
-your own at build time:
+is built without one; give your own at build time:
 
 ```bash
 BANANA_SCAN_FILES_URL=https://files.example.com/ docker compose up -d --build

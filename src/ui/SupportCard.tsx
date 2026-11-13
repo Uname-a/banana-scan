@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Hermann (CNC Kitchen) <stefan@cnckitchen.com>
 
+// rebrand:off
+// In Banana Scan this card credits the people it is built on: ScanRuler is
+// CNC Kitchen's, given away free and paid for by their store and tips, so
+// the links stay theirs. It is off until switched on in ⚙ Settings
+// (prefsStore's supportCard), since a fork showing it unasked would read as
+// CNC Kitchen's own site.
+// rebrand:on
+//
 // Support card — the same call-to-action bumpmesh.com carries, in the
 // bottom-left corner of the stage: a thank-you, then the three ways to give
 // something back. Not a modal: the user came to look at a part, and a dialog
@@ -31,6 +39,7 @@ import { ASK_OFF_MS, useSupportAsk } from '../state/supportAskStore'
 
 let closedThisLoad = false
 
+// rebrand:off — CNC Kitchen's own store and tip jars, named as theirs.
 const LINKS = [
   {
     kind: 'store',
@@ -51,6 +60,7 @@ const LINKS = [
     href: 'https://ko-fi.com/cnckitchen',
   },
 ] as const
+// rebrand:on
 
 const supportLinks = (onOpen?: () => void) =>
   LINKS.map((l) => (
@@ -85,10 +95,12 @@ export function SupportCard() {
           ×
         </button>
       </div>
+      {/* rebrand:off */}
       <p>
-        This tool is provided <b>completely free</b> by CNC Kitchen. Once you have finished
-        measuring, why not have a look at the store that keeps us making things like this?
+        Banana Scan is built on <b>ScanRuler</b>, which CNC Kitchen makes and gives away free.
+        If it saves you time, the store and tips below are what keep them making it.
       </p>
+      {/* rebrand:on */}
       {supportLinks()}
     </aside>
   )
@@ -145,14 +157,16 @@ export function SupportAsk() {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="support-ask-title">Thanks for using Banana Scan!</h2>
+        {/* rebrand:off */}
         <p>
-          This tool is provided <b>completely free</b> by CNC Kitchen. Your file is on its way —
-          why not check out the{' '}
+          Your file is on its way. Banana Scan is built on ScanRuler, which CNC Kitchen makes and
+          gives away free — their{' '}
           <a href={store.href} target="_blank" rel="noopener noreferrer" onClick={close}>
             store
           </a>{' '}
-          that helps us keep making things like this?
+          is what keeps them making it.
         </p>
+        {/* rebrand:on */}
         {supportLinks(close)}
         <label className="supportask-off">
           <input

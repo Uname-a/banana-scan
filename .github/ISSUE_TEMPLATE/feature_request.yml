@@ -44,5 +44,5 @@ body:
     attributes:
       label: Contributing
       options:
-        - label: I'd like to build this myself. Pull requests need the [CLA](https://github.com/Uname-a/banana-scan/blob/main/CLA.md) signed once, see [CONTRIBUTING.md](https://github.com/Uname-a/banana-scan/blob/main/CONTRIBUTING.md).
+        - label: I'd like to build this myself, see [CONTRIBUTING.md](https://github.com/Uname-a/banana-scan/blob/main/CONTRIBUTING.md).
           required: false

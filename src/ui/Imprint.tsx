@@ -1,12 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Hermann (CNC Kitchen) <stefan@cnckitchen.com>
 
-// Imprint (Impressum) + privacy policy — German legal requirement
-// (§ 5 DDG / Art. 13 DSGVO). Opened from the status strip.
+// About and privacy, opened from the status strip: what Banana Scan is and
+// where it comes from, its license (the notices the AGPL asks a user
+// interface to show), the third-party notices, and what the app keeps and
+// fetches.
+//
+// rebrand:off
+// ScanRuler's version of this was its imprint, naming CNC Kitchen as the
+// site's operator, as German law asks of a site run from Germany. A fork must
+// not name them, so whoever serves Banana Scan to the public adds their own
+// operator details and privacy contact here.
+// rebrand:on
 
 import { plugins } from '../plugins/registry'
 import { useStore } from '../state/store'
-import { APP_VERSION } from '../version'
+import { APP_VERSION, SOURCE_URL } from '../version'
 import { useDismiss } from './useDismiss'
 
 export function ImprintModal() {
@@ -24,7 +33,7 @@ export function ImprintModal() {
     <div className="modalback" onClick={() => close(false)}>
       <div className="modal imprint" onClick={(e) => e.stopPropagation()}>
         <div className="modalhead">
-          <h2>Imprint &amp; Privacy Policy</h2>
+          <h2>About &amp; Privacy</h2>
           <button className="x" onClick={() => close(false)} aria-label="Close">
             ×
           </button>
@@ -33,32 +42,29 @@ export function ImprintModal() {
           Banana Scan v{APP_VERSION} — quote the number when reporting a problem.
         </p>
 
-        <h3>Imprint (Impressum)</h3>
-        <p>
-          CNC Kitchen
-          <br />
-          Stefan Hermann
-          <br />
-          Bahnhofstr. 2
-          <br />
-          88145 Hergatz
-          <br />
-          Germany
+        <h3>About</h3>
+        {/* rebrand:off */}
+        <p data-test="about-origin">
+          Banana Scan is a modified version of{' '}
+          <a href="https://github.com/CNCKitchen/ScanRuler" target="_blank" rel="noopener noreferrer">
+            ScanRuler
+          </a>{' '}
+          by Stefan Hermann (CNC Kitchen), changed from its version 0.11.2 on 13 November 2026.
+          It is not made or endorsed by CNC Kitchen; ScanRuler and CNC Kitchen are their
+          trademarks.
         </p>
+        {/* rebrand:on */}
         <p>
-          Email: <a href="mailto:contact@cnckitchen.com">contact@cnckitchen.com</a>
-          <br />
-          Phone: <a href="tel:+491752011824">+49 175 2011824</a>
-          <br />
-          <span className="dim">
-            The phone number is for legal/business inquiries only — not for support.
-          </span>
-        </p>
-        <p>
-          EU Online Dispute Resolution platform:{' '}
-          <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">
-            ec.europa.eu/consumers/odr
-          </a>
+          Copyright © 2026 Stefan Hermann and the Banana Scan contributors. Banana Scan is free
+          software under the{' '}
+          <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer">
+            GNU Affero General Public License, version 3
+          </a>{' '}
+          (AGPL-3.0-only), and comes with no warranty. Its{' '}
+          <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer">
+            source code
+          </a>{' '}
+          is under the same license.
         </p>
 
         {notices.length > 0 && (
@@ -70,26 +76,8 @@ export function ImprintModal() {
           </>
         )}
 
-        <h3>Privacy Policy (Datenschutzerklärung)</h3>
-        <p>
-          Responsible party (Verantwortlicher gem. Art. 4 Abs. 7 DSGVO): Stefan Hermann,
-          Bahnhofstr. 2, 88145 Hergatz, Germany.
-        </p>
+        <h3>Privacy</h3>
         <ul>
-          <li>
-            This website is hosted on Cloudflare (Cloudflare, Inc., 101 Townsend St, San
-            Francisco, CA 94107, USA). When you visit this site, Cloudflare may process your IP
-            address in server logs to deliver the site and protect it against attacks. Legal
-            basis: Art. 6(1)(f) DSGVO (legitimate interest in providing the website). See{' '}
-            <a
-              href="https://www.cloudflare.com/privacypolicy/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Cloudflare’s Privacy Policy
-            </a>
-            .
-          </li>
           <li>
             Your scans, reference models, fitted elements and every measurement made from them
             are processed entirely in your browser and are never uploaded. So that unsaved work
@@ -112,22 +100,22 @@ export function ImprintModal() {
           </li>
           <li>
             A link that opens a file (an address with <code>?open=</code> or <code>/s/</code>)
-            makes your browser fetch that file from where the link points: for{' '}
-            <code>/s/</code> this site’s own file store on Cloudflare, for <code>?open=</code> any
-            server the link names, which may belong to someone else and sees your IP address as
-            any website does.
-          </li>
-          <li>This website does not use cookies, analytics, or any tracking technologies.</li>
-          <li>
-            This site contains links to external websites (e.g., GitHub, CNCKitchen.STORE,
-            PayPal, Ko-fi). These sites have their own privacy policies, over which we have no
-            control.
+            makes your browser fetch that file from where the link points: for <code>/s/</code>{' '}
+            the file store this copy was built with, if it has one, and for <code>?open=</code>{' '}
+            any server the link names, which may belong to someone else and sees your IP address
+            as any website does.
           </li>
           <li>
-            Under the GDPR you have the right to access, rectification, erasure, restriction of
-            processing, data portability, and the right to lodge a complaint with a supervisory
-            authority.
+            The server this page comes from may log what your browser asks it for — your IP
+            address, the time and the files fetched — as any web server can. Banana Scan has no
+            cookies, analytics or tracking of its own.
           </li>
+          {/* rebrand:off */}
+          <li>
+            Links to other websites — GitHub, and, if you switch on the card crediting ScanRuler,
+            CNC Kitchen’s store, PayPal and Ko-fi — lead to sites with their own privacy policies.
+          </li>
+          {/* rebrand:on */}
         </ul>
       </div>
     </div>

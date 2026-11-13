@@ -1117,7 +1117,7 @@ workspace models on [Open CASCADE Technology](https://dev.opencascade.org/)
 this one is not linked. The kernel is a separate `.wasm` asset and a separate
 JS chunk, fetched on demand in a worker and replaceable by anyone with the
 same build, which is exactly the relinking the LGPL asks to keep possible.
-What we owe in return: the imprint names OCCT and points at its source and
+What we owe in return: About names OCCT and points at its source and
 the wrapper's, and any change to OCCT itself would have to be published — we
 make none. `occt-wasm` is pinned without a caret, and the twelve kernel
 operations we use are named in one adapter (`plugins/reverse/core/kernel.ts`, with

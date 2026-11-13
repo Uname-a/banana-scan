@@ -558,8 +558,8 @@ export function SettingsModal() {
             ) : null}{' '}
             {link.detail ?? (
               <>
-                <code>npx -y banana-scan-mcp@latest --pair</code> prints the port and the token, and a link
-                that fills them in.
+                <code>node mcp/bin/banana-scan-mcp.js --pair</code>, run in the banana-scan folder, prints
+                the port and the token, and a link that fills them in.
               </>
             )}
           </small>
@@ -567,7 +567,8 @@ export function SettingsModal() {
 
         <BetaWorkspaces />
 
-        <h3>Support</h3>
+        {/* rebrand:off */}
+        <h3>Credit to ScanRuler</h3>
         <label className="checkrow settings-check">
           <input
             type="checkbox"
@@ -576,9 +577,9 @@ export function SettingsModal() {
             onChange={(e) => setSupportCard(e.target.checked)}
           />
           <span>
-            <b>Support card</b> — the thank-you in the corner of the stage, with the ways to
-            give something back. Its × closes it for this visit; switched off here it stays
-            away, the big one below with it.
+            <b>Support card</b> — a card in the corner of the stage saying Banana Scan is built
+            on ScanRuler, with CNC Kitchen’s store and tip links. Off unless switched on here;
+            its × closes it for this visit.
           </span>
         </label>
         <label className="checkrow settings-check">
@@ -590,11 +591,12 @@ export function SettingsModal() {
             onChange={(e) => setSupportAsk(e.target.checked)}
           />
           <span>
-            <b>Big card on saving</b> — the same thank-you in the middle of the screen after a save
+            <b>Big card on saving</b> — the same card in the middle of the screen after a save
             or an export, at most once in ten minutes. The file does not wait for it. Its "Don't
             show this again for a week" shows here as off until the week is over.
           </span>
         </label>
+        {/* rebrand:on */}
       </div>
     </div>
   )

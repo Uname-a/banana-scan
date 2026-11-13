@@ -15,9 +15,10 @@ import { EventEmitter } from 'node:events'
 import { WebSocketServer } from 'ws'
 import { decoder, encode } from './framing.js'
 
-/** The hosted app. Loopback pages — a dev server, `--serve` — are allowed
- *  on any port; anything else takes `--allow-origin`. */
-const HOSTED_ORIGINS = ['https://scanruler.com', 'https://www.scanruler.com']
+/** The hosted app: none, since Banana Scan has no hosted copy. Loopback
+ *  pages — a dev server, `--serve` — are allowed on any port; anything else,
+ *  a copy on a server of your own, takes `--allow-origin`. */
+const HOSTED_ORIGINS = []
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
 
@@ -283,7 +284,7 @@ export class PageLink extends Asker {
     const hello = message.hello
     if (!hello || typeof hello !== 'object') return refuse(CLOSE.noHello, 'The page did not say hello.')
     if (hello.token !== this.token) {
-      return refuse(CLOSE.badToken, 'The pairing token does not match — copy it again from `npx -y banana-scan-mcp@latest --pair` into Banana Scan’s Settings.')
+      return refuse(CLOSE.badToken, 'The pairing token does not match — copy it again from `node mcp/bin/banana-scan-mcp.js --pair`, run in the banana-scan folder, into Banana Scan’s Settings.')
     }
     if (this.socket && this.socket.readyState === this.socket.OPEN) {
       return refuse(CLOSE.taken, 'Another Banana Scan tab is connected to this agent already — close the connection there first.')

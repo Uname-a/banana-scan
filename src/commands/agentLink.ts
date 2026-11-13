@@ -44,28 +44,29 @@ export function olderVersion(a: string, b: string): boolean {
 }
 
 /** What the person can paste into the agent's chat to have it update the
- *  connector: it says the setting, for an agent that has not read the page,
- *  and the restart, which the agent cannot do itself. */
+ *  connector: it says how, for an agent that has not read the page, and the
+ *  restart, which the agent cannot do itself. banana-scan-mcp is not on npm;
+ *  it runs from the repository's mcp/ folder, so updating it is a pull. */
 export const CONNECTOR_ASK =
-  'Update the banana-scan MCP server in this app to banana-scan-mcp@latest, then tell me to quit the app completely and open it again.'
+  'Update the banana-scan MCP server: run git pull in the banana-scan folder it runs from, then npm --prefix mcp ci there, then tell me to quit the app completely and open it again.'
 
-/** One step per AI app to update the connector, copy-ready: the setting
- *  with `@latest`, which has npx fetch the newest at each start. */
+/** One step per AI app to run the connector from the repository, copy-ready
+ *  but for the folder's path: after a pull there it is the newest. */
 export const CONNECTOR_STEPS: { app: string; how: string; text: string }[] = [
   {
     app: 'Claude Code',
-    how: 'run in a terminal',
-    text: 'claude mcp remove banana-scan\nclaude mcp add --scope user banana-scan -- npx -y banana-scan-mcp@latest',
+    how: 'run in a terminal, with your banana-scan folder in place of /path/to/banana-scan',
+    text: 'claude mcp remove banana-scan\nclaude mcp add --scope user banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js',
   },
   {
     app: 'Codex',
-    how: 'run in a terminal',
-    text: 'codex mcp remove banana-scan\ncodex mcp add banana-scan -- npx -y banana-scan-mcp@latest',
+    how: 'run in a terminal, with your banana-scan folder in place of /path/to/banana-scan',
+    text: 'codex mcp remove banana-scan\ncodex mcp add banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js',
   },
   {
     app: 'Claude Desktop',
-    how: 'in Settings → Developer → Edit Config, change "banana-scan-mcp" in the banana-scan entry to "banana-scan-mcp@latest", so the line reads',
-    text: '"args": ["-y", "banana-scan-mcp@latest"]',
+    how: 'in Settings → Developer → Edit Config, have the banana-scan entry run node on the server in your banana-scan folder, so its lines read',
+    text: '"command": "node", "args": ["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js"]',
   },
 ]
 
@@ -79,7 +80,7 @@ export function serverTooOld(server: AgentServer | null = useAgentLink.getState(
   const steps = CONNECTOR_STEPS.map((s) => `${s.app} — ${s.how}: ${s.text.split('\n').map((line) => `\`${line}\``).join(', then ')}`).join('; ')
   return (
     `Your Banana Scan connector is out of date: the banana-scan-mcp your AI app started is ${which}, and this Banana Scan needs ${WANTS_SERVER} or newer — some of what the agent asks may not work. ` +
-    `To update it, ask the agent to, or change its setting to the @latest one. ${steps}. Then quit the app completely and open it again. ` +
+    `To update it, ask the agent to, or by hand: git pull in the banana-scan folder, then npm --prefix mcp ci there, and have the app run the server from that folder — ${steps}. Then quit the app completely and open it again. ` +
     'With more than one AI app open, the old connector may be another app’s — one left open in the background holds the connection for all of them: quit it.'
   )
 }

@@ -128,9 +128,9 @@ interface PrefsState {
    *  feature of it, put away until the part turns to show them — the
    *  default; off, every pin shows through the part. */
   hidePinsBehind: boolean
-  /** Whether the support card comes up in the corner of the stage on each
-   *  visit. On by default; its own × puts it away for the page load only,
-   *  this puts it away for good. */
+  /** Whether the support card, the credit to the project Banana Scan is
+   *  built on, comes up in the corner of the stage on each visit. Off by
+   *  default; its own × puts it away for the page load only, this for good. */
   supportCard: boolean
   /** Whether a save or an export also puts up the big card (ui/SupportCard's
    *  SupportAsk). On by default, and only ever with `supportCard` on. */
@@ -210,7 +210,7 @@ export const usePrefs = create<PrefsState>()((set) => {
     edgeLines: clampLineWidth(read(EDGE_LINES_KEY), EDGE_LINE_DEFAULT),
     markSize: clampMarkSize(read(MARK_SIZE_KEY)),
     hidePinsBehind: read(PINS_BEHIND_KEY) !== '0',
-    supportCard: read(SUPPORT_CARD_KEY) !== '0',
+    supportCard: read(SUPPORT_CARD_KEY) === '1',
     supportAsk: read(SUPPORT_ASK_KEY) !== '0',
     supportAskOffUntil: Number(read(SUPPORT_ASK_OFF_UNTIL_KEY)) || 0,
     units: displayUnitsOf(read(UNITS_KEY)) ?? 'mm',

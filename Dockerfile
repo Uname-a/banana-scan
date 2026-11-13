@@ -14,9 +14,9 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
-# The file store short links (/s/<name>) open from. Empty by default, so a
-# self-hosted build does not point into the scanruler.com store. Taken out of
-# the tracked .env, since Vite lets an empty value there stand.
+# The file store short links (/s/<name>) open from. Empty by default: the
+# tracked .env names none. Any line for it there is taken out first, since
+# Vite lets an empty value there stand.
 ARG VITE_FILES_URL=""
 RUN sed -i '/^VITE_FILES_URL=/d' .env \
  && if [ -n "$VITE_FILES_URL" ]; then printf 'VITE_FILES_URL=%s\n' "$VITE_FILES_URL" >> .env; fi \

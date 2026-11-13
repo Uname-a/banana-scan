@@ -20,7 +20,9 @@ import { httpServer } from './serve.js'
 import { NO_UPDATE_ENV, startUpdates, watchParent } from './update.js'
 
 const DEFAULT_PORT = 7317
-const HOSTED_APP = 'https://scanruler.com/'
+/** What the pairing link opens without --app or --serve: the dev server,
+ *  `npm run dev` in the repository. Banana Scan has no hosted copy. */
+const DEFAULT_APP = 'http://localhost:5173/'
 
 const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
 
@@ -33,7 +35,7 @@ Usage: banana-scan-mcp [options]
                          (default: the folder the agent starts this in)
   --serve <dir>          also serve a built Banana Scan from <dir> at http://127.0.0.1:<port>/
   --allow-origin <url>   let a Banana Scan page from another origin connect (repeatable)
-  --app <url>            the Banana Scan address the pairing link opens (default ${HOSTED_APP})
+  --app <url>            the Banana Scan address the pairing link opens (default ${DEFAULT_APP})
   --engine <file>        run Banana Scan headless in this process, from an engine built
                          with "npm run build:engine" (BANANA_SCAN_ENGINE) — no browser,
                          no page: modelling and files only
@@ -64,10 +66,9 @@ Usage: banana-scan-mcp [options]
   --version              print this server's version, and exit
   --help                 this
 
-Once a day, in the background, the server asks npm's registry for its latest
-version; when there is a newer one, npm fetches it, and the next start runs it
-in this one's place. Not for a copy run from a git checkout, a version pinned
-in the agent's config (banana-scan-mcp@0.4.0), or with --no-update.
+This server is not published on npm and does not update itself: it runs from
+the mcp/ folder of the Banana Scan repository, and git pull there updates it
+(then npm --prefix mcp ci, and a restart of the agent's app).
 
 The pairing token is made on the first run and kept in ${join2(configDir(), 'config.json')};
 BANANA_SCAN_MCP_TOKEN overrides it. BANANA_SCAN_MCP_PORT, BANANA_SCAN_MCP_TOOLS,
@@ -160,7 +161,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const config = loadConfig()
   const token = process.env.BANANA_SCAN_MCP_TOKEN || config.token
-  const app = values.app ?? (values.serve ? `http://127.0.0.1:${port}/` : HOSTED_APP)
+  const app = values.app ?? (values.serve ? `http://127.0.0.1:${port}/` : DEFAULT_APP)
   const pairing = `${app.replace(/#.*$/, '')}#agent=${port}:${token}`
   const connectHelp = () =>
     `Open Banana Scan — ${app} — in Chrome, Edge or Firefox and either open this pairing link once: ${pairing} — or in Banana Scan go to Settings → Agents, switch on "Local agent connection", and enter port ${port} and token ${token}. The first time, Banana Scan warns that what the agent reads goes to the agent and its model, and connects only once the warning is accepted.`

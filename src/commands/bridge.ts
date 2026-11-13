@@ -61,7 +61,7 @@ export const BROWSER_ASKING =
 /** What the link says while nothing answers the hello. */
 export const nothingAnswers = (port: number): string =>
   `Nothing answers on port ${port} on this computer yet. Is the AI app running, with Banana Scan's connector (banana-scan-mcp) on that port? ` +
-  '"npx -y banana-scan-mcp@latest --pair" prints the port and the token. In Safari, or where the browser will not let this site reach this computer, ' +
+  '"node mcp/bin/banana-scan-mcp.js --pair", run in the banana-scan folder, prints the port and the token. In Safari, or where the browser will not let this site reach this computer, ' +
   'open the page "banana-scan-mcp --serve" gives instead.'
 
 export interface BridgeOptions {

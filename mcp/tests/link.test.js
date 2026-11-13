@@ -26,14 +26,13 @@ after(() => {
   http.close()
 })
 
-test('pages are let in from the hosted app, loopback, and origins named', () => {
-  assert.ok(originAllowed('https://scanruler.com'))
+test('pages are let in from loopback and origins named, and from no hosted app', () => {
+  assert.equal(originAllowed('https://scanruler.com'), false, 'not the site this was forked from') // rebrand:keep
   assert.ok(originAllowed('http://localhost:5187'))
   assert.ok(originAllowed('http://127.0.0.1:7317'))
   assert.ok(originAllowed('https://banana-scan.example', ['https://banana-scan.example']))
   assert.ok(originAllowed(undefined), 'no Origin: not a browser page; the token decides')
   assert.equal(originAllowed('https://evil.example'), false)
-  assert.equal(originAllowed('http://scanruler.com'), false, 'not the hosted app over plain http')
   assert.equal(originAllowed('null'), false)
 })
 
@@ -49,14 +48,14 @@ const fetchWithOrigin = (path, origin, at = port) =>
   })
 
 test('the hello a page fetches first answers an allowed origin, and only that one, with CORS', async () => {
-  const ok = await fetchWithOrigin(HELLO_PATH, 'https://scanruler.com')
+  const ok = await fetchWithOrigin(HELLO_PATH, 'https://banana-scan.example')
   assert.equal(ok.status, 200)
-  assert.equal(ok.headers['access-control-allow-origin'], 'https://scanruler.com')
+  assert.equal(ok.headers['access-control-allow-origin'], 'https://banana-scan.example')
   assert.equal(ok.headers['access-control-allow-private-network'], 'true')
   assert.deepEqual(JSON.parse(ok.body), { server: 'banana-scan-mcp', version: '9.9.9' })
   const other = await fetchWithOrigin(HELLO_PATH, 'https://evil.example')
   assert.equal(other.headers['access-control-allow-origin'], undefined)
-  const root = await fetchWithOrigin('/', 'https://scanruler.com')
+  const root = await fetchWithOrigin('/', 'https://banana-scan.example')
   assert.match(root.body, /waiting for the Banana Scan page/)
 })
 

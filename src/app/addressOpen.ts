@@ -7,7 +7,7 @@
 // says which workspace to land in, by the names the command layer uses,
 // after the file is open — or on its own.
 
-import { PROJECT_EXTENSION } from '../core/project/manifest'
+import { isProjectExtension, PROJECT_EXTENSION } from '../core/project/manifest'
 import { extensionOf, isImageFile, isReferenceFile } from '../core/formats'
 
 export interface AddressOpen {
@@ -55,7 +55,7 @@ export function openFromAddress(
     return { error: `The address is not a file name: ${name}` }
   }
   if (!filesBase) return { error: 'This build has no file store, so a short link cannot be opened here.' }
-  const known = isReferenceFile(name) || isImageFile(name) || extensionOf(name) === PROJECT_EXTENSION
+  const known = isReferenceFile(name) || isImageFile(name) || isProjectExtension(extensionOf(name))
   const key = known ? name : `${name}.${PROJECT_EXTENSION}`
   const url = new URL(key.split('/').map(encodeURIComponent).join('/'), filesBase.replace(/\/*$/, '/'))
   return { url: url.href, name: nameOf(url) }

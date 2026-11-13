@@ -5,3 +5,7 @@
 // bump of that one field and a tag (docs/development.md, "Releases").
 
 export const APP_VERSION: string = __APP_VERSION__
+
+/** Where this version's source is, as the AGPL asks a network service to
+ *  offer it: the GitHub key in the top bar and About link here. */
+export const SOURCE_URL = 'https://github.com/Uname-a/banana-scan'

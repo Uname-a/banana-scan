@@ -96,7 +96,7 @@ Workspaces can be added by plugins: `plugins/<id>/plugin.ts` beside `src/`,
 found at build time and read through the interfaces in
 [src/plugins/api.ts](../src/plugins/api.ts) — a workspace's tab, panel and stage,
 its part of the project file, of the undo history, of the mesh worker and of
-the 3D viewport, and its notices in the imprint. Reverse engineer and Mesh Tools
+the 3D viewport, and its notices in About. Reverse engineer and Mesh Tools
 are built this way; [plugins/README.md](../plugins/README.md) has the rules and
 the extension points. A build stands with any plugin or none, so nothing in
 `src/` imports from one; `node scripts/check-plugin-boundary.mjs` checks
@@ -132,7 +132,7 @@ binding (a kernel operation we lacked) goes in
 
 The version is the `version` field in `package.json` and nowhere else. The
 build reads it into the app, which shows it in the caption under the Banana Scan
-name in the top bar and in the imprint, and writes it into every `.bananascan`
+name in the top bar and in About, and writes it into every `.bananascan`
 project it saves as `appVersion`. Whether an older build can open a project is
 decided by the file's own `schemaVersion` and the names in it, not by this
 number: a build refuses a higher `schemaVersion`, and an element kind, way of
@@ -153,8 +153,8 @@ git tag -a v0.3.0 -m "Banana Scan 0.3.0"
 git push --follow-tags
 ```
 
-The push builds and deploys the site (below), so the number on scanruler.com is
-the one that was pushed. A plain `git push` leaves the tag behind, and so does
+Where a push builds and deploys the site (below), the number on it is the one
+that was pushed. A plain `git push` leaves the tag behind, and so does
 VS Code's **Sync Changes** unless `git.followTagsWhenSync` is on.
 
 Each version tag on GitHub becomes a release, its notes the version's section
@@ -175,18 +175,19 @@ it:
   `npm test && npm run build` — the config file supplies the rest. Pushes to
   `main` then build and deploy automatically.
 
-Either way the site lands on a `*.workers.dev` URL — the live deployment is at
-<https://scanruler.com/> via a custom domain attached in the Worker's
-settings.
+Either way the site lands on a `*.workers.dev` URL, or on a domain of your own
+attached in the Worker's settings. Banana Scan has no live deployment yet. A
+public one must offer its users this version's source (the AGPL's section 13),
+and say who runs it in About (`src/ui/Imprint.tsx`).
 
 **The file store** behind the short links (`/s/<name>`, see [Opening a file from a
 link](manual.md#opening-a-file-from-a-link)) is any web address the app may read from — for the live site a
 Cloudflare R2 bucket with public access on a custom domain, and a CORS rule
 on the bucket allowing `GET` from the site's origin (and from
 `http://localhost:5173` for development). The build is told where it is
-through `VITE_FILES_URL` in `.env` next to `package.json`, which names the
-live site's store; a `.env.local` beside it (not committed) or a build
-variable in Workers Builds overrides it for another deployment. Without one
+through `VITE_FILES_URL`, which the tracked `.env` next to `package.json`
+leaves unset; a `.env.local` beside it (not committed) or a build variable in
+Workers Builds sets it for a deployment. Without one
 the app still opens `?open=` links; only the short form answers that the
 build has no store. Files go into the bucket through the R2 page of
 the Cloudflare dashboard, `wrangler r2 object put`, or any S3 client with an

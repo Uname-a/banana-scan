@@ -124,7 +124,7 @@ const drag = (from, to, button) => libDrag(page, from, to, { button })
 // the part off screen instead of magnifying it in place. The measure is how
 // much of the frame the part covers, which survives the pan and orbit that
 // follow only if they come afterwards.
-await setScheme('cnckitchen')
+await setScheme('bananascan')
 
 const framed = await sample()
 check(framed.area > 0.005, `the part is on screen to begin with — area ${framed.area.toFixed(4)}`)
@@ -162,7 +162,7 @@ const swOutDiff = await pixelDiff(page, swOut.png, framed.png)
 check(swOutDiff < 0.5, `solidworks scroll up zooms back out (${swOutDiff.toFixed(3)}% off the framed view)`)
 
 // ---- drag gestures ----
-await setScheme('cnckitchen')
+await setScheme('bananascan')
 
 let before = await canvasHash()
 await drag(mid, [mid[0] + 220, mid[1] + 90], 'left')
@@ -341,7 +341,7 @@ check((await canvasCursor()) === '', 'the pointer goes back to normal off the gi
 // ---- picking still works after all that ----
 // A drag must not read as a click, and a click must not read as a drag: sweep
 // the frame for a point that starts a sphere draft and previews a fit.
-await setScheme('cnckitchen')
+await setScheme('bananascan')
 
 // Aim at pixels the part actually occupies: the orbits and pans above left it
 // wherever they left it, and this check is about the click, not about aim.

@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+// Banana Scan's agent server is not published on npm (PUBLISHED below), so
+// all of this is off: a copy runs from the repository's mcp/ folder and is
+// updated with it, by git pull. A name nobody holds on the registry could be
+// taken by anyone, and a copy that went looking for it would run what it
+// found. What follows is how it works once the package is published.
+//
 // The server keeps itself current. A config written as `npx -y
 // banana-scan-mcp` is rarely changed again, and a copy installed or copied by
 // hand never updates at all; so the server does it by itself, in two halves
@@ -37,6 +43,9 @@ import { fileURLToPath } from 'node:url'
 import { configDir } from './config.js'
 
 export const PACKAGE = 'banana-scan-mcp'
+/** Whether PACKAGE is on npm's registry, published there by this project's
+ *  owner. Until it is, no copy asks the registry about it or fetches it. */
+export const PUBLISHED = false
 /** Set on the copy handed to: the version that handed off. */
 export const HANDED_OFF_ENV = 'BANANA_SCAN_MCP_HANDED_OFF'
 /** The launcher's process id, for the copy handed to to stop with it. */
@@ -112,13 +121,16 @@ export function installOf(packageDir = PACKAGE_DIR, exists = existsSync) {
 }
 
 /** Whether this copy keeps itself current: `updates` is `on`, `off`
- *  (--no-update, BANANA_SCAN_MCP_NO_UPDATE), `checkout` or `pinned`. A copy
+ *  (not published, --no-update, BANANA_SCAN_MCP_NO_UPDATE), `checkout` or
+ *  `pinned`. A copy
  *  handed to goes by the launcher's decision, not its own folder — which is
  *  a pinned spec's. */
-export function updatePolicy({ argv = [], env = process.env, install }) {
+export function updatePolicy({ argv = [], env = process.env, install, published = PUBLISHED }) {
   const handedOffFrom = env[HANDED_OFF_ENV] || null
   const from = handedOffFrom ? { handedOffFrom } : {}
   if (argv.includes('--no-update') || /^(1|true|yes|on)$/i.test(env[NO_UPDATE_ENV] ?? '')) return { updates: 'off', ...from }
+  // Before the hand-off: a variable set by hand must not turn it on.
+  if (!published) return install.kind === 'checkout' ? { updates: 'checkout' } : { updates: 'off', ...from }
   if (handedOffFrom) return { updates: 'on', ...from }
   if (install.kind === 'checkout') return { updates: 'checkout' }
   if (install.pinned) return { updates: 'pinned', pinned: true }
@@ -157,11 +169,11 @@ export function saveState(patch, dir = configDir()) {
 
 /** What the launcher runs: `{ run: 'self', why }` or `{ run: 'handoff',
  *  bin, version }` — read from update.json and the disk alone. */
-export function launchPlan({ argv = [], env = process.env, version, install, state = {}, exists = existsSync, readVersion = versionAt }) {
+export function launchPlan({ argv = [], env = process.env, version, install, state = {}, exists = existsSync, readVersion = versionAt, published = PUBLISHED }) {
   const self = (why) => ({ run: 'self', why })
   if (env[HANDED_OFF_ENV]) return self('handed-off')
   if (argv.some((a) => OWN_ANSWERS.includes(a))) return self('answer')
-  const policy = updatePolicy({ argv, env, install })
+  const policy = updatePolicy({ argv, env, install, published })
   if (policy.updates !== 'on') return self(policy.updates)
   const ready = state.ready
   if (!ready || typeof ready.bin !== 'string' || !newer(ready.version, version)) return self('current')
@@ -212,11 +224,11 @@ export function runHandOff({ plan, argv, version, env = process.env, spawnFn = s
 /** The launcher's part: run a newer copy fetched earlier in this one's
  *  place. Resolves its exit code, or null for this copy to run — always
  *  null on any failure. */
-export async function launch(argv, { env = process.env, packageDir = PACKAGE_DIR, dir, log = stderrLog } = {}) {
+export async function launch(argv, { env = process.env, packageDir = PACKAGE_DIR, dir, log = stderrLog, published = PUBLISHED } = {}) {
   try {
     const version = versionAt(join(packageDir, 'bin', 'banana-scan-mcp.js'))
     const where = dir ?? configDir(env)
-    const plan = launchPlan({ argv, env, version, install: installOf(packageDir), state: loadState(where) })
+    const plan = launchPlan({ argv, env, version, install: installOf(packageDir), state: loadState(where), published })
     if (plan.run !== 'handoff') return null
     log(`Starting banana-scan-mcp ${plan.version}, fetched earlier, in place of ${version}.`)
     const out = await runHandOff({
@@ -379,9 +391,9 @@ export async function checkForUpdate({ version, dir = configDir(), env = process
 /** The server's part, once it serves: the check in the background, and
  *  what the status says of it — `{ latest, handedOffFrom?, pinned?,
  *  updates? }` (updates only when off: `off` or `checkout`). */
-export function startUpdates({ version, argv = [], env = process.env, packageDir = PACKAGE_DIR, dir = configDir(env), log = stderrLog, check = checkForUpdate } = {}) {
+export function startUpdates({ version, argv = [], env = process.env, packageDir = PACKAGE_DIR, dir = configDir(env), log = stderrLog, check = checkForUpdate, published = PUBLISHED } = {}) {
   const install = installOf(packageDir)
-  const policy = updatePolicy({ argv, env, install })
+  const policy = updatePolicy({ argv, env, install, published })
   let state = policy.updates === 'on' ? loadState(dir) : {}
   const done =
     policy.updates === 'on'

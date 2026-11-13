@@ -1019,7 +1019,7 @@ export function createMcpServer({
     return lastProject
   }
   const rememberProject = (file) => {
-    if (extname(String(file)).toLowerCase() !== '.bananascan') return
+    if (!['.bananascan', '.scanruler'].includes(extname(String(file)).toLowerCase())) return // rebrand:keep — ScanRuler's projects open here too
     lastProject = file
     try {
       folderStore?.saveProject?.(file)

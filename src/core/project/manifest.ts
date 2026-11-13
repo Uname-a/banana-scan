@@ -27,6 +27,10 @@ import type { Vec2 } from '../flat/types'
 import { NEWER_PROJECT, validateProjectParts } from './validation'
 
 export const PROJECT_APP = 'Banana Scan'
+/** What a project saved by the app Banana Scan is a fork of says it is
+ *  (docs/upstream.md): Banana Scan opens those as its own, and saves them as
+ *  its own. */
+export const UPSTREAM_PROJECT_APP = 'ScanRuler' // rebrand:keep
 /** The version a project is saved as. A build refuses a higher one, so it
  *  goes up when a project starts to hold something an older build would
  *  read wrongly without noticing: a field whose meaning changes, a new one
@@ -40,6 +44,13 @@ export const PROJECT_APP = 'Banana Scan'
  *  from the constructions added since and do not open them half-built. */
 export const PROJECT_SCHEMA = 2
 export const PROJECT_EXTENSION = 'bananascan'
+/** The extension that app saves projects with, opened as a project too
+ *  (UPSTREAM_PROJECT_APP). */
+export const UPSTREAM_EXTENSION = 'scanruler' // rebrand:keep
+
+/** Whether an extension, without its dot, is a project's: this app's or
+ *  upstream's. */
+export const isProjectExtension = (ext: string): boolean => ext === PROJECT_EXTENSION || ext === UPSTREAM_EXTENSION
 
 /** Names the model files take inside the archive: a fixed stem, the original
  *  extension, so the right parser picks them up again. */
@@ -48,20 +59,23 @@ export const REFERENCE_STEM = 'reference'
 export const IMAGE_STEM = 'image'
 export const MANIFEST_NAME = 'project.json'
 
-/** PROJECT_EXTENSION, then a count: see isProjectName. */
-const PROJECT_NAME = /\.bananascan(?:-\d+| ?\(\d+\))?$/i
+/** PROJECT_EXTENSION or UPSTREAM_EXTENSION, then a count: see isProjectName. */
+const PROJECT_NAME = /\.(?:bananascan|scanruler)(?:-\d+| ?\(\d+\))?$/i // rebrand:keep
 
-/** Whether a file's name is a project's: `.bananascan`, or that with the
- *  count a browser adds after it when the name is taken in the folder —
- *  `MyProject.bananascan-2` (Chrome on macOS, issue 83), or ` (2)`. */
+/** Whether a file's name is a project's: `.bananascan` (or upstream's
+ *  extension), or that with the count a browser adds after it when the name
+ *  is taken in the folder — `MyProject.bananascan-2` (Chrome on macOS,
+ *  issue 83), or ` (2)`. */
 export function isProjectName(name: string): boolean {
   return PROJECT_NAME.test(name.trim())
 }
 
-/** The extensions the Open dialog offers a project by: its own, and the
- *  counted ones a browser leaves when it saves over a name (isProjectName)
- *  — a Mac's dialog will not let any other be picked. */
-export const PROJECT_ACCEPT = [`.${PROJECT_EXTENSION}`, ...Array.from({ length: 9 }, (_, i) => `.${PROJECT_EXTENSION}-${i + 1}`)].join(',')
+/** The extensions the Open dialog offers a project by: its own and
+ *  upstream's, and the counted ones a browser leaves when it saves over a
+ *  name (isProjectName) — a Mac's dialog will not let any other be picked. */
+export const PROJECT_ACCEPT = [PROJECT_EXTENSION, UPSTREAM_EXTENSION]
+  .flatMap((ext) => [`.${ext}`, ...Array.from({ length: 9 }, (_, i) => `.${ext}-${i + 1}`)])
+  .join(',')
 
 /** Whether a file begins as a project does, whatever its name: a zip whose
  *  first member is the manifest (packProject writes it first) — the local
@@ -296,7 +310,7 @@ export interface FlatPart {
 }
 
 export interface ProjectManifest {
-  app: typeof PROJECT_APP
+  app: typeof PROJECT_APP | typeof UPSTREAM_PROJECT_APP
   schemaVersion: number
   appVersion: string
   /** What the operator named the project. Absent for one not named, and
@@ -315,7 +329,8 @@ export interface ProjectManifest {
 /** Check a parsed manifest is one of ours and one this build can read. */
 export function validateManifest(raw: unknown): ProjectManifest {
   const m = raw as Partial<ProjectManifest> | null
-  if (!m || typeof m !== 'object' || m.app !== PROJECT_APP || typeof m.schemaVersion !== 'number') {
+  const ours = m?.app === PROJECT_APP || m?.app === UPSTREAM_PROJECT_APP
+  if (!m || typeof m !== 'object' || !ours || typeof m.schemaVersion !== 'number') {
     throw new Error('Not a Banana Scan project file.')
   }
   if (!Number.isInteger(m.schemaVersion) || m.schemaVersion < 1) throw new Error('Unsupported project schema version.')

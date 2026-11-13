@@ -24,6 +24,7 @@ import {
   npmFolder,
   npxHash,
   prefetch,
+  PUBLISHED,
   runHandOff,
   runNpm,
   saveState,
@@ -62,21 +63,45 @@ test('how a copy was installed: npx with its spec, npm, a checkout, a copy', () 
   assert.deepEqual(installOf(join('/work', 'banana-scan-mcp'), noGit), { kind: 'copy', pinned: false })
 })
 
+test('while banana-scan-mcp is not on npm, no copy asks the registry or hands off, whatever its folder or variables', async () => {
+  assert.equal(PUBLISHED, false)
+  const npx = { kind: 'npx', pinned: false }
+  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: npx }), { updates: 'off' })
+  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'installed', pinned: false } }), { updates: 'off' })
+  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'copy', pinned: false } }), { updates: 'off' })
+  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'checkout' } }), { updates: 'checkout' })
+  // A hand-off variable set by hand does not turn it on.
+  assert.deepEqual(updatePolicy({ argv: [], env: { [HANDED_OFF_ENV]: '0.4.0' }, install: npx }), { updates: 'off', handedOffFrom: '0.4.0' })
+  const bin = join(npxCopy('banana-scan-mcp@0.4.1'), 'bin', 'banana-scan-mcp.js')
+  const ready = { checked: '2026-10-23T00:00:00.000Z', latest: '0.4.1', ready: { version: '0.4.1', bin } }
+  assert.equal(launchPlan({ argv: [], env: {}, version: '0.4.0', install: npx, state: ready, exists: () => true, readVersion: () => '0.4.1' }).why, 'off')
+  let checked = 0
+  const installed = join(await tempDir(), 'lib', 'node_modules', 'banana-scan-mcp')
+  const u = startUpdates({ version: '0.4.0', env: {}, packageDir: installed, dir: await tempDir(), check: async () => checked++ })
+  await u.done
+  assert.equal(checked, 0)
+  assert.deepEqual(u.info(), { latest: null, updates: 'off' })
+})
+
+// The rest is the machinery for once the package is published, so it is
+// tested as published.
+const policy = (o) => updatePolicy({ published: true, ...o })
+
 test('updates are off with --no-update or the variable, in a checkout, for a pinned spec; a copy handed to goes on', () => {
   const npx = { kind: 'npx', pinned: false }
-  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: npx }), { updates: 'on' })
-  assert.deepEqual(updatePolicy({ argv: ['--no-update'], env: {}, install: npx }), { updates: 'off' })
-  assert.deepEqual(updatePolicy({ argv: [], env: { BANANA_SCAN_MCP_NO_UPDATE: '1' }, install: npx }), { updates: 'off' })
-  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'checkout' } }), { updates: 'checkout' })
-  assert.deepEqual(updatePolicy({ argv: [], env: {}, install: { kind: 'npx', pinned: true } }), { updates: 'pinned', pinned: true })
+  assert.deepEqual(policy({ argv: [], env: {}, install: npx }), { updates: 'on' })
+  assert.deepEqual(policy({ argv: ['--no-update'], env: {}, install: npx }), { updates: 'off' })
+  assert.deepEqual(policy({ argv: [], env: { BANANA_SCAN_MCP_NO_UPDATE: '1' }, install: npx }), { updates: 'off' })
+  assert.deepEqual(policy({ argv: [], env: {}, install: { kind: 'checkout' } }), { updates: 'checkout' })
+  assert.deepEqual(policy({ argv: [], env: {}, install: { kind: 'npx', pinned: true } }), { updates: 'pinned', pinned: true })
   // The copy handed to sits in a pinned spec's folder; the launcher decided.
-  assert.deepEqual(updatePolicy({ argv: [], env: { [HANDED_OFF_ENV]: '0.4.0' }, install: { kind: 'npx', pinned: true } }), { updates: 'on', handedOffFrom: '0.4.0' })
+  assert.deepEqual(policy({ argv: [], env: { [HANDED_OFF_ENV]: '0.4.0' }, install: { kind: 'npx', pinned: true } }), { updates: 'on', handedOffFrom: '0.4.0' })
 })
 
 test('the launcher runs a newer copy already fetched, and itself otherwise', () => {
   const bin = join(npxCopy('banana-scan-mcp@0.4.1'), 'bin', 'banana-scan-mcp.js')
   const ready = { checked: '2026-10-23T00:00:00.000Z', latest: '0.4.1', ready: { version: '0.4.1', bin } }
-  const base = { argv: [], env: {}, version: '0.4.0', install: { kind: 'npx', pinned: false }, state: ready, exists: (p) => p === bin, readVersion: () => '0.4.1' }
+  const base = { argv: [], env: {}, version: '0.4.0', install: { kind: 'npx', pinned: false }, state: ready, exists: (p) => p === bin, readVersion: () => '0.4.1', published: true }
   assert.deepEqual(launchPlan(base), { run: 'handoff', bin, version: '0.4.1' })
   assert.equal(launchPlan({ ...base, version: '0.4.1' }).why, 'current')
   assert.equal(launchPlan({ ...base, version: '0.5.0' }).why, 'current')
@@ -261,13 +286,15 @@ test('a checkout makes no request, and the status says updates are off there', a
   assert.deepEqual(u.info(), { latest: null, updates: 'checkout' })
   const dir = await tempDir()
   saveState({ checked: new Date().toISOString(), latest: '0.4.1' }, dir)
-  const on = startUpdates({ version: '0.4.0', env: { [HANDED_OFF_ENV]: '0.3.9' }, packageDir: MCP_DIR, dir, log: () => {}, check: async () => ({ latest: '0.4.2' }) })
+  const on = startUpdates({ version: '0.4.0', env: { [HANDED_OFF_ENV]: '0.3.9' }, packageDir: MCP_DIR, dir, log: () => {}, check: async () => ({ latest: '0.4.2' }), published: true })
   assert.deepEqual(on.info(), { latest: '0.4.1', handedOffFrom: '0.3.9' })
   await on.done
   assert.equal(on.info().latest, '0.4.2')
 })
 
-test('the launcher, run for real, hands off to the fetched copy with the same arguments and passes its exit code back', { timeout: 30_000 }, async () => {
+// The real launcher reads PUBLISHED itself, so while that is false there is
+// no hand-off to watch it make.
+test('the launcher, run for real, hands off to the fetched copy with the same arguments and passes its exit code back', { timeout: 30_000, skip: !PUBLISHED && 'banana-scan-mcp is not on npm' }, async () => {
   const root = await tempDir()
   // This version, installed by npm — not a checkout — with its launcher.
   const pkg = join(root, 'lib', 'node_modules', 'banana-scan-mcp')

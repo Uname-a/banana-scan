@@ -1069,14 +1069,14 @@ it had been dropped: a `.bananascan` project replaces the session and lands in
 the workspace it was saved from, a mesh becomes the scan, an image opens the
 2D workspace. Two forms:
 
-- `https://scanruler.com/?open=https://host.example/parts/hinge.scanruler`
-  fetches any file on the web. The server the file is on has to let the app
+- `http://localhost:5173/?open=https://host.example/parts/hinge.bananascan` (the
+  app's address, then `?open=`) fetches any file on the web. The server the file is on has to let the app
   read it — it has to answer with a CORS header naming the app's origin (or
   `*`); GitHub's raw file addresses do, most file-sharing sites do not. The
   status strip says what went wrong when the file does not come: the status
   the server answered with, or that it could not be fetched at all, which
   is nearly always that header missing.
-- `https://scanruler.com/s/hinge` is the short form for a file in the
+- `http://localhost:5173/s/hinge` is the short form for a file in the
   deployment's own file store: the name is looked up under the store's
   address, as `hinge.bananascan` unless the name ends in a format the app
   opens (`/s/scans/ballbar.stl`). Names may have folders in them. Which store

@@ -161,7 +161,7 @@ export const absolute = (path, base) => (isAbsolute(path) ? path : resolve(base,
  *  of its kind in it. Other commands take a file only. */
 const FOLDER_PICKS = {
   'scan.open': { what: 'mesh', kinds: ['.stl', '.ply', '.obj', '.3mf'] },
-  'project.load': { what: 'project', kinds: ['.bananascan'] },
+  'project.load': { what: 'project', kinds: ['.bananascan', '.scanruler'] }, // rebrand:keep — and ScanRuler's
 }
 
 /** The file a path names: itself, or — for a folder, where the command
@@ -318,7 +318,7 @@ function pickAt(data, at, path) {
 /** A file's kind by its extension, as bananascan_files lists it. */
 const KINDS = {
   mesh: ['.stl', '.ply', '.obj', '.3mf', '.off'],
-  project: ['.bananascan'],
+  project: ['.bananascan', '.scanruler'], // rebrand:keep — and ScanRuler's
   step: ['.step', '.stp'],
   picture: ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'],
   drawing: ['.dxf', '.svg', '.pdf'],

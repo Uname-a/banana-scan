@@ -1,7 +1,6 @@
 # banana-scan-mcp
 
-Drive [ScanRuler](https://scanruler.com/), the browser tool for measuring 3D
-scans, from an AI agent. This is a [Model Context Protocol](https://modelcontextprotocol.io)
+Drive Banana Scan, the browser tool for measuring 3D scans, from an AI agent. This is a [Model Context Protocol](https://modelcontextprotocol.io)
 server: the agent starts it and calls its tools; the Banana Scan tab open in
 your browser connects to it over `127.0.0.1` and runs each call there, in
 front of you. Every step the agent takes is one step of the tab's undo
@@ -10,20 +9,22 @@ history, so you can take any of it back.
 Nothing goes anywhere but your own computer: the scan travels from your disk
 to your browser through this server, as it does when you open it yourself.
 What the agent reads — the figures, the report — goes to the agent's model
-provider, like everything else it reads. The server's one request of its own
-asks npm, once a day, for its latest version (see *Staying current*).
+provider, like everything else it reads. The server makes no request of its
+own: it is not on npm and does not update itself (see *Staying current*).
 
 ## Setting up
 
-You need [Node.js](https://nodejs.org/) 22 or newer, and Chrome, Edge or
-Firefox.
+You need [Node.js](https://nodejs.org/) 22 or newer, Chrome, Edge or Firefox,
+and the Banana Scan repository with this server's packages installed once:
+`npm --prefix mcp ci` in it. The server is not on npm; every setting below runs
+it from that folder, with yours in place of `/path/to/banana-scan`.
 
 ### 1. Add the server to your agent
 
 **Claude Code**
 
 ```bash
-claude mcp add --scope user banana-scan -- npx -y banana-scan-mcp@latest
+claude mcp add --scope user banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js
 ```
 
 `--scope user` has it in every project; leave it out for this one only.
@@ -33,17 +34,16 @@ unless the agent names a path.
 **Codex** — the CLI, the IDE extension and the app share one setting:
 
 ```bash
-codex mcp add banana-scan -- npx -y banana-scan-mcp@latest
+codex mcp add banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js
 ```
 
-or, in `~/.codex/config.toml`, with room for the first start (npx fetches the
-package) and for long calls — Codex gives a server 10 seconds to start and a
-call 60 unless told otherwise:
+or, in `~/.codex/config.toml`, with room for long calls — Codex gives a server
+10 seconds to start and a call 60 unless told otherwise:
 
 ```toml
 [mcp_servers.banana-scan]
-command = "npx"
-args = ["-y", "banana-scan-mcp@latest"]
+command = "node"
+args = ["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js"]
 startup_timeout_sec = 60
 tool_timeout_sec = 300
 ```
@@ -55,8 +55,8 @@ tool_timeout_sec = 300
 {
   "mcpServers": {
     "banana-scan": {
-      "command": "npx",
-      "args": ["-y", "banana-scan-mcp@latest", "--out", "/Users/you/Documents/BananaScan"]
+      "command": "node",
+      "args": ["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js", "--out", "/Users/you/Documents/BananaScan"]
     }
   }
 }
@@ -76,36 +76,33 @@ tab connects to it, and the other sends its calls through that one — see
 {
   "mcpServers": {
     "banana-scan": {
-      "command": "npx",
-      "args": ["-y", "banana-scan-mcp@latest"]
+      "command": "node",
+      "args": ["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js"]
     }
   }
 }
 ```
 
-**From a clone of the Banana Scan repository**, to try a change: run
-`npm --prefix mcp ci` once, then use
-`node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js` where the examples say
-`npx -y banana-scan-mcp@latest` — in Claude Code,
-`claude mcp add banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js`.
-
 ### 2. Let the agent open Banana Scan
 
 Ask the agent for something in Banana Scan — or just *"Connect to Banana Scan"*.
 With no tab connected, it calls `bananascan_open`, which opens Banana Scan in
-your default browser with the pairing in its address: the tab switches the
+your default browser with the pairing in its address — `http://localhost:5173/`,
+the dev server, so start it first with `npm run dev` in the repository, or the
+address `--app` names, or with `--serve` the build this server serves: the tab switches the
 connection on with this server's port and token, and connects. The first
 time, Banana Scan warns that what the agent reads goes to the agent and its model,
-not only this computer, and connects once you accept. Then **Chrome and Edge**
-ask whether scanruler.com may access "apps and services on this device" — allow
-it, that is this server. **Firefox** asks the same. The tab keeps the pairing,
+not only this computer, and connects once you accept. For a copy served from
+another computer, **Chrome and Edge** then ask whether the site may access
+"apps and services on this device" — allow it, that is this server. **Firefox**
+asks the same. The tab keeps the pairing,
 so this is done once per browser.
 
 When the default browser is not the one you use Banana Scan in, or the agent
 runs somewhere it cannot open one, pair by hand:
 
 ```bash
-npx -y banana-scan-mcp@latest --pair
+node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js --pair
 ```
 
 prints the port, the pairing token and a link. Open the link once in the
@@ -128,30 +125,19 @@ runs on at all; use `--serve` below.
 
 ### Staying current
 
-With `@latest` in the setting, npx asks npm for the newest version at every
-start and fetches it when there is one, so quitting the app and opening it
-again updates the server. Offline, npx starts the copy it has; on a network
-that turns connections away rather than having none, it tries for about a
-minute first. (npm 9.7 and newer treat a bare `banana-scan-mcp` the same way.)
+The server is not on npm and does not update itself: it is the `mcp/` folder
+of the repository, so `git pull` there updates it, then `npm --prefix mcp ci`
+for its packages. Quit the app that starts it completely — not just its
+window — and open it again to run the new copy. (`src/update.js` holds a
+self-update for a package on npm; it stays off while `PUBLISHED` there is
+false, so no copy asks npm about a name this project does not hold.
+`bananascan_status` says `server.updates: "checkout"` for a copy run from the
+repository.)
 
-The server also keeps itself current — for a setting without `@latest` on an
-older npm, or a copy installed with `npm install -g`. Once a day, in the
-background, it asks npm's registry (registry.npmjs.org, or the one npm is set
-to) for its latest version: that one request, given 2 seconds. When there is
-a newer one, npm fetches it into its cache, and the next start runs it in
-place of the old copy, without waiting on the network. What it found is kept
-in `update.json` in the config folder, and `bananascan_status` says it:
-`server.version`, `server.latest`, and `server.handedOffFrom` when an older
-copy started this one. A version pinned in the setting
-(`banana-scan-mcp@0.4.0`) is left as it is, and so is a copy run from a clone
-of the repository. To turn it off: `--no-update`, or
-`BANANA_SCAN_MCP_NO_UPDATE=1`.
-
-When Banana Scan shows **Your Banana Scan connector is out of date**, the server
-your app starts is older than the page needs: ask your agent to update it, with
-the sentence the banner gives you to paste, or change the setting to the
-`@latest` line it shows. Then quit the app completely — not just its window —
-and open it again.
+When Banana Scan shows **Your Banana Scan connector is out of date**, the
+server your app starts is older than the page needs: pull, as above, or ask
+your agent to, with the sentence the banner gives you to paste. Then quit the
+app completely and open it again.
 
 When the page is updated while the app runs, the tools the app was given are
 the old page's, and `bananascan_status` says so (`tools.stale`, with what was
@@ -181,7 +167,7 @@ the tab, each one step of the same undo history.
 ### Serving the app yourself
 
 ```bash
-npx -y banana-scan-mcp@latest --serve /path/to/banana-scan/dist
+node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js --serve /path/to/banana-scan/dist
 ```
 
 serves a built Banana Scan (`npm run build` in a clone) at
@@ -193,7 +179,7 @@ no browser permission, and `--pair` then gives a link to it.
 
 ```bash
 npm run build:engine                       # in a clone of Banana Scan
-npx -y banana-scan-mcp@latest --engine /path/to/banana-scan/dist-engine/engine.mjs
+node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js --engine /path/to/banana-scan/dist-engine/engine.mjs
 ```
 
 runs Banana Scan itself inside the server, with no browser and no tab: the
@@ -248,8 +234,8 @@ separate entries. In `mcp.json`:
 {
   "mcpServers": {
     "banana-scan": {
-      "command": "npx",
-      "args": ["-y", "banana-scan-mcp@latest", "--tools", "compact"]
+      "command": "node",
+      "args": ["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js", "--tools", "compact"]
     }
   }
 }
@@ -258,10 +244,10 @@ separate entries. In `mcp.json`:
 **Codex** with a local model:
 
 ```bash
-codex mcp add banana-scan -- npx -y banana-scan-mcp@latest --tools compact
+codex mcp add banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js --tools compact
 ```
 
-or `args = ["-y", "banana-scan-mcp@latest", "--tools", "compact"]` in
+or `args = ["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js", "--tools", "compact"]` in
 `~/.codex/config.toml`.
 
 ### Fewer tools
@@ -292,7 +278,7 @@ may add one — and the server says so on its stderr when a tab connects.
 | `--port <n>` | The port the tab connects to; 7317 unless given. Also `BANANA_SCAN_MCP_PORT`. |
 | `--out <dir>` | Where exports go when a tool call names no path; the folder the server was started in otherwise. |
 | `--serve <dir>` | Also serve a built Banana Scan from `<dir>`. |
-| `--allow-origin <url>` | Let a ScanRuler tab from another address connect — a self-hosted copy. Repeatable. scanruler.com and any page on this computer are always allowed. |
+| `--allow-origin <url>` | Let a Banana Scan tab from another address connect — a copy on a server of your own. Repeatable. Any page on this computer is always allowed. |
 | `--app <url>` | The Banana Scan address the pairing link opens. |
 | `--engine <file>` | Run Banana Scan headless in the server, from an engine built with `npm run build:engine` — no tab. Also `BANANA_SCAN_ENGINE`. |
 | `--headless` | The same, with the engine built in the checkout the server is part of. |
@@ -481,8 +467,7 @@ the part lies), `element_fit` twice, `dimension_add`, `report_get`,
 The tab connects to `ws://127.0.0.1:<port>/`. Before that, a tab from the web
 fetches `http://127.0.0.1:<port>/banana-scan-mcp`, which is what has Chrome and
 Edge ask for the permission a WebSocket alone never asks for. The server lets
-in a tab from scanruler.com, from this computer, or from an `--allow-origin`
-address, that presents the pairing token — one tab at a time — and, beside
+in a tab from this computer, or from an `--allow-origin` address, that presents the pairing token — one tab at a time — and, beside
 it, other copies of itself that present the token, whose requests it passes
 to the tab (`src/relay.js`). Messages are
 JSON; a file travels as a binary frame right after the JSON that announces it,

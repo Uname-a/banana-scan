@@ -20,10 +20,10 @@ import { IMAGE_ACCEPT, SCAN_ACCEPT, isImageFile, isModelFile, isTextureFile } fr
 import { bundleFiles } from '../app/scanFiles'
 import { PROJECT_ACCEPT, PROJECT_EXTENSION, projectStem } from '../core/project/manifest'
 import { holdsProject, isProjectFile } from '../app/useProject'
-import { APP_VERSION } from '../version'
+import { APP_VERSION, SOURCE_URL } from '../version'
 import type { RecoveryStatus } from '../app/useRecovery'
 
-const GITHUB_URL = 'https://github.com/Uname-a/banana-scan'
+const GITHUB_URL = SOURCE_URL
 
 /** What the GitHub key links to: the whole app, or — with plugins in use,
  *  which are not published there — the app without them. */
@@ -233,7 +233,7 @@ export function TopBar({
       <div className="brand" title={`Banana Scan v${APP_VERSION}`}>
         <b>Banana Scan</b>
         <span>
-          CNC Kitchen · 3D scan analysis ·{' '}
+          3D scan analysis ·{' '}
           <i className="ver" data-test="app-version">
             v{APP_VERSION}
           </i>

@@ -11,7 +11,7 @@ import { SNAPSHOT } from '../src/mcp.js'
  *  progress line before it — `message` the server's whole request, its job
  *  among it; a thrown `{ code, message }` is the error. `hello` adds to
  *  what the page says of itself — its pageId and since, say. */
-export function fakePage(port, { token, origin = 'https://scanruler.com', commands = SNAPSHOT, answer = () => ({}), hello = {} } = {}) {
+export function fakePage(port, { token, origin = 'http://localhost:5173', commands = SNAPSHOT, answer = () => ({}), hello = {} } = {}) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(`ws://127.0.0.1:${port}/`, { origin })
     const page = { ws, runs: [], close: () => ws.close() }

@@ -1,36 +1,26 @@
 # Contributing
 
-Thanks for your interest! Two ground rules keep this project sustainable —
-please read them before opening a PR.
+Thanks for your interest! Two ground rules — please read them before opening
+a PR.
 
-## 1. Contributor License Agreement (CLA)
+## 1. Licensing of contributions
 
-This project is dual-licensed: open source under AGPL-3.0-only for everyone,
-with commercial exceptions sold to companies that want to embed it in
-proprietary software (see [COMMERCIAL.md](COMMERCIAL.md)). That model only
-works if one person — Stefan Hermann (CNC Kitchen), the project's author and
-licensor — holds the right to license the whole codebase.
-
-So every contribution needs the [Contributor License Agreement](CLA.md)
-signed once. You keep the copyright to what you wrote; you grant the licensor
-a perpetual, irrevocable, worldwide right to license it under any terms,
-including commercial ones, and you promise it is your own work and brings in
-nothing the dependency policy below rules out. The document is two screens long; please read it.
-
-Signing is a comment on your first pull request. A bot posts the request and
-the exact sentence to reply with, marks the check green once you have, and
-records your login, the date, the pull request and the commit on the
-`cla-signatures` branch. Pull requests from anyone not on file cannot merge.
-If the bot missed your reply, comment `recheck`.
-
-We're transparent about why: without this, a single outside patch would
-legally block the commercial-exception model that funds development.
+<!-- rebrand:off -->
+Banana Scan is a modified version of ScanRuler by Stefan Hermann (CNC
+Kitchen), under the GNU AGPL-3.0-only, and a contribution here is made under
+that license too. There is no contributor agreement. ScanRuler's own (its CLA)
+covers contributions to ScanRuler, made in CNC Kitchen's repository: a fix that
+belongs there as well is best offered there, so both projects get it.
+<!-- rebrand:on -->
 
 ## 2. Dependency license policy (CRITICAL — checked on every PR)
 
-The dual-licensing model collapses if the app ever contains third-party
-copyleft code we don't own: we cannot sell a commercial exception covering
-someone else's (A)GPL code. **Every new dependency — npm package or vendored
+<!-- rebrand:off -->
+The policy is ScanRuler's, kept so that the whole stays licensable as one:
+its author's dual licensing (AGPL and commercial exceptions) collapses if the
+app ever contains third-party copyleft code, since no commercial exception can
+cover someone else's (A)GPL code.
+<!-- rebrand:on --> **Every new dependency — npm package or vendored
 snippet — must be license-vetted before it lands.**
 
 Allowed:
@@ -60,10 +50,10 @@ If a copyleft component is ever genuinely needed, the options are: isolate it
 behind a process/network boundary as an optional component, buy a commercial
 license for it, or write our own. Ask first.
 
-**The one AGPL dependency is our own.** [`meshstep`](https://github.com/CNCKitchen/meshStep)
-— the STEP importer behind the CAD reference geometry — is AGPL-3.0-only, and
-lands here under the fourth option above: we wrote it, so a commercial
-exception for this app can cover it too. That is the whole of the exemption:
+**The one AGPL dependency is meshStep.** [`meshstep`](https://github.com/CNCKitchen/meshStep)
+— the STEP importer behind the CAD reference geometry — is AGPL-3.0-only, by
+the author of the code Banana Scan is built on, and lands here under the
+fourth option above: a commercial exception from him could cover it too. That is the whole of the exemption:
 "AGPL code we don't own" above still means never. It is excluded by exact
 version in the CI allowlist and pinned without a caret in `package.json`, so
 upgrading it is a deliberate edit in both files — appropriate for the code
@@ -77,7 +67,7 @@ engineer workspace is [Open CASCADE Technology](https://dev.opencascade.org/)
 "never LGPL" rule above assumes the bundler links everything into one file; this
 one is a separate `.wasm` asset and a separate JS chunk, fetched on demand in a
 worker and replaceable by anyone with the same build, which is exactly the
-relinking the LGPL asks to keep possible. The imprint names it and points at its
+relinking the LGPL asks to keep possible. About names it and points at its
 source, and any change to OCCT itself would have to be published; we make none.
 A commercial exception does not cover it: OCCT stays LGPL in every build. CI
 cannot see this one, because `occt-wasm`'s package declares only its wrapper's
@@ -137,9 +127,6 @@ npx license-checker --excludePrivatePackages --summary
 
 ## How you are credited
 
-This repository is published from a development repository, so a pull request is
-applied there and closed here rather than merged. It goes out with the next
-publish, as one commit of the whole tree, with you as a co-author of that commit:
-that is what puts you among the contributors. The changelog thanks you by name.
-For the credit to count, the email on your commits has to be on your GitHub
-account, or be its no-reply address.
+Pull requests are merged here, with your commits and your name on them, and
+the changelog thanks you by name. For GitHub to count them, the email on your
+commits has to be on your GitHub account, or be its no-reply address.

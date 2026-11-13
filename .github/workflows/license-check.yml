@@ -2,8 +2,12 @@
 # Copyright (C) 2026 Stefan Hermann (CNC Kitchen) <stefan@cnckitchen.com>
 #
 # Enforces the dependency license policy from CONTRIBUTING.md §2 on every PR
-# and push: the dual-licensing model (AGPL + commercial exceptions) requires
-# that no third-party copyleft code ever lands in the app.
+# and push: no third-party copyleft code lands in the app.
+# rebrand:off
+# The policy is ScanRuler's, whose dual licensing (AGPL + commercial
+# exceptions) needs it; kept, it leaves a commercial exception from CNC
+# Kitchen able to cover all of Banana Scan.
+# rebrand:on
 #
 # The full tree is checked, dev dependencies included — a bundler-time or
 # test-time package is still code we ship or distribute alongside what we
@@ -12,15 +16,16 @@
 # license-checker reports `private: true` as UNLICENSED.
 #
 # `meshstep` is excluded rather than allowed: it is AGPL-3.0-only, which is a
-# license this policy otherwise rejects outright, but it is OUR code (same
-# author, same dual-licensing model, https://github.com/CNCKitchen/meshStep).
-# The rule the allowlist enforces is "no copyleft we cannot relicense", and a
-# commercial exception for this app covers meshStep too. The exclusion is
+# license this policy otherwise rejects outright, but it is by the same
+# author as the code Banana Scan is built on, under the same dual-licensing
+# model (https://github.com/CNCKitchen/meshStep). The rule the allowlist
+# enforces is "no copyleft that cannot be relicensed with the rest", and a
+# commercial exception from that author would cover meshStep too. The exclusion is
 # pinned to the exact version package.json pins (license-checker only honours
 # --excludePackages against --onlyAllow, not its startsWith variant), so an
 # upgrade has to be made deliberately in both places — which is what we want
 # for the component that decides how CAD surfaces become triangles. It must
-# never be widened to a package we do not own.
+# never be widened to another package.
 #
 # This check cannot see Open CASCADE: `occt-wasm` declares its wrapper's MIT /
 # Apache-2.0, so it passes, while the kernel inside it is LGPL-2.1 with the

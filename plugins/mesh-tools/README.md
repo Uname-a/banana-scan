@@ -927,7 +927,7 @@ The workspace ships two libraries, both permissive and used unmodified:
 MIT) for the reduction, and [Manifold](https://github.com/elalish/manifold)
 (`manifold-3d`, © The Manifold Authors, Apache-2.0) for the booleans. Both
 are WebAssembly loaded when first used, both pinned without a caret, and
-the imprint names them (`ui/MeshNotices.tsx`).
+About names them (`ui/MeshNotices.tsx`).
 
 ## Roadmap
 

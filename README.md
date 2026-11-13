@@ -5,12 +5,17 @@
 
 # Banana Scan
 
-**Use it live at <https://scanruler.com/>** — nothing to install.
+<!-- rebrand:off -->
+> Banana Scan is a modified version of
+> [ScanRuler](https://github.com/CNCKitchen/ScanRuler) by Stefan Hermann
+> ([CNC Kitchen](https://www.cnckitchen.com)), changed from ScanRuler 0.11.2 on
+> 13 November 2026. It is not made or endorsed by CNC Kitchen; ScanRuler and
+> CNC Kitchen are their trademarks. What changed, and how CNC Kitchen's later
+> work is brought in, is in [docs/upstream.md](docs/upstream.md).
+<!-- rebrand:on -->
 
-> **Open source under the AGPL, with commercial licenses available.** Want to
-> build Banana Scan into closed-source software, or host a modified version
-> without publishing its source? Write to <stefan@cnckitchen.com>, see
-> [COMMERCIAL.md](COMMERCIAL.md).
+There is no hosted copy: run it from this repository
+([Development](#development)) or in [Docker](#docker).
 
 Check a 3D scan against what it should have been, entirely in your browser:
 fit spheres, cylinders and planes to the scan and measure between them, paint
@@ -180,9 +185,10 @@ files, projects and agent answers stay in millimetres.
   everything open at a plane to look inside.
 - **Recovery**: work is checkpointed in your browser every few seconds, and
   a later visit offers to restore it. Use **Save** for a portable copy.
-- **Open from a link**: `https://scanruler.com/?open=<url-of-a-file>` opens
-  any file the hosting server allows the app to read (CORS), and
-  `&workspace=deviation` picks where to land.
+- **Open from a link**: the app's address with `?open=<url-of-a-file>`
+  (`http://localhost:5173/?open=…` on the dev server) opens any file the
+  hosting server allows the app to read (CORS), and `&workspace=deviation`
+  picks where to land.
 - **Accuracy**: on a real structured-light scan of a ball bar, the centre
   distance agrees with GOM Inspect to its last digit (148.639 mm against
   148.64 mm). A scan displaced at random comes back to within 0.9 µm of
@@ -199,17 +205,21 @@ can be undone. It can also
 [model a scan into a solid](#automatic-reverse-engineering) in Reverse
 engineer and clean up a scan in Mesh Tools.
 
-You need [Node.js](https://nodejs.org/) 22 or newer and Chrome, Edge or
-Firefox. Add the helper to your agent once:
+You need [Node.js](https://nodejs.org/) 22 or newer, Chrome, Edge or Firefox,
+and this repository with the helper's packages installed
+(`npm --prefix mcp ci`). The helper, `banana-scan-mcp`, is not on npm: it runs
+from the repository's `mcp/` folder, and `git pull` updates it. Add it to your
+agent once, with your folder in place of `/path/to/banana-scan`:
 
 ```bash
-claude mcp add --scope user banana-scan -- npx -y banana-scan-mcp@latest   # Claude Code
-codex mcp add banana-scan -- npx -y banana-scan-mcp@latest                 # Codex
+claude mcp add --scope user banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js   # Claude Code
+codex mcp add banana-scan -- node /path/to/banana-scan/mcp/bin/banana-scan-mcp.js                 # Codex
 ```
 
-For Claude Desktop, Cursor and others, add `"command": "npx", "args": ["-y",
-"banana-scan-mcp@latest"]` to their MCP settings. Then say *"Connect to
-Banana Scan"*. It opens the app paired with the agent. The first time, Banana Scan
+For Claude Desktop, Cursor and others, add `"command": "node", "args":
+["/path/to/banana-scan/mcp/bin/banana-scan-mcp.js"]` to their MCP settings.
+Then start the app with `npm run dev` and say *"Connect to Banana Scan"*. It
+opens the app (`http://localhost:5173/`) paired with the agent. The first time, Banana Scan
 warns you what connecting means for your data (below) and connects only once
 you accept; then the browser asks whether the site may reach *apps and services
 on this device*; click **Allow**. After that, ask for what you want measured,
@@ -342,7 +352,7 @@ type. It helps to include:
 Pull requests are welcome too: the measuring guides in
 [src/commands/guides/](src/commands/guides/), the Reverse engineer guides in
 [plugins/reverse/guides/](plugins/reverse/guides/), and the code underneath.
-They need the CLA, see [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development
 
@@ -394,7 +404,7 @@ How it fits together:
 - **The `banana-scan` container** is nginx serving the static build. It only
   hands out files: scans never reach it, everything runs in the browser.
 - **The `banana-scan-mcp` container** is the bridge. The agent starts it
-  (`docker compose run` in place of `npx`) and speaks MCP over stdin/stdout,
+  (`docker compose run` in place of `node`) and speaks MCP over stdin/stdout,
   where `-T` keeps a terminal from getting in the way. The Banana Scan tab
   connects to its WebSocket on port 7317 with the pairing token
   (`#agent=7317:<token>` in the pairing link). An agent's tool call goes to the
@@ -406,9 +416,9 @@ How it fits together:
   the same path (`BANANA_SCAN_FILES` picks another folder): exports land there,
   and it is the only place the helper can read files from.
 
-Unlike with `npx`:
+Unlike running it with `node`:
 
-- **Only one copy can run.** With `npx`, a second copy joins the first through
+- **Only one copy can run.** Run with `node`, a second copy joins the first through
   the port. Each container has a network of its own, so a second one gets
   `port is already allocated` and the agent reports *Connection closed*. A
   leftover container causes the same thing: find it with
@@ -436,28 +446,33 @@ and redistribute. If you distribute it or offer it over a network (and a
 browser app on a web server counts), your version's complete source must be
 available under the same terms.
 
-Want it inside closed-source software, or hosted without publishing your
-changes? **Commercial exceptions are available**, see
-[COMMERCIAL.md](COMMERCIAL.md). Contributions require the CLA in
-[CONTRIBUTING.md](CONTRIBUTING.md), which also sets the dependency license
-policy: no third-party copyleft in the app, enforced in CI by
-[license-check.yml](.github/workflows/license-check.yml). The STEP importer
-[meshStep](https://github.com/CNCKitchen/meshStep) is AGPL and is allowed
-only because it is ours too, so a commercial exception for this app covers
-it as well. The one third-party exception is Reverse engineer's CAD kernel,
-[Open CASCADE Technology](https://dev.opencascade.org/) (LGPL-2.1 with the Open
-CASCADE exception): it is loaded as a separate, replaceable file, not linked,
-and keeps its own license.
+<!-- rebrand:off -->
+Banana Scan is a modified version of
+[ScanRuler](https://github.com/CNCKitchen/ScanRuler), © 2026 Stefan Hermann
+(CNC Kitchen), under the same license; the copyright notices in its files are
+his and stay. ScanRuler's author also sells commercial licenses for it, which
+Banana Scan cannot offer: only he can license his code on other terms
+(<stefan@cnckitchen.com>). The ScanRuler name and the CNC Kitchen name and logo
+are CNC Kitchen's trademarks and are not used for this project.
+<!-- rebrand:on -->
 
-scanruler.com also carries a workspace in beta that is not in this repository
-and not under this license.
+The dependency license policy, no third-party copyleft in the app, is kept
+from the original and enforced in CI by
+[license-check.yml](.github/workflows/license-check.yml); see
+[CONTRIBUTING.md](CONTRIBUTING.md). The STEP importer
+[meshStep](https://github.com/CNCKitchen/meshStep) is AGPL, by the same author
+as the code Banana Scan is built on. The one third-party exception is Reverse
+engineer's CAD kernel, [Open CASCADE Technology](https://dev.opencascade.org/)
+(LGPL-2.1 with the Open CASCADE exception): it is loaded as a separate,
+replaceable file, not linked, and keeps its own license, and its notice, the
+pointer to its source and the right to replace it go with any copy that ships
+it.
 
 The bundled fonts are under SIL OFL 1.1 (license files in
 [public/fonts/](public/fonts/)). The colour maps other than jet are the tables
 of [viridisLite](https://github.com/sjmgarnier/viridisLite), MIT, © 2015 Simon
 Garnier; the notice is in
-[src/core/field/colormapData.ts](src/core/field/colormapData.ts). The project
-name and the CNC Kitchen name and logo are trademarks and not covered by the
-code license.
-
-By [CNC Kitchen](https://www.cnckitchen.com).
+[src/core/field/colormapData.ts](src/core/field/colormapData.ts). The sample
+scans and reference meshes some tests look for (`ballbar.stl`,
+`block-marius.stl`, `side bracket left.stl`) are local fixtures, not part of
+this repository.

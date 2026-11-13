@@ -43,8 +43,8 @@ export interface ControlScheme {
 // shortcut card, Blender manual, SketchUp quick-reference card, ...).
 export const SCHEMES: ControlScheme[] = [
   {
-    id: 'cnckitchen',
-    label: 'CNC Kitchen',
+    id: 'bananascan',
+    label: 'Banana Scan',
     hint: 'left-drag orbit · right-drag pan · scroll zoom',
     bindings: [
       { buttons: LMB, action: 'orbit' },
@@ -191,7 +191,7 @@ export const SCHEMES: ControlScheme[] = [
   },
 ]
 
-/** The scheme with this id, or the default (CNC Kitchen) if it is unknown —
+/** The scheme with this id, or the default (Banana Scan's) if it is unknown —
  *  a stale id in localStorage must not leave the viewport unnavigable. */
 export function schemeById(id: string | null | undefined): ControlScheme {
   return SCHEMES.find((s) => s.id === id) ?? SCHEMES[0]

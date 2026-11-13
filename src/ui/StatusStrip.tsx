@@ -83,11 +83,21 @@ export function StatusStrip() {
       <button
         className="stripimprint"
         onClick={() => openImprint(true)}
-        title="Impressum & Datenschutzerklärung"
+        title="About, license and privacy"
       >
-        § <span className="btxt">IMPRINT</span>
+        § <span className="btxt">ABOUT</span>
       </button>
-      <a href="https://www.cnckitchen.com" target="_blank" rel="noreferrer" data-test="local-note">
+      {/* What stays local, and what an agent changes, is the privacy part
+          of About: the note opens it. */}
+      <a
+        href="#about"
+        onClick={(e) => {
+          e.preventDefault()
+          openImprint(true)
+        }}
+        title="About, license and privacy"
+        data-test="local-note"
+      >
         {agentConnected ? (
           <>
             AGENT CONNECTED<span className="ltxt"> · WHAT IT READS GOES TO ITS AI MODEL</span>

@@ -1,9 +1,30 @@
 # Changelog
 
-What changed in ScanRuler, newest first. The number a build reports in the top
-bar and the imprint is the entry it belongs to; the `.scanruler` projects it
-saves carry the same number as `appVersion`. How a release is cut is in
+What changed in Banana Scan, newest first. Banana Scan is a fork of
+ScanRuler by CNC Kitchen, made from its 0.11.2 (docs/upstream.md): the entries
+from 0.11.2 down are ScanRuler's own history, kept as it was written, so they
+name ScanRuler and `.scanruler`. The number a build reports in the top bar and
+in About is the entry it belongs to; the `.bananascan` projects it saves carry
+the same number as `appVersion`. How a release is cut is in
 `docs/development.md` under "Releases".
+
+## Unreleased
+
+- **Banana Scan** (2026-11-13). ScanRuler 0.11.2, forked and renamed, with a
+  logo of its own: the ScanRuler name and the CNC Kitchen name and logo are
+  CNC Kitchen's trademarks, which a fork may not use. Projects are saved as
+  `.bananascan`, and `.scanruler` projects still open. Settings are kept under
+  new names, so a browser that ran ScanRuler at the same address starts from
+  the defaults. The agent server is `banana-scan-mcp`, its own tools
+  `bananascan_*` and its variables `BANANA_SCAN_MCP_*`; it is not on npm, runs
+  from the repository's `mcp/` folder and is updated with it, and lets in pages
+  from this computer and from `--allow-origin` addresses only, no longer
+  scanruler.com. The imprint, which named CNC Kitchen as the site's operator,
+  is About & Privacy now, with the credit to ScanRuler and the AGPL's notices.
+  The card for CNC Kitchen's store and tips is off unless switched on in
+  Settings, and says whose they are. Short links have no file store until a
+  build is given one. `scripts/rebrand.mjs` does the renaming, and is run again
+  after each merge from ScanRuler.
 
 ## 0.11.2 — 2026-11-11
 

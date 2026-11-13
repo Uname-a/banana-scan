@@ -135,6 +135,14 @@ describe('the project archive', () => {
     )
   })
 
+  // rebrand:off — what ScanRuler writes in a project it saves.
+  it('opens a project ScanRuler saved, and saves it as its own', () => {
+    const { manifest } = collectProject(sources(), null, '0.1.0')
+    expect(manifest.app).toBe('Banana Scan')
+    expect(validateManifest(JSON.parse(JSON.stringify({ ...manifest, app: 'ScanRuler' }))).app).toBe('ScanRuler')
+  })
+  // rebrand:on
+
   it('names the file after the project, else the scan, else the image', () => {
     expect(projectStem(null, 'bracket.stl', 'sheet.png')).toBe('bracket')
     expect(projectStem(null, null, 'sheet.png')).toBe('sheet')

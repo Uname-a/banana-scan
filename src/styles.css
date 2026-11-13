@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 /* "Werkbank" theme — software as a measuring instrument. Warm-gray chassis,
-   recessed input wells, CNC-Kitchen-blue accent, DRO-style readouts. Shared
+   recessed input wells, a blue accent, DRO-style readouts. Shared
    with filaSim so the two tools read as one bench.
    Type: Barlow (DIN heritage) for UI, Barlow Semi Condensed for small caps
    labels, B612 Mono (the Airbus cockpit face) for all data. All three are
@@ -73,7 +73,7 @@
   --ink: #26282a;
   --dim: #75787b;
   --faint: #9a9d9f;
-  --accent: #1877c0; /* CNC Kitchen brand blue */
+  --accent: #1877c0; /* the accent blue, kept from the project this is built on */
   --accent-d: #12629f;
   --accent-soft: #d9e8f5;
   --green: #2e7d46; /* status lamp */
@@ -2475,7 +2475,7 @@ button.x:disabled {
 }
 
 /* Three keys, stacked and full width, in their own house colours — the store
-   in CNC Kitchen blue, then the two tip jars in theirs. Links, not buttons:
+   in the accent blue, then the two tip jars in theirs. Links, not buttons:
    each one opens somewhere. */
 .sc-btn {
   display: flex;
@@ -3227,8 +3227,8 @@ button.x:disabled {
   }
 
   /* The strip is a fixed 30px row that never wraps. Labelled buttons give up
-     their word and keep their glyph — "§ IMPRINT" → "§" — with the title
-     attribute carrying the name. The imprint has to stay reachable, so it
+     their word and keep their glyph — "§ ABOUT" → "§" — with the title
+     attribute carrying the name. About has to stay reachable, so it
      shrinks rather than disappearing. */
   .strip .btxt {
     display: none;

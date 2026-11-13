@@ -31,7 +31,8 @@ export function ConnectorBar() {
         <CopyButton label="Copy" className="ghost" onCopy={() => void navigator.clipboard?.writeText(CONNECTOR_ASK)} />
       </div>
       <p>
-        <b>Or by hand:</b> change the app's Banana Scan setting to the one below, then <b>quit the app completely</b> (not just its window){' '}
+        <b>Or by hand:</b> run <code>git pull</code>, then <code>npm --prefix mcp ci</code>, in your banana-scan folder, and have the app run
+        the server from that folder as below, then <b>quit the app completely</b> (not just its window){' '}
         <b>and open it again</b>. With more than one AI app open, the old connector may be another app's — one left open in the background
         holds the connection for all of them: quit it.
       </p>

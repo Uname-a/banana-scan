@@ -27,6 +27,16 @@ describe('a project by its name', () => {
   it('is offered by the Open dialog with the counts too', () => {
     expect(PROJECT_ACCEPT.split(',')).toEqual(expect.arrayContaining(['.bananascan', '.bananascan-2', '.bananascan-9']))
   })
+
+  // rebrand:off — ScanRuler's own extension, which Banana Scan still opens.
+  it('takes a project saved by ScanRuler, by its extension, counts and all', () => {
+    for (const name of ['MyProject.scanruler', 'MyProject.SCANRULER', 'MyProject.scanruler-2', 'MyProject.scanruler (2)']) {
+      expect(isProjectName(name), name).toBe(true)
+    }
+    expect(isProjectName('MyProject.scanrulers')).toBe(false)
+    expect(PROJECT_ACCEPT.split(',')).toEqual(expect.arrayContaining(['.scanruler', '.scanruler-2', '.scanruler-9']))
+  })
+  // rebrand:on
 })
 
 describe('a project by what it holds', () => {

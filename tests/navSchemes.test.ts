@@ -41,7 +41,7 @@ describe('control scheme table', () => {
   })
 
   it('falls back to the default scheme for unknown ids', () => {
-    expect(schemeById('cnckitchen').id).toBe('cnckitchen')
+    expect(schemeById('bananascan').id).toBe('bananascan')
     expect(schemeById('rhino').id).toBe('rhino')
     expect(schemeById('not-a-scheme').id).toBe(SCHEMES[0].id)
     expect(schemeById(null).id).toBe(SCHEMES[0].id)

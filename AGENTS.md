@@ -60,7 +60,7 @@ against the dev server; see docs/development.md for which ones need no scan.
 - **Dependency licenses.** Only permissive licenses (list in CONTRIBUTING.md
   section 2 and `.github/workflows/license-check.yml`). Never GPL, LGPL, or
   AGPL code we do not own; do not transcribe algorithms from such projects.
-  The two exceptions (our own `meshstep`, and Open CASCADE loaded as a
+  The two exceptions (`meshstep`, by the author of the code this fork is built on, and Open CASCADE loaded as a
   separate WebAssembly file) are explained there; they are not precedents.
   Ask before adding any dependency.
 
