@@ -317,7 +317,8 @@ export class ReScene {
         if (this.bodyPreview && this.replacedBodies.size > 0) targets.push(this.bodyPreview)
         return targets
       },
-      // No scan: the bodies modelled on the blank stage are the part.
+      // The bodies shown: the part on a blank stage, and what a fit frames
+      // beside the scan — a body run past the scan's end included.
       frameBox: () => {
         const box = new THREE.Box3()
         for (const mesh of this.bodyMeshes.values()) {

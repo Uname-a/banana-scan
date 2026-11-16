@@ -9,6 +9,7 @@
 // whole app: a mesh whose geometry has a bounds tree is raycast through it.
 
 import * as THREE from 'three'
+import { fitBoxOf } from './fitBox'
 import type { LinkedView } from './cameraLink'
 import { OrthoViewport, STANDARD_VIEWS, viewAcross, type Projection, type StandardView } from './orthoViewport'
 import { AxisGizmo, type GizmoAxis } from './axisGizmo'
@@ -1450,32 +1451,21 @@ export class SceneManager {
    * the reference that has to be fitted, and fitting the pair of them would
    * leave the one being looked at small and off to one side. The datum
    * stage counts too while it is out, because an alignment being set up is read
-   * against it.
+   * against it. So do the bodies a layer draws, with a scan or without one: a
+   * part made longer than it was scanned is framed whole, not cut off at the
+   * scan's end (fitBoxOf).
    */
   fitToView(): void {
-    const box = new THREE.Box3()
     const moved = this.movedScanBox()
-    if (moved && this.mesh?.visible) box.union(moved)
-    if (this.nominalMesh?.visible && this.nominalMesh.geometry.boundingBox) {
-      box.union(this.nominalMesh.geometry.boundingBox)
-    }
-    if (this.stage.active()) {
-      const e = this.stage.extent()
-      box.union(new THREE.Box3(new THREE.Vector3(-e, -e, -e), new THREE.Vector3(e, e, e)))
-    }
-    // No scan: what a layer stands in its place is the part, as frameAll
-    // has it.
-    if (!this.mesh) {
-      this.partGroup.updateMatrixWorld(true)
-      for (const layer of this.layers) {
-        const b = layer.frameBox?.()
-        if (b) box.union(b.clone().applyMatrix4(this.partGroup.matrixWorld))
-      }
-    }
-    // Nothing visible to fit — a hidden scan with no reference beside it. The
-    // part is still loaded, so fit that rather than doing nothing at all.
-    if (box.isEmpty() && moved) box.union(moved)
-    if (box.isEmpty()) return
+    this.partGroup.updateMatrixWorld(true)
+    const box = fitBoxOf({
+      scan: moved && this.mesh?.visible ? moved : null,
+      reference: this.nominalMesh?.visible ? this.nominalMesh.geometry.boundingBox : null,
+      stageExtent: this.stage.active() ? this.stage.extent() : null,
+      layers: this.layers.map((layer) => layer.frameBox?.()?.clone().applyMatrix4(this.partGroup.matrixWorld)),
+      scanAnyway: moved,
+    })
+    if (!box) return
     this.viewport.fitCamera(box)
     this.framedClip.center.copy(this.clipSphere.center)
     this.framedClip.radius = this.clipSphere.radius

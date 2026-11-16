@@ -142,7 +142,9 @@ export interface SceneLayer {
   scanReplaced?(): void
   /** What an orbit may pivot on, while shown. */
   navTargets?(): THREE.Object3D[]
-  /** What the camera frames when there is no scan to frame. */
+  /** What of this layer the camera frames: its shown bodies. A fit takes it
+   *  with the scan or without one (a body past the scan's end is framed
+   *  whole); frameAll and the section view's cut take it with no scan. */
   frameBox?(): THREE.Box3 | null
   dispose(): void
 }

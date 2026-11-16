@@ -10,6 +10,11 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A fit frames a part modelled past the scan** (2026-11-16). Fit, and
+  each view of a sheet of views (view.render with views), framed the scan
+  alone whenever one was open, so a body modelled past the scan's end — a part
+  made longer than it was scanned — was cut off at the scan's edge in the top
+  and front views. A fit now frames the bodies shown as well as the scan.
 - **Banana Scan** (2026-11-13). ScanRuler 0.11.2, forked and renamed, with a
   logo of its own: the ScanRuler name and the CNC Kitchen name and logo are
   CNC Kitchen's trademarks, which a fork may not use. Projects are saved as
