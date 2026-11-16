@@ -11,9 +11,20 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # manifold-3d 3.3.0 and later depend on @gltf-transform/functions, which
+      # brings in sharp and its LGPL-3.0 libvips: not allowed here
+      # (license-check.yml). Held at 3.2.x until that changes.
+      - dependency-name: manifold-3d
+        versions: [">=3.3.0"]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+        # Each of these comes on its own, to be looked at by itself: below 1.0 a
+        # minor version may break, and three.js's do (three-mesh-bvh 0.9 failed
+        # the bounds-tree worker tests); occt-wasm is the CAD kernel, and 5.17
+        # changed what a boolean leaves (reRoundTrip's sliver count).
+        exclude-patterns: ["three", "three-mesh-bvh", "@types/three", "occt-wasm"]
   - package-ecosystem: npm
     directory: /mcp
     target-branch: dev

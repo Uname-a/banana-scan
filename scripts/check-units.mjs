@@ -24,7 +24,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import ts from 'typescript'
+// The parser of TypeScript 5, installed as typescript5: TypeScript 7, the
+// compiler, is native and has no JavaScript API to parse with.
+import ts from 'typescript5'
 
 const args = process.argv.slice(2)
 const countOnly = args.includes('--count')

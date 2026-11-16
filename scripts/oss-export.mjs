@@ -19,7 +19,7 @@
 //
 // --verify installs, type-checks, tests and builds the tree, the proof that
 // the open-source edition stands on what it has.
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -143,21 +143,30 @@ if (leaks.length > 0) {
   process.exit(1)
 }
 
-// npm is a .cmd on Windows, which Node starts only through a shell — so the
-// command is one string there, each argument quoted.
-const quote = (a) => (/[\s"&|<>^]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)
-const run = (command, commandArgs) =>
-  process.platform === 'win32' && command !== process.execPath
-    ? execSync([command, ...commandArgs].map(quote).join(' '), { cwd: out, stdio: 'inherit' })
-    : execFileSync(command, commandArgs, { cwd: out, stdio: 'inherit' })
+// A script run by this same Node, in the tree; npm too, by its own
+// npm-cli.js — never through a shell, which Windows would need for npm.cmd.
+const node = (scriptArgs) => execFileSync(process.execPath, scriptArgs, { cwd: out, stdio: 'inherit' })
+let npmCliPath = null
+function npm(npmArgs) {
+  npmCliPath ??= [
+    process.env.npm_execpath, // run through npm
+    join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), // Windows
+    join(dirname(process.execPath), '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'), // Linux, macOS
+  ].find((p) => p && /npm-cli\.js$/.test(p) && existsSync(p))
+  if (!npmCliPath) {
+    console.error('oss-export: npm-cli.js is not beside this Node. Run it through npm (npm exec -- node scripts/oss-export.mjs …).')
+    process.exit(2)
+  }
+  node([npmCliPath, ...npmArgs])
+}
 
-run(process.execPath, [join(root, 'scripts', 'check-plugin-boundary.mjs'), out])
+node([join(root, 'scripts', 'check-plugin-boundary.mjs'), out])
 
 // The lockfile follows package.json: what the stripped dependencies alone
 // pulled in goes with them. Resolved from the lockfile that came along, so
 // every version that stays is the one this repository pins.
 if (stripped.some((s) => !s.startsWith('script '))) {
-  run('npm', ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'])
+  npm(['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'])
 }
 const lock = readFileSync(join(out, 'package-lock.json'), 'utf8')
 for (const name of config.stripDependencies ?? []) {
@@ -169,8 +178,8 @@ for (const name of config.stripDependencies ?? []) {
 console.log('No private material in the open-source tree.')
 
 if (verify) {
-  run('npm', ['ci', '--no-audit', '--no-fund'])
-  run('npm', ['test', '--', '--reporter=dot'])
-  run('npm', ['run', 'build'])
+  npm(['ci', '--no-audit', '--no-fund'])
+  npm(['test', '--', '--reporter=dot'])
+  npm(['run', 'build'])
   console.log('The open-source tree type-checks, passes its tests and builds.')
 }
