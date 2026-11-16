@@ -70,6 +70,22 @@ test('a malformed URL path is refused without leaving the request hanging', asyn
   }
 })
 
+test('a path that climbs out of the served folder is not found, its file never read', async () => {
+  // Served: tests/; next to it, outside, the agent server's package.json.
+  const served = httpServer({ serve: fileURLToPath(new URL('./', import.meta.url)) })
+  await new Promise((resolve) => served.listen(0, '127.0.0.1', resolve))
+  try {
+    for (const climb of ['/%2e%2e/package.json', '/..%2fpackage.json', '/..%5cpackage.json']) {
+      const response = await fetchWithOrigin(climb, null, served.address().port)
+      assert.equal(response.status, 404, climb)
+      assert.doesNotMatch(response.body, /banana-scan-mcp/, climb)
+    }
+    assert.equal((await fetchWithOrigin('/link.test.js', null, served.address().port)).status, 200)
+  } finally {
+    served.close()
+  }
+})
+
 test('a page from another origin is turned away before it can say anything', async () => {
   const r = await fakePage(port, { token: TOKEN, origin: 'https://evil.example' })
   assert.equal(r.code, 403)
