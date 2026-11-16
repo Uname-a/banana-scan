@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# A quick check on every change and every day, as in the other scan2stl
+# repositories: no secrets in the files or anywhere in the history, which
+# matters before this repository is ever made public (the AGPL asks a public
+# deployment to offer its source). `main` needs it to pass on a pull request.
+# Made-up tokens in the tests are allowed in .gitleaks.toml. It holds no
+# secrets and can't change the repository.
+name: Security scan
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  schedule:
+    - cron: "41 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0     # the whole history, because deleting a secret from the files doesn't remove it from there
+          persist-credentials: false
+      - name: Secrets in the files and all of the history
+        env:
+          GITLEAKS: zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        run: |
+          run_gitleaks() { docker run --rm --network none --read-only --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" "$GITLEAKS" "$@" --redact --no-banner; }
+          run_gitleaks git /repo
+          run_gitleaks dir /repo
