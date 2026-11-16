@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # A quick check on every change and every day, as in the other scan2stl
 # repositories: no secrets in the files or anywhere in the history, which
-# matters before this repository is ever made public (the AGPL asks a public
-# deployment to offer its source). `main` needs it to pass on a pull request.
+# matters all the more as this repository is public: a secret pushed once stays
+# in its history. `main` needs it to pass on a pull request.
 # Made-up tokens in the tests are allowed in .gitleaks.toml. It holds no
 # secrets and can't change the repository.
 name: Security scan
