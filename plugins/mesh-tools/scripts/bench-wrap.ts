@@ -89,7 +89,7 @@ async function nodePool(size: number): Promise<WrapRunner> {
       terminate: () => void thread.terminate(),
     }
     thread.on('message', (data) => worker.onmessage?.({ data }))
-    thread.on('error', (e) => worker.onerror?.({ message: e.message }))
+    thread.on('error', (e: Error) => worker.onerror?.({ message: e.message }))
     return worker
   })
 }
