@@ -31,11 +31,11 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 }
 
-/** The file a URL path names under `root`, or null for one outside it. */
+/** The file a URL path names, resolved against `root` — which the caller
+ *  checks it stays in before it touches the file. */
 function fileFor(root, urlPath) {
   const path = decodeURIComponent(urlPath.split('?')[0].split('#')[0])
-  const file = resolve(root, normalize('.' + (path.endsWith('/') ? `${path}index.html` : path)))
-  return file === root || file.startsWith(root + sep) ? file : null
+  return resolve(root, normalize('.' + (path.endsWith('/') ? `${path}index.html` : path)))
 }
 
 /** The path the page fetches before it connects. */
@@ -87,7 +87,8 @@ export function httpServer({ serve, allowOrigin = () => false, version = '' }) {
       res.writeHead(400).end()
       return
     }
-    if (!file) {
+    // Nothing outside root is served: a path that climbs out of it is not found.
+    if (file !== root && !file.startsWith(root + sep)) {
       res.writeHead(404).end()
       return
     }

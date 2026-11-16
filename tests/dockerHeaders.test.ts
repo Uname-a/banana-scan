@@ -43,7 +43,7 @@ describe('Docker nginx headers', () => {
     expect(workers.size).toBeGreaterThan(0)
     for (const [path, csp] of workers) {
       // _headers matches /assets/reWorker-* ; nginx sees /assets/reWorker-abc123.js.
-      expect(nginx.workerPattern.test(path.replace('*', 'abc123.js')), path).toBe(true)
+      expect(nginx.workerPattern.test(path.replaceAll('*', 'abc123.js')), path).toBe(true)
       expect(nginx.worker, path).toBe(csp)
     }
     expect(nginx.workerPattern.test('/assets/edgeWorker-abc123.js')).toBe(false)
