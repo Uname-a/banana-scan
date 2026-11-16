@@ -67,9 +67,12 @@ function reach(entry) {
 }
 
 // The worker scripts: whatever any chunk starts with new Worker(new URL(…)).
+// Rolldown (Vite 8) keeps a /* @vite-ignore */ before the URL of a worker
+// started from inside another worker: comments there are skipped, or those
+// workers go unchecked.
 const workers = new Set()
 for (const code of source.values())
-  for (const m of code.matchAll(/new (?:Shared)?Worker\(\s*new URL\(\s*["'`](?:\.?\/)?(?:assets\/)?([\w.-]+\.js)["'`]/g)) if (source.has(m[1])) workers.add(m[1])
+  for (const m of code.matchAll(/new (?:Shared)?Worker\(\s*new URL\(\s*(?:\/\*[\s\S]*?\*\/\s*)*["'`](?:\.?\/)?(?:assets\/)?([\w.-]+\.js)["'`]/g)) if (source.has(m[1])) workers.add(m[1])
 
 const problems = []
 for (const worker of [...workers].sort()) {
