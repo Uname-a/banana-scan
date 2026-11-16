@@ -91,8 +91,10 @@
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "esbuild": "^0.28.2",
     "puppeteer-core": "^25.17.0",
     "typescript": "^7.0.2",
+    "typescript5": "npm:typescript@^5.9.3",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
