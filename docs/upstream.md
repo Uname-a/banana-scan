@@ -33,7 +33,10 @@ CNC Kitchen's repository, for fetching only: its push address is `no_push`.
   the site's operator. It credits ScanRuler, carries the AGPL notices and links
   this version's source. A public deployment adds its own operator details
   there (`src/ui/Imprint.tsx`), and has to offer its users this version's
-  source (the AGPL's section 13): the repository is private now.
+  source (the AGPL's section 13). This repository, public at
+  https://github.com/Uname-a/banana-scan, is that source for the code it
+  holds, and About & Privacy links it; a deployment of a changed version links
+  its own.
 - **The support card** for CNC Kitchen's store and tips stays, as a credit to
   them, but is off unless switched on in Settings.
 - **No file store** for short links (`/s/<name>`) until a build is given one
