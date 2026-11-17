@@ -10,6 +10,18 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Merge scans** (Mesh Tools, 2026-11-17). Another scan of the part — its
+  underside, scanned on its own — opened beside the mesh, placed where the
+  two share surface, shown there in orange with how much of it lies on the
+  mesh, and merged into the edited copy as one edit, leaving out (if asked)
+  its triangles that only scan again what the mesh has. It is placed on the
+  overlap alone, so two scans that share only a band round the middle place
+  as well as two that share most: from the file's own frame, from a search
+  for the shape the two have in common (FPFH descriptors and RANSAC), or,
+  from an agent, from three picked pairs; and where it cannot tell, it says
+  so rather than placing it wrong. The agent's commands are
+  `mesh.merge_open`, `mesh.merge_place`, `mesh.merge` and
+  `mesh.merge_clear`. Picking the pairs in the panel is not there yet.
 - **A fit frames a part modelled past the scan** (2026-11-16). Fit, and
   each view of a sheet of views (view.render with views), framed the scan
   alone whenever one was open, so a body modelled past the scan's end — a part

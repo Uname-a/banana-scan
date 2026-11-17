@@ -27,6 +27,7 @@ import { exportTrimmedMesh } from './exportTrimmed'
 import { exportEditedMesh } from './exportEdited'
 import { useMeshWorkspace } from './useMeshWorkspace'
 import { createMeshToolsSession, installMeshToolsSession } from './meshToolsSession'
+import { meshUnitsFor } from '../../../src/state/unitsPromptStore'
 
 const MESH_VIEWS: { id: MeshView; icon: IconName; label: string; title: string }[] = [
   {
@@ -112,7 +113,7 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
   useEffect(() => tools.watch(), [tools])
   const { reduceField, reduceRgb, copyField, copyRgb } = tools
   const {
-    runReduce, applyReduction, discardReduction, removeIslands, deleteMarked, flipScan, cutScan, mirrorScan, fillScanHoles, smoothScan, densifyScan, offsetScan, shellScan, booleanScan, trimScan,
+    runReduce, applyReduction, discardReduction, removeIslands, deleteMarked, flipScan, cutScan, mirrorScan, fillScanHoles, smoothScan, densifyScan, offsetScan, shellScan, booleanScan, trimScan, openOtherScan, placeOtherScan, mergeOtherScan, clearOtherScan,
     wrap, cancelWrap, applyWrap, discardWrap, adoptEditedCopy, discardEditedCopy,
   } = useMeshWorkspace(tools)
   // The units on screen: the maps' figures and the status lines of the
@@ -332,6 +333,15 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
         onApplyWrap={() => void applyWrap({ units })}
         onDiscardWrap={discardWrap}
         onBoolean={() => void booleanScan({ units })}
+        onOpenOther={(file) =>
+          void (async () => {
+            const read = await meshUnitsFor(file.name)
+            if (read && (await openOtherScan(file, read))) await placeOtherScan(undefined, units)
+          })()
+        }
+        onPlaceOther={() => void placeOtherScan(undefined, units)}
+        onMergeOther={() => void mergeOtherScan({ units })}
+        onCloseOther={() => void clearOtherScan()}
         onTrim={() => void trimScan(undefined, units)}
         onExportTrimmed={(format) => exportTrimmedMesh(sceneRef, format, units)}
         onExportEdited={exportEditedMesh}

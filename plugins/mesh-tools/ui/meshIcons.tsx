@@ -53,6 +53,15 @@ const ICONS = {
       <path className="i-a" d="M3.5 12c0-5.5 3.5-8.5 9-8.5 5 0 8 3 8 7.5 0 5.5-3 9.5-8.5 9.5S3.5 17.5 3.5 12Z" />
     </>
   ),
+  // The top of a part scanned, and its underside scanned on its own, the
+  // two lapping over each other in a band round the middle.
+  mergeScans: (
+    <>
+      <path className="i-g" d="M3.5 13.5V12a8.5 8.5 0 0 1 17 0v1.5" />
+      <path className="i-a" d="M3.5 10.5V12a8.5 8.5 0 0 0 17 0v-1.5" />
+      <path className="i-ds" d="M2 12h20" />
+    </>
+  ),
   // A part cut open: a wall the same thickness all round a sealed hollow.
   shellSolid: (
     <>

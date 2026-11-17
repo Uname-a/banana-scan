@@ -505,6 +505,53 @@ moved; those inside the solid go, and the surface the solid brings — a
 bore's wall and floor — is new, with nothing of the scan under it, and grey
 in the **Deviation** view. The edit is one step of the undo history.
 
+### Merge scans
+
+A part scanned in two goes — its top, then turned over for its underside —
+comes as two files, each with surface the other lacks. **Merge scans**
+brings the second onto the mesh and adds it, so the part is whole.
+
+1. Pick **Merge scans** and **Open the other scan…** (STL, PLY, OBJ or
+   3MF). It is placed on the mesh at once and drawn there in orange, with
+   how much of it lies on the mesh and the RMS distance over that overlap.
+2. Check it in orange. **Place again** looks for it afresh.
+3. **Merge** adds it to the edited copy, one step of the undo history.
+   With **Leave out what doubles the scan** (on to start) its triangles
+   that only scan again what the mesh has — every corner within the
+   placement's gate — are left out, so the band the two share is not
+   there twice. The two then meet along a seam: **Fill holes** closes it,
+   or a **Wrap** makes one skin of both.
+
+The other scan is placed where the two share surface, and fitted there
+only (`src/core/deviation/overlap.ts`). The best fits the Deviation
+workspace uses count every point of the scan against the reference, which
+suits a part and its CAD but not two sides of a part: the half of the other
+scan with nothing under it pulls the fit off. Here the fit is the local
+fit's ICP over the whole of the other scan with every pair beyond a gate
+refused, the gate closing from a twentieth of the part to a two-hundredth,
+so a band round the middle that both scans saw is enough. It starts from:
+
+- **the file's own frame**, for two scans exported in one frame — kept when
+  nothing fits better;
+- **a search for the shape the two share**: both scans thinned to a few
+  thousand points, each described by its Fast Point Feature Histogram
+  (Rusu, Blodow and Beetz, ICRA 2009), the descriptors matched across, and
+  random triples of matches whose lengths agree turned into poses (RANSAC);
+  the candidates screened, the best three refined, and the one that lies on
+  the mesh most closely — within three times the noise the best of them
+  reaches — kept;
+- **three or more picked pairs** of the same place on each, from an agent
+  (`mesh.merge_place` with `pairs`); picking them in the panel is not
+  there yet.
+
+What it cannot tell it says. Where the two share too little for their
+shapes to be matched, all the search finds is a look-alike: the underside
+of a dome laid over its top, near enough over much of it and a few tenths
+off all over. A placement whose RMS over the overlap is more than 0.15 % of
+the part's size (or 0.15 mm), or that overlaps less than a twentieth of the
+other scan, is refused with the advice to pick points. A part that sits two
+ways about equally well is placed, and flagged.
+
 ### Shell / hollow
 
 What the tool does depends on the mesh, and the panel says which before
@@ -826,6 +873,7 @@ tools `mesh_cut` and so on, registered from the plugin's `install()`
 | `mesh.cut_preview` | what a cut at a plane would close, bridge and leave open |
 | `mesh.mark` | a region marked on the part as the window, brush and lasso mark it, for Delete marked, Flip normals, Smooth or Shrink / expand — to look at before the edit, or for the person to put right |
 | `mesh.remove_islands`, `mesh.delete_marked`, `mesh.flip_normals`, `mesh.cut`, `mesh.fill_holes`, `mesh.smooth`, `mesh.densify`, `mesh.offset`, `mesh.boolean`, `mesh.shell` | the edits, each one step of the undo history — Flip normals turns the whole mesh over, or a region; Densify cuts the triangles down to `maxEdge`; Shell hollows a closed part or thickens an open one, as the panel's does |
+| `mesh.merge_open`, `mesh.merge_place`, `mesh.merge`, `mesh.merge_clear` | Merge scans: another scan of the part opened beside the mesh (its file's bytes); placed on it, by itself or from three or more `pairs`, answering with the share of it on the mesh, the RMS there, the gate and the pose; merged into the copy, one step of the undo history, `dropDoubled` leaving out what only scans the mesh again; or let go |
 | `mesh.reduce`, `mesh.trim` | the reduced mesh and Trim to scan's piece, made beside the scan |
 | `mesh.apply_reduced` | the reduced mesh made the edited copy, one step of the undo history |
 | `mesh.wrap` | the wrap, made beside the scan — `gap`, and `grow`, `edges`, `tolerance` (how far its reduction may stray) — answering with its shells, triangles, what went inside it, the area bridged, the volume before and after and the time each step took; `preview: false` applies it at once |

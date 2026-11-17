@@ -3,7 +3,7 @@
 // none, the parts in the viewport — and the edited copy. The tools are of the two kinds the workspace has — the edits,
 // which change a copy of the scan until it is taken into use for every
 // workspace (Remove islands, Delete marked, Flip normals, Cut, Mirror, Fill holes,
-// Smooth, Shrink / expand, Boolean, Shell, and Wrap once applied), and those that leave the instrument as
+// Smooth, Shrink / expand, Boolean, Merge scans, Shell, and Wrap once applied), and those that leave the instrument as
 // geometry for somebody else's: Reduce mesh, the scan reduced to a light mesh
 // to model over in CAD, held within a tolerance and measured to prove it, and
 // Trim to scan, a body cut to fit the scan's break, to print and glue in. Each tool is laid out like the
@@ -40,6 +40,7 @@ import { DensifyTool } from './tools/DensifyTool'
 import { OffsetTool } from './tools/OffsetTool'
 import { ShellTool } from './tools/ShellTool'
 import { WrapTool } from './tools/WrapTool'
+import { MergeTool } from './tools/MergeTool'
 import type { MeshFormat } from '../../../src/core/exportMesh'
 
 const TOOLS: { id: MeshTool; icon: ReactNode; label: string; title: string }[] = [
@@ -116,6 +117,12 @@ const TOOLS: { id: MeshTool; icon: ReactNode; label: string; title: string }[] =
     title: 'Cut a body modelled to mend a broken part to fit the scanned break — the missing piece, to print and glue in',
   },
   {
+    id: 'merge',
+    icon: <MeshIcon name="mergeScans" />,
+    label: 'Merge scans',
+    title: 'Add another scan of the part — its underside, scanned on its own — placed where the two share surface, so the part is whole',
+  },
+  {
     id: 'shell',
     icon: <MeshIcon name="shellSolid" />,
     label: 'Shell/hollow',
@@ -151,6 +158,10 @@ export function MeshPanel({
   onApplyWrap,
   onDiscardWrap,
   onBoolean,
+  onOpenOther,
+  onPlaceOther,
+  onMergeOther,
+  onCloseOther,
   onTrim,
   onExportTrimmed,
   onExportEdited,
@@ -182,6 +193,10 @@ export function MeshPanel({
   onApplyWrap: () => void
   onDiscardWrap: () => void
   onBoolean: () => void
+  onOpenOther: (file: File) => void
+  onPlaceOther: () => void
+  onMergeOther: () => void
+  onCloseOther: () => void
   /** Cut the body in hand to the break marked on the part, and save the
    *  piece as an STL. */
   onTrim: () => void
@@ -297,6 +312,8 @@ export function MeshPanel({
         <OffsetTool ready={Boolean(scanName)} busy={busy} onOffset={onOffset} onClear={onClearMarking} />
       ) : tool === 'shell' ? (
         <ShellTool ready={Boolean(scanName)} busy={busy} onShell={onShell} />
+      ) : tool === 'merge' ? (
+        <MergeTool ready={Boolean(scanName)} busy={busy} onOpen={onOpenOther} onPlace={onPlaceOther} onMerge={onMergeOther} onClose={onCloseOther} />
       ) : tool === 'wrap' ? (
         <WrapTool ready={Boolean(scanName)} busy={busy} onWrap={onWrap} onCancel={onCancelWrap} onApply={onApplyWrap} onDiscard={onDiscardWrap} />
       ) : (

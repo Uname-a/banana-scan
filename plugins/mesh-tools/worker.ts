@@ -28,6 +28,8 @@ import { loadManifold } from './core/manifold'
 import { defaultBreakSpeck, findBreak } from './core/breakSurface'
 import { prepareBody, trimToScan, type PreparedBody } from './core/trimToScan'
 import { selectVertices } from './core/select'
+import { mergeScan, type OtherScan } from './core/merge'
+import { overlapAuto, overlapFromPairs } from '../../src/core/deviation/overlap'
 import { MESH_TOOLS, type MeshEditReport, type MeshToolsOps, type TrimBody } from './core/protocol'
 import { extentOf } from '../../src/core/geometry/bounds'
 import { tetraVolume6 } from '../../src/core/geometry/centroid'
@@ -35,6 +37,10 @@ import { tetraVolume6 } from '../../src/core/geometry/centroid'
 /** The copy of the scan the workspace edits — null until its first edit,
  *  and again once the copy is taken into use or thrown away. */
 let edited: MeshGraph | null = null
+
+/** Another scan of the part, held to be placed on the mesh and merged into
+ *  it, in its own frame — with its normals, which placing it reads. */
+let other: (OtherScan & { normals: Float32Array }) | null = null
 
 /** The body Trim to scan last cut, prepared — welded, its surface built —
  *  under its key: finding the break and making the piece ask for the same
@@ -205,6 +211,12 @@ const ops: { [K in keyof MeshToolsOps]: (payload: Payload<K>, ctx: WorkerContext
       const thick = thickenMesh(g.positions, g.indices, g.vertexCount, edit.thickness, edit.side, ctx.progress, surface)
       result = thick
       report = { kind: 'thicken', report: thick.report }
+    } else if (edit.type === 'merge') {
+      if (!other) throw new Error('There is no other scan to merge: open one first.')
+      ctx.progress('Merging the other scan…')
+      const merged = mergeScan(g.positions, g.indices, g.vertexCount, other, edit.transform, edit.dropWithin, () => ctx.surfaceOf(g, 'Preparing the scan to find what the other one doubles…'))
+      result = merged
+      report = { kind: 'merge', report: merged.report }
     } else {
       ctx.progress('Loading the mesh boolean…')
       const wasm = await loadManifold()
@@ -288,6 +300,36 @@ const ops: { [K in keyof MeshToolsOps]: (payload: Payload<K>, ctx: WorkerContext
     }
   },
 
+  'other-open'({ staged }, ctx) {
+    const g = ctx.takeStaged(staged)
+    if (!g) throw new Error('The prepared import is no longer available.')
+    other = { positions: g.positions.slice(0, g.vertexCount * 3), indices: g.indices, normals: g.normals.slice(0, g.vertexCount * 3) }
+    return { result: { vertices: g.vertexCount, triangles: g.triangleCount } }
+  },
+
+  'other-place'({ pairs }, ctx) {
+    if (!other) throw new Error('There is no other scan to place: open one first.')
+    const g = subjectOf(ctx)
+    const surface = ctx.surfaceOf(g, 'Preparing the scan to place the other one on…')
+    const options = { onProgress: ctx.progress }
+    const placed = pairs?.length
+      ? overlapFromPairs(surface, other.positions, other.normals, pairs, options)
+      : overlapAuto(surface, g.normals.subarray(0, surface.positions.length), other.positions, other.normals, options)
+    return { result: placed }
+  },
+
+  'other-triangles'() {
+    if (!other) throw new Error('There is no other scan open.')
+    const positions = other.positions.slice()
+    const indices = other.indices.slice()
+    return { result: { positions, indices }, transfer: [positions.buffer, indices.buffer] }
+  },
+
+  'other-clear'() {
+    other = null
+    return { result: null }
+  },
+
   'recrease-edited'({ crease }) {
     if (!edited) return { result: null }
     const r = scanRender(edited, crease)
@@ -303,10 +345,11 @@ const plugin: WorkerPlugin = {
     return run(payload, ctx)
   },
   // A copy of another scan has nothing to do with this one, nor a body
-  // prepared in its frame.
+  // prepared in its frame, nor a scan held to be merged into it.
   scanReplaced() {
     edited = null
     trimBody = null
+    other = null
   },
   // The copy is in the scan's frame, and stays in it; a body prepared before
   // the move is sent again as it now stands.

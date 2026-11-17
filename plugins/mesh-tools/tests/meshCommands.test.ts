@@ -574,3 +574,49 @@ describe('a region "marked" on screen', () => {
     }
   }, 60_000)
 })
+
+describe('merging another scan through the commands', () => {
+  /** The soup's triangles whose middle is where `keep` says, each moved by `move`. */
+  const part = (soup: Float32Array, keep: (z: number) => boolean, move: (p: Vec3) => Vec3 = (p) => p): Float32Array => {
+    const out: number[] = []
+    for (let t = 0; t < soup.length; t += 9) {
+      if (!keep((soup[t + 2] + soup[t + 5] + soup[t + 8]) / 3)) continue
+      for (let k = 0; k < 9; k += 3) out.push(...move([soup[t + k], soup[t + k + 1], soup[t + k + 2]]))
+    }
+    return Float32Array.from(out)
+  }
+
+  it('opens the underside, places it from three pairs, merges it less the band it doubles — one step, undone', async () => {
+    const cube = cuboid([-10, -10, -10], [10, 10, 10], 10)
+    const top = part(cube, (z) => z > -3)
+    // The underside turned over about X and lifted off, as its scanner left it.
+    const turned = (p: Vec3): Vec3 => [p[0], -p[1], 40 - p[2]]
+    const under = part(cube, (z) => z < 3, turned)
+    await open('top.stl', top)
+    useHistory.setState({ past: [], future: [] })
+
+    expect((await refused('mesh.merge_place')).code).toBe('invalid_state')
+    const opened = await run<{ other: { name: string; triangles: number } }>('mesh.merge_open', { bytes: stlBytes(under), name: 'underside.stl' })
+    expect(opened.other).toMatchObject({ name: 'underside.stl', triangles: under.length / 9 })
+    expect((await refused('mesh.merge')).code).toBe('invalid_state')
+
+    const pairs = ([[10, 10, 0], [-10, 10, 0], [10, -10, 0], [0, 0, -10]] as Vec3[]).map((q) => ({ other: turned(q), mesh: q }))
+    const placed = await run<{ placement: { source: string; overlap: number; rms: number; gate: number; translation: number[] } }>('mesh.merge_place', { pairs })
+    expect(placed.placement.source).toBe('points')
+    expect(placed.placement.rms).toBeLessThan(0.01)
+    expect(placed.placement.overlap).toBeGreaterThan(0.1)
+    expect(placed.placement.translation[2]).toBeCloseTo(40, 2)
+
+    const merged = await run<EditAnswer>('mesh.merge', {})
+    expect(merged.edit.kind).toBe('merge')
+    expect(merged.report.added + merged.report.doubled).toBe(under.length / 9)
+    expect(merged.report.doubled).toBeGreaterThan(0)
+    expect(merged.mesh.triangles).toBe(top.length / 9 + merged.report.added)
+    // The underside came back where it belongs: the part's bounds are the cube's again.
+    expect(merged.mesh.bounds.min[2]).toBeCloseTo(-10, 3)
+    expect(merged.mesh.bounds.max[2]).toBeCloseTo(10, 3)
+    expect(undoLabels()).toEqual(['Agent: merge underside.stl'])
+    // Merged, the other scan is let go.
+    expect(useMeshTools.getState().other).toBe(null)
+  })
+})

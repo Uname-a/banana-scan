@@ -12,6 +12,7 @@ import type { LoadedScan, MeshWorkerClient } from '../../../src/core/workerClien
 import { MESH_TOOLS, type MeshRegion, type MeshToolsOps, type ScanEditRequest, type TrimBody } from './protocol'
 import type { ReduceSettings } from './reduce'
 import type { TrimSettings } from './trimToScan'
+import type { PointPair } from '../../../src/core/deviation/align'
 
 class MeshToolsClient {
   /** Bumped whenever the edited copy is put in place or taken away. A copy
@@ -86,6 +87,27 @@ class MeshToolsClient {
   /** It edited, to be loaded as the copy, like removeIslands'. */
   editScan(edit: ScanEditRequest) {
     return this.call('edit', { edit })
+  }
+
+  /** A staged load held as the other scan, to be placed on the mesh and
+   *  merged into it. */
+  openOther(staged: number) {
+    return this.call('other-open', { staged })
+  }
+
+  /** The other scan placed on the mesh: automatically, or from picked pairs
+   *  (on it, `scan`; on the mesh, `nominal`). */
+  placeOther(pairs?: PointPair[]) {
+    return this.call('other-place', pairs?.length ? { pairs } : {})
+  }
+
+  /** The other scan's triangles, in its own frame. */
+  otherTriangles() {
+    return this.call('other-triangles', {})
+  }
+
+  clearOther() {
+    return this.call('other-clear', {})
   }
 
   /** The edited copy's signed distance from the scan in use at each of its
