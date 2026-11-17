@@ -19,6 +19,7 @@
 // nothing here writes as well, or writes to agree with them.
 import { memo } from 'react'
 import { useElementField } from './useElementField'
+import { useCurvatureShading } from './curvatureShading'
 import { pluginReads, useSceneSync } from './useSceneSync'
 
 export type SceneSyncProps = Parameters<typeof useSceneSync>[0] & Parameters<typeof useElementField>[0]
@@ -57,6 +58,9 @@ export const SceneSync = memo(function SceneSync({
   // called them: it measures on a change of target, and the repaint below
   // paints whatever it settles.
   useElementField({ sceneRef, clientRef, elementField, elementRgb, elementScope, fieldDirections })
+  // Curvature shading's reading, asked of the worker while it is on, before
+  // the paint below reads it.
+  useCurvatureShading({ clientRef })
   useSceneSync({
     sceneRef,
     clientRef,

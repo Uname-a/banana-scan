@@ -10,6 +10,13 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Curvature shading** (2026-11-17). Under the model in the Measure
+  panel: the scan coloured by how it bends — red convex, pale flat, blue
+  concave, sharp edges darker — read off a quadric fitted round every
+  vertex over a radius you set, so a scan's noise does not swamp it. A
+  scale in 1/mm and as a radius, the radius under the cursor, and the
+  shares of flat, convex and concave. `scan.curvature` sets it and reads
+  it in numbers, the curvatures at a place included.
 - **PTX scans open** (2026-11-17). A long-range laser scanner's PTX —
   what Leica Cyclone, FARO SCENE and Trimble RealWorks export — opens as
   the scan, every scan in the file taken through its own transform and

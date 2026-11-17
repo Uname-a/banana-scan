@@ -22,6 +22,7 @@ import type { CreaseReport, CreaseSetting } from './geometry/crease'
 import type { SeedPlane, SymmetryPlane } from './symmetry'
 import type { AutoAlignResult } from './autoAlign'
 import type { ScanSpot } from './geometry/nearest'
+import type { CurvatureFit } from './geometry/principalCurvature'
 import type { PlaneRegionReport, Segmentation, SegmentOptions } from './fit/segment'
 import type { SectionFrame } from './section/frame'
 import type { ShadowShape } from './section/shadow'
@@ -178,6 +179,12 @@ export type WorkerRequest =
   /** The scan's mean curvature at every vertex, 1/mm, convex positive, for
    *  colouring the scan by it. See geometry/curvature. */
   | { type: 'curvature'; requestId: number }
+  /** The scan's principal curvatures at every vertex, from a quadric
+   *  fitted over a ball of `radius` mm round each (null: a few edge
+   *  lengths), for curvature shading. See geometry/principalCurvature. */
+  | { type: 'principal-curvature'; requestId: number; radius: number | null }
+  /** The same fit at one vertex, with the directions it bends in. */
+  | { type: 'curvature-at'; requestId: number; vertex: number; radius: number | null }
   /** A place on the scan named without a click — a vertex by its number,
    *  or the vertex nearest a point — with a triangle it is a corner of, the
    *  seed a click there would give. See geometry/nearest. */
@@ -368,6 +375,8 @@ export type WorkerResponse =
   | { type: 'plane-region-ok'; requestId: number; result: PlaneRegionReport }
   | { type: 'segment-ok'; requestId: number; result: Segmentation }
   | { type: 'curvature-ok'; requestId: number; values: Float32Array }
+  | { type: 'principal-curvature-ok'; requestId: number; k1: Float32Array; k2: Float32Array; area: Float32Array; radius: number; spacing: number; noise: number; noiseFloor: number }
+  | { type: 'curvature-at-ok'; requestId: number; fit: CurvatureFit | null; radius: number }
   | { type: 'auto-align-ok'; requestId: number; result: AutoAlignResult }
   | { type: 'nearest-ok'; requestId: number; result: ScanSpot }
   | { type: 'bounds-ok'; requestId: number; min: Vec3; max: Vec3 }

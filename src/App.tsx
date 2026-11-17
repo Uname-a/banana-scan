@@ -70,6 +70,9 @@ import { FlatPanel } from './ui/FlatPanel'
 import { FlatViewer } from './ui/FlatViewer'
 import type { FlatScene } from './viewer/FlatScene'
 import { MapLegend, type LegendStat } from './ui/MapLegend'
+import { CurvatureLegend } from './ui/CurvatureLegend'
+import { flatBelow, useCurvature } from './state/curvatureStore'
+import { describeCurvature } from './app/curvatureShading'
 import { fetchSampleScan } from './app/sampleScan'
 import { StartPane, type StartSlot } from './ui/StartPane'
 import { CompareView } from './ui/CompareView'
@@ -723,6 +726,17 @@ function Workbench() {
     // A plugin's workspace reads its own map.
     const plugin = activeRef.current
     if (plugin?.readingAt) return plugin.readingAt(hit)
+    // Curvature shading reads its own map, in the Measure workspace.
+    if (workspace === 'elements') {
+      const curv = useCurvature.getState()
+      if (!curv.on || !curv.values) return null
+      const [a, b, c] = hit.vertices
+      const [wa, wb, wc] = hit.weights
+      const value = curv.values[a] * wa + curv.values[b] * wb + curv.values[c] * wc
+      if (!Number.isFinite(value)) return null
+      const len = boundLength(usePrefs.getState().units)
+      return { value, x: hit.clientX, y: hit.clientY, text: describeCurvature(value, curv.quantity, flatBelow(curv.flatRadius, curv.reading), len), muted: false }
+    }
     const onThickness = workspace === 'thickness'
     const values = onThickness
       ? thickness.current
@@ -1300,6 +1314,8 @@ function Workbench() {
   const picking = useDeviation((s) => s.picking)
   const split = useDeviation((s) => s.split)
   const hasThicknessMap = useThickness((s) => s.status === 'ready')
+  // Curvature shading reads the radius under the cursor, in Measure.
+  const curvatureOn = useCurvature((s) => s.on && s.values !== null)
 
   // Error toasts clear themselves.
   const errorText = useStore((s) => s.errorText)
@@ -1810,6 +1826,7 @@ function Workbench() {
             />
           )}
           {!picking && active?.overlay}
+          {!picking && workspace === 'elements' && <CurvatureLegend />}
           {!picking && onThickness && hasThicknessMap && (
             <MapLegend
               id="thickness"
@@ -1866,7 +1883,7 @@ function Workbench() {
               onOpenSample={openSample}
             />
           )}
-          {(onDeviation || onThickness || Boolean(active?.hoverReadout)) && !picking && <HoverReadout register={registerHover} />}
+          {(onDeviation || onThickness || (workspace === 'elements' && curvatureOn) || Boolean(active?.hoverReadout)) && !picking && <HoverReadout register={registerHover} />}
           {/* The bottom-left corner: the view bar at the very bottom, where a
               hand learns to find it, and the support card stacked above it so
               neither ever covers the other. Before the error toast below it:

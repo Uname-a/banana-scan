@@ -25,6 +25,9 @@ export type ColormapId =
   | 'mako'
   | 'rocket'
   | 'turbo'
+  /** Curvature shading's own (app/curvatureShading), not offered in the
+   *  settings: a signed bend is read on it whatever ramp the maps use. */
+  | 'diverging'
 
 /** A ramp, and the two colours that stand beyond its ends. */
 export interface Colormap {

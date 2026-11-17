@@ -28,6 +28,7 @@ import { usePrefs } from '../../state/prefsStore'
 import { elementRefSchema, findElement, planeRef, type ElementRef } from '../refs'
 import { setMarked } from '../marked'
 import { scale } from './scanScale'
+import { curvature } from './curvature'
 
 export const unitsSchema = enumOf(
   MESH_UNITS.map((u) => u.id),
@@ -1282,4 +1283,4 @@ const qa: Command<{ axis?: 'x' | 'y' | 'z' | Vec3 }> = {
   },
 }
 
-export const scanCommands = [open, nearest, query, fitSurface, draft, heightmap, outline, pattern, qa, scale]
+export const scanCommands = [open, nearest, query, fitSurface, draft, heightmap, outline, pattern, qa, scale, curvature]

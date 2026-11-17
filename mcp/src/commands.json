@@ -1,6 +1,6 @@
 {
   "app": "0.11.2",
-  "saved": "2026-11-17T18:16:16.715Z",
+  "saved": "2026-11-17T20:30:01.451Z",
   "commands": [
     {
       "name": "align.auto",
@@ -3033,6 +3033,143 @@
       "returnsImage": false
     },
     {
+      "name": "scan.curvature",
+      "title": "Curvature shading",
+      "description": "Colour the scan by how it bends — convex (red), flat (pale), concave (blue), sharper than the range darker — and read it in numbers. Every vertex gets a quadric fitted to the scan within radius mm of it (null, the default: eight edge lengths, more on a noisy scan — till its scatter reads under a twentieth of a round that size), so the reading holds on a scan’s noise; a round smaller than the radius reads as an edge spread over it. show (true by default) switches the shading on in the measure workspace, putting it on screen, or off; quantity is what it is coloured by: principal (the default — the sharper of the two principal curvatures, signed: 1/R on a ball and a cylinder alike), mean or gaussian. rangeRadius is the round that takes full colour (null: the scan’s own range), flatRadius where flat ends: a surface bending more gently than a round that large is flat (null, the default: what the scan’s scatter allows — 1.5 times noiseFloor, the curvature its scatter, noise, reads on a flat at this radius). Returns the radius read at, the range, shares of the area (flat, convex, concave, saddle; unread is the share with too few points round it), the tightest convex and concave rounds on most of the part (radius, mm — the tightest half per cent read past), and with at the curvatures there: k1 ≥ k2 (1/mm, convex positive), their radii, mean, gaussian, shape (flat, convex, concave or saddle), dir1 and dir2 (the directions they bend in), points and rms of the fit. Not a step of the history.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "show": {
+            "type": "boolean",
+            "description": "Shading on (true, the default) or off."
+          },
+          "quantity": {
+            "type": "string",
+            "enum": [
+              "principal",
+              "mean",
+              "gaussian"
+            ],
+            "description": "What the scan is coloured by: principal (the default), mean or gaussian."
+          },
+          "radius": {
+            "oneOf": [
+              {
+                "type": "number",
+                "minimum": 0.05,
+                "maximum": 100
+              },
+              {
+                "type": "null",
+                "description": "By the scan."
+              }
+            ],
+            "description": "The neighbourhood radius, mm; null for eight edge lengths or more, as the scan’s scatter asks."
+          },
+          "rangeRadius": {
+            "oneOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null",
+                "description": "By the scan."
+              }
+            ],
+            "description": "The radius of the round that takes full colour, mm; null for the scan’s own range."
+          },
+          "flatRadius": {
+            "oneOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null",
+                "description": "By the scan."
+              }
+            ],
+            "description": "Gentler than a round of this radius is flat, mm; null for what the scan’s scatter allows."
+          },
+          "at": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "vertex": {
+                    "type": "integer",
+                    "description": "A scan vertex number.",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "vertex"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "point": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "[x, y, z] mm in the current frame; the nearest scan vertex is taken.",
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                },
+                "required": [
+                  "point"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "A viewport pixel [x, y] (not available yet).",
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                },
+                "required": [
+                  "screen"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "candidate": {
+                    "type": "integer",
+                    "description": "A feature from scan.candidates (not available yet).",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "candidate"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "A place to read the curvature at."
+          }
+        },
+        "additionalProperties": false
+      },
+      "readOnly": true,
+      "returnsFile": false,
+      "returnsImage": false,
+      "long": true
+    },
+    {
       "name": "scan.draft",
       "title": "Read the draft against a pull",
       "description": "The scan’s walls that run near a pull direction — the sides a mould opens along — gathered into patches, each with draftDeg, the angle it leans off the pull: positive where the wall faces partly along the pull, negative where it faces back (a back draft, an undercut); with sigmaDeg, spreadDeg, centroid, box, area (mm²), count, facing, turnDeg and round for a boss’s or hole’s round side. Needs pull; box, nearDeg (10), patches (12), minArea (1 mm²) and split (a plane no patch reaches across: \"symmetry\", a plane element, \"XY\", \"YZ\", \"XZ\" or { point, normal }) narrow it. Trap: read it early on a moulded or cast part, along each direction the tools open — walls that lean half a degree to a few explain fits that miss by the lean. Changes nothing.",
@@ -4843,7 +4980,7 @@
           },
           "show": {
             "type": "object",
-            "description": "Keys to show (true) or put away (false): scan, reference, sections, elements (with dimensions), labels, comb (the curvature comb), map (the deviation map, in Deviation and in Reverse engineer), and a workspace’s own (view.set lists every key standing now).",
+            "description": "Keys to show (true) or put away (false): scan, reference, sections, elements (with dimensions), labels, comb (the curvature comb), curvature (curvature shading, in Measure), map (the deviation map, in Deviation and in Reverse engineer), and a workspace’s own (view.set lists every key standing now).",
             "properties": {
               "scan": {
                 "type": "boolean"
@@ -4861,6 +4998,9 @@
                 "type": "boolean"
               },
               "comb": {
+                "type": "boolean"
+              },
+              "curvature": {
                 "type": "boolean"
               },
               "map": {
@@ -5042,7 +5182,7 @@
           },
           "show": {
             "type": "object",
-            "description": "Keys to show (true) or put away (false): scan, reference, sections, elements (with dimensions), labels, comb (the curvature comb), map (the deviation map, in Deviation and in Reverse engineer), and a workspace’s own (view.set lists every key standing now).",
+            "description": "Keys to show (true) or put away (false): scan, reference, sections, elements (with dimensions), labels, comb (the curvature comb), curvature (curvature shading, in Measure), map (the deviation map, in Deviation and in Reverse engineer), and a workspace’s own (view.set lists every key standing now).",
             "properties": {
               "scan": {
                 "type": "boolean"
@@ -5060,6 +5200,9 @@
                 "type": "boolean"
               },
               "comb": {
+                "type": "boolean"
+              },
+              "curvature": {
                 "type": "boolean"
               },
               "map": {

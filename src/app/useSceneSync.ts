@@ -47,7 +47,9 @@ import { sectionSourceRuns, sheetComb } from './curvatureCombs'
 import { useShell } from '../state/shellStore'
 import { useMark } from '../state/markStore'
 import { useThickness } from '../state/thicknessStore'
-import { colormapById, paintField, paintKey, type FieldScale } from '../core/field/colormap'
+import { colormapById, paintField, paintKey, type Colormap, type FieldScale } from '../core/field/colormap'
+import { useCurvature } from '../state/curvatureStore'
+import { CURVATURE_COLORMAP, curvatureMapScale, rangeShown } from './curvatureShading'
 import { cachedDeviationStats, cachedHistogram, cachedThicknessStats } from '../core/field/readoutCache'
 import { deviationScale } from '../core/deviation/deviation'
 import {
@@ -805,6 +807,13 @@ export function useSceneSync({
   // workspaces re-runs both effects anyway, so gating on the workspace loses
   // nothing.
   const thickScaleShown = workspace === 'thickness' ? thickScale : null
+  // Curvature shading, in the Measure workspace while it is switched on and
+  // read: painted in its own diverging ramp, at the range set or its own.
+  const curvatureValues = useCurvature((s) => (s.on && workspace === 'elements' ? s.values : null))
+  const curvatureVersion = useCurvature((s) => s.version)
+  const curvatureQuantity = useCurvature((s) => s.quantity)
+  const curvatureRange = useCurvature((s) => rangeShown(s.range, s.reading))
+  const curvatureRgb = useRef<Uint8Array | null>(null)
   // A plugin's workspace paints its own map, when it has one.
   const pluginFieldVersion = plugin?.fieldVersion
   // The map on the reference: which surface the map is read on, and the
@@ -870,6 +879,15 @@ export function useSceneSync({
     if (workspace === 'thickness' && thickness.current) {
       return { values: thickness.current, rgb: thicknessRgb, scale: thickScale, version: thickVersion }
     }
+    if (workspace === 'elements' && curvatureValues) {
+      return {
+        values: curvatureValues,
+        rgb: curvatureRgb,
+        scale: curvatureMapScale(curvatureQuantity, curvatureRange),
+        version: curvatureVersion,
+        map: CURVATURE_COLORMAP as Colormap,
+      }
+    }
     const field = pluginRef.current?.field
     if (!field) return null
     const serial = pluginSerial.current
@@ -913,7 +931,7 @@ export function useSceneSync({
     // showing: the mesh tools' edited-copy swap runs before this effect, as
     // a layout effect, since this one runs in a child of the Workbench that
     // swaps and so ahead of its plain effects (see SceneSync.tsx).
-    const map = colormapById(colormap)
+    const map = ('map' in showing && showing.map) || colormapById(colormap)
     const key = paintKey(version, scale, map.id)
     const repainted = painted.current.get(rgb) !== key
     if (repainted) {
@@ -939,6 +957,10 @@ export function useSceneSync({
     thickVersion,
     thickScaleShown,
     pluginFieldVersion,
+    curvatureValues,
+    curvatureVersion,
+    curvatureQuantity,
+    curvatureRange,
   ])
 
   // The figures under the legend, separately from the paint: the tolerance and
@@ -1113,6 +1135,7 @@ export function useSceneSync({
   const hasMap =
     (workspace === 'deviation' && hasDeviationMap) ||
     (workspace === 'thickness' && hasThicknessMap) ||
+    (workspace === 'elements' && curvatureValues !== null) ||
     Boolean(plugin?.hoverReadout) ||
     Boolean(plugin?.hovers)
   useEffect(() => {
