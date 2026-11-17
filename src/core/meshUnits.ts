@@ -5,9 +5,10 @@
 // that every fit, reading and export downstream is in millimetres like every
 // other. An STL carries no units at all — a 1 in the file is whatever the
 // program that wrote it meant — which is why the STL import asks; a PLY or
-// OBJ is taken in millimetres, as before, and a STEP says its own.
+// OBJ is taken in millimetres, as before, and a STEP says its own. A 3MF
+// is in millimetres and a PTX in metres, whatever is asked (fixedUnits).
 
-import { isStepFile } from './formats'
+import { is3mfFile, isPtxFile, isStepFile } from './formats'
 
 export type MeshUnits = 'mm' | 'cm' | 'm' | 'in'
 
@@ -30,6 +31,14 @@ export function mmPerUnit(units: MeshUnits): number {
  *  part came out 25.4 times too big (issue 34). */
 export function fileScale(name: string, units: MeshUnits, scale = 1): number {
   return (isStepFile(name) ? 1 : mmPerUnit(units)) * scale
+}
+
+/** The units a file is in by its format, whatever it is opened with: a
+ *  3MF's millimetres, a PTX's metres. Else the units given. */
+export function fixedUnits(name: string, given: MeshUnits): MeshUnits {
+  if (is3mfFile(name)) return 'mm' // units-ok: a 3MF file is in millimetres, a MeshUnits id
+  if (isPtxFile(name)) return 'm' // units-ok: a PTX file is in metres, a MeshUnits id
+  return given
 }
 
 export function unitsLabel(units: MeshUnits): string {

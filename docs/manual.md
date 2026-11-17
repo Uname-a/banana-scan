@@ -78,7 +78,7 @@ current session, but history itself is not stored in project or recovery files.
 
 ### How to use it
 
-1. **Open** your scan (STL, PLY, OBJ, 3MF or STEP), or drag & drop it anywhere
+1. **Open** your scan (STL, PLY, OBJ, 3MF, PTX or STEP), or drag & drop it anywhere
    in the window. An STL carries no units, so opening one asks what it is
    in — millimetres, centimetres, metres or inches — and reads it in
    millimetres; **Don't ask again** makes the answer stand for every STL,

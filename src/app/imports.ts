@@ -12,8 +12,8 @@ import type { Rigid } from '../core/deviation/rigid'
 import type { SceneManager } from '../viewer/SceneManager'
 import { grayscaleOf } from '../core/flat/edgeClient'
 import { assertImageDecodable, imagePixelsPerMm } from '../core/flat/image'
-import { is3mfFile, isModelFile, isReferenceFile, isTextureFile } from '../core/formats'
-import type { MeshUnits } from '../core/meshUnits'
+import { isModelFile, isPtxFile, isReferenceFile, isTextureFile } from '../core/formats'
+import { fixedUnits, type MeshUnits } from '../core/meshUnits'
 import { useStore } from '../state/store'
 import { ImportQueue, type PreparedView } from './importQueue'
 import type { SourceFiles } from './project'
@@ -75,8 +75,8 @@ const NO_VIEW: PreparedView = { commit() {}, dispose() {} }
 export async function prepareScan(client: MeshWorkerClient, scene: SceneManager | null, file: File, crease: CreaseSetting, transform?: Rigid, given: MeshUnits = 'mm', scale = 1): Promise<PreparedScan> {
   if (!isModelFile(file.name)) throw new Error(isTextureFile(file.name)
     ? `${file.name} is part of a textured scan — open it together with its OBJ (pick or drop the OBJ, the .mtl and the image at once, or drop their folder).`
-    : 'Unsupported file type — use STL, PLY, OBJ, 3MF or STEP.')
-  const units = is3mfFile(file.name) ? 'mm' : given // units-ok: a 3MF file is in millimetres, a MeshUnits id
+    : 'Unsupported file type — use STL, PLY, OBJ, 3MF, PTX or STEP.')
+  const units = fixedUnits(file.name, given)
   const buffer = await file.arrayBuffer()
   const extras = await companionBytes(companionsOf(file))
   // A copy of the bytes is kept, or for a large scan the file itself (see
@@ -94,8 +94,8 @@ export async function prepareScan(client: MeshWorkerClient, scene: SceneManager 
 }
 
 export async function prepareNominal(client: MeshWorkerClient, scene: SceneManager | null, file: File, given: MeshUnits = 'mm'): Promise<PreparedNominal> {
-  if (!isReferenceFile(file.name)) throw new Error('Unsupported file type — use STL, PLY, OBJ, 3MF or STEP.')
-  const units = is3mfFile(file.name) ? 'mm' : given // units-ok: a 3MF file is in millimetres, a MeshUnits id
+  if (!isReferenceFile(file.name)) throw new Error(isPtxFile(file.name) ? 'A PTX is a laser scan: open it as the scan. The reference is the nominal part — STL, PLY, OBJ, 3MF or STEP.' : 'Unsupported file type — use STL, PLY, OBJ, 3MF or STEP.')
+  const units = fixedUnits(file.name, given)
   const buffer = await file.arrayBuffer()
   const source = { name: file.name, file: keptSource(file, buffer), units }
   const { id, mesh } = await client.prepareNominal(file.name, buffer, units)
