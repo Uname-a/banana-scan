@@ -25,6 +25,9 @@ import { EditedCopyNote } from '../ui/EditedCopyNote'
 import { exportReducedMesh } from './exportReduced'
 import { exportTrimmedMesh } from './exportTrimmed'
 import { exportEditedMesh } from './exportEdited'
+import { buildPatternFile } from './flatPatterns'
+import { saveBuilt } from '../../../src/app/exports'
+import { PATTERN_MARK_COLOR, patternMarks, usePattern } from '../state/patternStore'
 import { useMeshWorkspace } from './useMeshWorkspace'
 import { createMeshToolsSession, installMeshToolsSession } from './meshToolsSession'
 import { meshUnitsFor } from '../../../src/state/unitsPromptStore'
@@ -200,6 +203,10 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
             ? 'trim'
             : null,
   )
+  // Unroll / flatten's marking — its own store says when it asks for one.
+  const patternMarking = usePattern((p) => patternMarks(p))
+  const toolNow = useMeshTools((s) => s.tool)
+  const markingNow = markingFor ?? (toolNow === 'pattern' && patternMarking ? 'pattern' : null)
   // Trim to scan's piece and how it is looked at: over it, the break stays
   // marked on the ghosted scan, the marking tools stood down.
   const made = useMeshTools((s) => s.trimMade)
@@ -208,7 +215,7 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
   const setTrimView = useMeshTools((s) => s.setTrimView)
   const onPiece = trimMade && trimView !== 'break'
   const gapLegend = onMesh && tool === 'trim' && made !== null && trimView === 'gap' && made.report.fit !== null ? made : null
-  const session = onMesh ? markingFor : null
+  const session = onMesh ? markingNow : null
   const lastSession = useRef(session)
   useEffect(() => {
     if (lastSession.current === session) return
@@ -271,6 +278,8 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
               ? SMOOTH_MARK_COLOR
               : session === 'offset'
                 ? OFFSET_MARK_COLOR
+                : session === 'pattern'
+                ? PATTERN_MARK_COLOR
                 : session === 'trim'
                   ? TRIM_MARK_COLOR
                   : session === 'flip'
@@ -347,6 +356,11 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
         onExportEdited={exportEditedMesh}
         onUseEdited={() => void adoptEditedCopy()}
         onDiscardEdited={() => void discardEditedCopy()}
+        onMakePattern={() => void tools.makeFlatPattern(undefined, units)}
+        onExportPattern={(format) => {
+          const made = usePattern.getState().made
+          if (made) saveBuilt(buildPatternFile(made, format, units))
+        }}
       />
     ),
     overlay: (

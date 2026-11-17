@@ -384,7 +384,7 @@ export function buildFlatDxf(r: FlatDxfInput): string {
       `Layers: edges (${
         r.edgePieces
           ? 'the outline as lines, arcs and circles'
-          : `the detected edge chains${r.edgeTolerance > 0 ? `, thinned to ${num(r.edgeTolerance * k, unit === 'in' ? 5 : 4)} ${unit}` : ''}`
+          : `${r.edgesNote ?? 'the detected edge chains'}${r.edgeTolerance > 0 ? `, thinned to ${num(r.edgeTolerance * k, unit === 'in' ? 5 : 4)} ${unit}` : ''}`
       }), elements (the fitted geometry), labels (names, readings and notes)`,
     ),
     group(0, 'SECTION'),

@@ -8,6 +8,8 @@ import { pick, registerHistory } from '../../src/state/historyStore'
 import { registerProjectSection } from '../../src/app/projectSections'
 import { meshSection } from './app/projectSection'
 import { MESH_SETTINGS, reductionApplied, useMeshTools } from './state/meshStore'
+import { patternMarks, usePattern } from './state/patternStore'
+import { registerMeshGuides } from './guides/guides'
 import { useMark } from '../../src/state/markStore'
 import { useMeshPlugin } from './app/useMeshPlugin'
 import { MeshNotices } from './ui/MeshNotices'
@@ -54,7 +56,8 @@ const plugin: BananaScanPlugin = {
         m.tool === 'flip' ||
         m.tool === 'trim' ||
         (m.tool === 'smooth' && m.smoothScope === 'marked') ||
-        (m.tool === 'offset' && m.offsetScope === 'marked')
+        (m.tool === 'offset' && m.offsetScope === 'marked') ||
+        (m.tool === 'pattern' && patternMarks(usePattern.getState()))
       if (e.key === 'Escape' && marking && useMark.getState().gesture !== null) {
         useMark.getState().setGesture(null)
         return true
@@ -65,7 +68,7 @@ const plugin: BananaScanPlugin = {
         return true
       }
       // Escape puts the tool in hand away — not while it is at work.
-      if (e.key === 'Escape' && m.tool !== null && m.status !== 'running' && m.trimStatus !== 'running' && !m.editing) {
+      if (e.key === 'Escape' && m.tool !== null && m.status !== 'running' && m.trimStatus !== 'running' && !m.editing && !usePattern.getState().running) {
         m.setTool(null)
         return true
       }
@@ -80,6 +83,7 @@ const plugin: BananaScanPlugin = {
     // the plugin's has a hyphen, which a command's name does not take — its
     // part of the readout, and what it is busy with.
     registerCommands('mesh', meshCommands)
+    registerMeshGuides()
     registerStateSection('mesh', describeMesh)
     registerBusy('mesh', meshBusy, [useMeshTools], stopMeshWork)
     registerHistory({

@@ -69,6 +69,15 @@ const ICONS = {
       <path className="i-th" d="M3.5 12h4m9 0h4" />
     </>
   ),
+  // A curved sheet, and beside it the same sheet laid out flat with a hole
+  // in it: a flat pattern.
+  unrollFlat: (
+    <>
+      <path className="i-g" d="M2.5 11c2-5 5-7 8-7v7c-3 0-5 1.5-6.5 4Z" />
+      <path className="i-f" fillRule="evenodd" d="M12.5 9.5h9v11h-9ZM15.5 13v4h3v-4Z" />
+      <path className="i-a" d="m8 17 2.5 2.5m0 0v-2.3m0 2.3H8.2" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type MeshIconName = keyof typeof ICONS

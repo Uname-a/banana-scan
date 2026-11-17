@@ -12,6 +12,7 @@ import type { LoadedScan, MeshWorkerClient } from '../../../src/core/workerClien
 import { MESH_TOOLS, type MeshRegion, type MeshToolsOps, type ScanEditRequest, type TrimBody } from './protocol'
 import type { ReduceSettings } from './reduce'
 import type { TrimSettings } from './trimToScan'
+import type { UnrollSurface } from './unroll'
 import type { PointPair } from '../../../src/core/deviation/align'
 
 class MeshToolsClient {
@@ -147,6 +148,18 @@ class MeshToolsClient {
    *  `crease` says — the setting changed under it. Null with no copy. */
   recreaseEdited(crease: CreaseSetting) {
     return this.call('recrease-edited', { crease })
+  }
+
+  /** The region on a cylinder or cone laid out flat — `vertices`, or with
+   *  null the surface within `band` of it — `offset` outside it. Nothing
+   *  changes. */
+  unroll(surface: UnrollSurface, vertices: Uint32Array | null, band: number, offset: number) {
+    return this.call('unroll', { surface, vertices, band, offset })
+  }
+
+  /** The region flattened with the least distortion. Nothing changes. */
+  flatten(vertices: Uint32Array, iterations?: number) {
+    return this.call('flatten', iterations !== undefined ? { vertices, iterations } : { vertices })
   }
 
   /** Throw the edited copy away: the workspace works on the scan again. */

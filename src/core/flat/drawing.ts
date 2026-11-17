@@ -32,6 +32,9 @@ export interface FlatDrawingInput {
   /** Document units per chain unit: mm per pixel on an image, 1 on a
    *  section. */
   chainUnit: { x: number; y: number }
+  /** What the edge chains are, for the file's description — the detected
+   *  edges, when not said. */
+  edgesNote?: string
   /** The edges as lines, arcs and circles in document units, written in
    *  place of the chains where given — an outline already read the way a
    *  sketch is drawn, which a polyline would only approximate. */

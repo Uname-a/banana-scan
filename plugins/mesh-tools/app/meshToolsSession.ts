@@ -59,6 +59,8 @@ import type { WrapReport } from '../core/wrap'
 import { boundLength } from '../../../src/app/useUnits'
 import type { DisplayUnits } from '../../../src/core/units'
 import { typedLen } from '../ui/meshFormat'
+import { makePattern, unrollable, type PatternJob } from './flatPatterns'
+import { patternMarks, usePattern, type PatternMade } from '../state/patternStore'
 
 const count = (n: number) => n.toLocaleString('en-US')
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -1089,6 +1091,34 @@ export function createMeshToolsSession({
     }
   }
 
+  // ---- Unroll / flatten ----------------------------------------------------------------
+
+  /** A flat pattern of the mesh: `job`, or what the panel says — the
+   *  element chosen, or the only one there is, and the marking when it asks
+   *  for one. Beside the mesh, not an edit of it. The pattern, or null when
+   *  it failed — the error line says why. */
+  const makeFlatPattern = async (job?: PatternJob, units: DisplayUnits = 'mm'): Promise<PatternMade | null> => {
+    if (!job) {
+      const p = usePattern.getState()
+      const region = patternMarks(p) ? marked() : null
+      if (region && region.length === 0) {
+        useStore.getState().setError('Mark the surface to lay out on the part first — with a window, the brush or a lasso.')
+        return null
+      }
+      if (p.mode === 'flatten') job = { mode: 'flatten', region: region! }
+      else {
+        const options = unrollable(useStore.getState().elements)
+        const element = options.find((e) => e.id === p.element) ?? (options.length === 1 ? options[0] : undefined)
+        if (!element) {
+          useStore.getState().setError(options.length === 0 ? 'Fit a cylinder or a cone on the part in 3D Measure first.' : 'Pick the cylinder or cone to unroll by.')
+          return null
+        }
+        job = { mode: 'unroll', element, region, offset: p.offset }
+      }
+    }
+    return makePattern(tools(), job, units)
+  }
+
   // ---- Keeping in step ---------------------------------------------------------------
 
   /**
@@ -1112,6 +1142,7 @@ export function createMeshToolsSession({
           wrapped.current = null
           cancelWrap()
           useMeshTools.getState().clear()
+          usePattern.getState().clear()
           // The worker and the viewport let a copy of the last scan go with it.
           editedCopy.current = null
           if (scan) useMeshTools.getState().suggestForPart(2 * scan.modelSize, meanEdgeLength(scan.positions, scan.indices))
@@ -1133,6 +1164,8 @@ export function createMeshToolsSession({
           if (useMeshTools.getState().wrapMade) useMeshTools.getState().dropWrap()
           // The scene let a piece cut to it go with it.
           if (useMeshTools.getState().trimMade) useMeshTools.getState().dropTrim()
+          // A pattern was of the scan that went.
+          if (usePattern.getState().made) usePattern.getState().clear()
         },
         remeasure: async () => {
           // A reduction that cannot be made again goes: the mesh it described
@@ -1206,6 +1239,7 @@ export function createMeshToolsSession({
     clearOtherScan,
     trimBodyOf,
     trimScan,
+    makeFlatPattern,
     watch,
   }
 }

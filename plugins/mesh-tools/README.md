@@ -21,12 +21,13 @@ workspace has:
   spray it was scanned under, a bore it could not see to the bottom of, the
   inside a print does not need — which every workspace measures once it is
   taken into use.
-- **Reduce mesh**, **Wrap** and **Trim to scan** make something beside the
-  scan: a light mesh to model over in CAD, held within a tolerance of it; one
-  closed skin round the part, everything inside it dropped; and a body
-  modelled to mend a broken part cut to fit its break — of the edited copy,
-  when there is one. The scan stays as it is; **Apply** makes the reduced
-  mesh or the wrap the edited copy.
+- **Reduce mesh**, **Wrap**, **Trim to scan** and **Unroll/flatten** make
+  something beside the scan: a light mesh to model over in CAD, held within
+  a tolerance of it; one closed skin round the part, everything inside it
+  dropped; a body modelled to mend a broken part cut to fit its break; and
+  a flat pattern of a surface of it, to cut from sheet — of the edited
+  copy, when there is one. The scan stays as it is; **Apply** makes the
+  reduced mesh or the wrap the edited copy.
 
 A good order is the one the keys suggest: islands and marked surface off
 first, the normals turned the right way out, then the cut and a mirror, then the holes,
@@ -757,6 +758,55 @@ or export. The settings are steps of the undo history and are kept in a
 saved project; the piece is not saved, a click makes it again. A break of a
 few square centimetres takes a second or two.
 
+### Unroll/flatten: a flat pattern of the scan
+
+A flat pattern of a surface of the scan, true to size, to cut it from
+sheet: drawn in the panel and saved as a DXF or an SVG, in millimetres —
+the outline and the holes in it as closed polylines, the pattern's low
+corner at the origin, seen from outside the part. It is made beside the
+scan, not an edit of it, and is not a step of the undo history or kept in a
+project; another scan, or another pattern, takes its place.
+
+- **Unroll** lays a cylinder or a cone out by the element fitted to it in 3D
+  Measure, picked under **By**: the arc round the axis becomes the width and
+  the height along it the height, so an outline and the holes in it come out
+  the size they are on the part. A cone unrolls to its sector about its
+  apex. Each point is taken at the fitted surface, so the scanner's scatter
+  does not stretch the pattern — how far the region lies off the surface is
+  given instead. **On the element** takes the scan lying on it, within four
+  times the fit's scatter of it and facing off it, so a flange or an end
+  face is left out; **Marked region** only what is marked. **Offset** lays
+  out a surface that far outside the fitted one (inside, negative) — half a
+  sheet's thickness, for the neutral fibre a blank is cut to. A region that
+  wraps right round the axis — a whole tube — is cut along a seam where
+  nothing is, or between two columns of its points.
+- **Flatten** lays a marked sheet — a bent bracket, a formed panel —
+  out flat with the least distortion, and says how far it had to stretch
+  the surface: a fraction of a per cent for a sheet bent from flat, several
+  for a dished or drawn one, which no flat blank makes exactly. The pattern
+  is turned so the smallest rectangle round it lies square, its long side
+  across. Mark one skin of the sheet, not both.
+
+Only the largest connected piece of a region is laid out; the panel says
+what was left out.
+
+#### How it lays out
+
+An unroll is the element's own geometry: each point's angle round the axis
+and its height along it (for a cone, its distance from the apex along the
+cone, and its angle shrunk by the sine of the half-angle). A flattening is
+solved: a least-squares conformal layout first (Lévy et al. 2002, as Mullen
+et al. 2008 put it — angles kept, scale free), then as-rigid-as-possible
+rounds (Liu et al. 2008), each turning every triangle the way that best
+fits the layout and laying the layout out again to keep every triangle its
+true shape, until it settles. Both solves are sparse and symmetric, done by
+conjugate gradients over a Cholesky factor of the matrix in a
+nested-dissection order (`core/sparse.ts`); a sheet of 90,000 points
+flattens in a few seconds. The stretch is measured triangle by triangle: a
+length on the pattern against the same length on the scan, in the
+direction it changed most, and the area — the most anywhere, the mean and
+the 95th percentile over the surface.
+
 ### Reduce mesh: a light mesh for CAD
 
 A scan is millions of triangles, and CAD chokes on it: Fusion warns above
@@ -878,6 +928,8 @@ tools `mesh_cut` and so on, registered from the plugin's `install()`
 | `mesh.apply_reduced` | the reduced mesh made the edited copy, one step of the undo history |
 | `mesh.wrap` | the wrap, made beside the scan — `gap`, and `grow`, `edges`, `tolerance` (how far its reduction may stray) — answering with its shells, triangles, what went inside it, the area bridged, the volume before and after and the time each step took; `preview: false` applies it at once |
 | `mesh.apply_wrap` | the wrap made the edited copy, one step of the undo history |
+| `mesh.unroll`, `mesh.flatten` | a flat pattern made beside the scan: a cylinder or cone unrolled by its element (`element`, and `region`, `band`, `offset`), or a `region` flattened — answering with its size and holes, how far the region lies off the surface or how far the layout stretched it |
+| `mesh.export_pattern` | the pattern as a DXF or an SVG (`format`), in millimetres |
 | `mesh.use_edited`, `mesh.discard_edited` | the Edited copy section's two buttons |
 | `mesh.export` | the edited copy, the reduced mesh or the piece as STL or 3MF (`format`), as the panel's buttons write them |
 
