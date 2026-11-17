@@ -10,7 +10,7 @@
 
 import { create } from 'zustand'
 import { extensionOf } from '../core/formats'
-import type { MeshUnits } from '../core/meshUnits'
+import { fixedUnits, type MeshUnits } from '../core/meshUnits'
 import { usePrefs } from './prefsStore'
 
 interface UnitsPromptState {
@@ -57,11 +57,12 @@ export function askMeshUnits(fileName: string): Promise<MeshUnits | null> {
   return result
 }
 
-/** The units to read a mesh file in: millimetres for anything but an STL,
+/** The units to read a mesh file in: a format's own where it has them (a
+ *  PTX's metres), millimetres for anything else but an STL,
  *  and for an STL the remembered answer, or the operator's — null when they
  *  dismissed the question, and the file is not to be opened. */
 export function meshUnitsFor(fileName: string): Promise<MeshUnits | null> {
-  if (extensionOf(fileName) !== 'stl') return Promise.resolve('mm')
+  if (extensionOf(fileName) !== 'stl') return Promise.resolve(fixedUnits(fileName, 'mm'))
   const prefs = usePrefs.getState()
   if (!prefs.askStlUnits) return Promise.resolve(prefs.stlUnits)
   return askMeshUnits(fileName)

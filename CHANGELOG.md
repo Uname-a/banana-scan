@@ -10,6 +10,17 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **PTX scans open** (2026-11-17). A long-range laser scanner's PTX —
+  what Leica Cyclone, FARO SCENE and Trimble RealWorks export — opens as
+  the scan, every scan in the file taken through its own transform and
+  read in metres, whatever units are asked. Each scan is a grid of points
+  as the scanner swept them, so it is made a surface as it is read:
+  neighbouring points joined two triangles a square, facing the scanner,
+  and none made across a step from a near surface to one behind it, where
+  the gap is far wider than the sweep's step at that range. Points the
+  beam got nothing back for are left out, and the scanner's colours kept
+  when every point has them. Scans that overlap give overlapping sheets;
+  Wrap makes one surface of them. A PTX is never the reference.
 - **Merge scans** (Mesh Tools, 2026-11-17). Another scan of the part — its
   underside, scanned on its own — opened beside the mesh, placed where the
   two share surface, shown there in orange with how much of it lies on the

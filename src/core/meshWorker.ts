@@ -14,6 +14,7 @@ import { parseSTL } from './parsers/stl'
 import { parsePLY } from './parsers/ply'
 import { parseOBJ } from './parsers/obj'
 import { parse3MF } from './parsers/threemf'
+import { parsePTX } from './parsers/ptx'
 import type { ObjCompanions } from './parsers/objTexture'
 import { parseSTEP, type StepInfo } from './parsers/step'
 import { extensionOf } from './formats'
@@ -172,7 +173,8 @@ function parseByName(name: string, buffer: ArrayBuffer, onProgress: (t: string) 
   if (ext === 'ply') return parsePLY(buffer, onProgress)
   if (ext === 'obj') return parseOBJ(buffer, onProgress, companions)
   if (ext === '3mf') return parse3MF(buffer, onProgress, companions)
-  throw new Error(`Unsupported file type ".${ext}" — use STL, PLY, OBJ, 3MF or STEP.`)
+  if (ext === 'ptx') return parsePTX(buffer, onProgress)
+  throw new Error(`Unsupported file type ".${ext}" — use STL, PLY, OBJ, 3MF, PTX or STEP.`)
 }
 
 /** The scan: a mesh, or a CAD part opened in a scan's place — cut finer

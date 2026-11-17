@@ -3,7 +3,7 @@
 // anywhere, or fetched from a link: a project, a flatbed image, the reference
 // while the deviation workspace is comparing against one, else the scan.
 
-import { isImageFile, isModelFile, isStepFile } from '../core/formats'
+import { isImageFile, isModelFile, isPtxFile, isStepFile } from '../core/formats'
 import { useStore } from '../state/store'
 import { useDeviation } from '../state/deviationStore'
 import { useShell } from '../state/shellStore'
@@ -30,12 +30,13 @@ export async function openAnyFile(file: File, { openFile, openNominal, openImage
   // file fills whichever slot is still empty, so the two files can simply be
   // dropped one after the other; only once both are there does a drop mean
   // "replace the scan". A STEP file is the exception: compared against, it
-  // is the nominal part, so it goes there however full the slots are.
+  // is the nominal part, so it goes there however full the slots are; a PTX
+  // is a laser scan, so it is always the scan.
   //
   // Measuring against an element wants no second model at all, so there a
   // drop is always the scan.
   const dev = useDeviation.getState()
-  if (useShell.getState().workspace === 'deviation' && dev.source === 'reference') {
+  if (useShell.getState().workspace === 'deviation' && dev.source === 'reference' && !isPtxFile(file.name)) {
     if (isStepFile(file.name) || (useStore.getState().fileName && !dev.nominalName)) {
       return openNominal(file)
     }

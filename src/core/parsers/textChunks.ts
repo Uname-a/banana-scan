@@ -37,6 +37,11 @@ class Gathered<T extends Float32Array | Uint32Array> {
     this.store = bigger
   }
 
+  /** The numbers so far, not copied: good until the next push. */
+  peek(): T {
+    return this.store.subarray(0, this.length) as T
+  }
+
   /** The numbers, in an array of just their length. */
   take(): T {
     const out = this.make(this.length)

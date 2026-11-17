@@ -156,7 +156,7 @@ files, projects and agent answers stay in millimetres.
 
 | | Formats |
 | --- | --- |
-| **Scan** | STL, PLY, OBJ (with its `.mtl` and texture, in colour), 3MF, STEP |
+| **Scan** | STL, PLY, OBJ (with its `.mtl` and texture, in colour), 3MF, STEP, PTX (a long-range laser scanner's gridded scans, each made a surface as it is read) |
 | **Reference part** | STL, PLY, OBJ, 3MF, STEP (tessellated in the browser by [meshStep](https://github.com/CNCKitchen/meshStep)) |
 | **Flatbed image** | PNG, JPEG (the file's dpi is read as a working scale) |
 | **Project** | `.bananascan`: a plain zip of the input files and `project.json` |
