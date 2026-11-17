@@ -47,6 +47,7 @@ import { trianglesWithin } from './geometry/region'
 import { floodByNormal } from './fit/regionGrow'
 import { planeRegionReport, segmentPlanes } from './fit/segment'
 import { meanCurvature } from './geometry/curvature'
+import { CurvatureFitter, defaultCurvatureRadius, meshSpacing, principalCurvatures, scanScatter } from './geometry/principalCurvature'
 import { scanSpot } from './geometry/nearest'
 import { boundsOf } from './geometry/bounds'
 import { closedVertices } from './geometry/closedShells'
@@ -731,6 +732,41 @@ function handle(msg: Exclude<WorkerRequest, { type: 'align-abort' }>): void {
     }
     const values = meanCurvature(graph)
     post({ type: 'curvature-ok', requestId: msg.requestId, values }, [values.buffer])
+    return
+  }
+
+  if (msg.type === 'principal-curvature' || msg.type === 'curvature-at') {
+    if (!graph) {
+      post({ type: 'error', requestId: msg.requestId, message: 'No model loaded.' })
+      return
+    }
+    try {
+      if (msg.type === 'curvature-at') {
+        checkVertices(Uint32Array.of(msg.vertex), graph.vertexCount)
+        // One fit: a grid over the scan costs a pass over it, which is
+        // nothing beside what the whole map costs.
+        const spacing = meshSpacing(graph.positions, graph.indices)
+        const radius = msg.radius && msg.radius > 0 ? msg.radius : defaultCurvatureRadius(spacing, scanScatter(graph, spacing))
+        const fit = new CurvatureFitter(graph, radius, spacing).fitAt(msg.vertex)
+        post({ type: 'curvature-at-ok', requestId: msg.requestId, fit, radius })
+        return
+      }
+      let lastPercent = -1
+      // The scan's own scatter, read by principalCurvatures, sets the
+      // default radius and the floor under which a surface reads as flat.
+      const { k1, k2, area, radius, spacing, noise, noiseFloor } = principalCurvatures(graph, {
+        radius: msg.radius,
+        progress: (f) => {
+          const percent = Math.round(f * 100)
+          if (percent === lastPercent) return
+          lastPercent = percent
+          progress(`Reading the curvature — ${percent}%…`)
+        },
+      })
+      post({ type: 'principal-curvature-ok', requestId: msg.requestId, k1, k2, area, radius, spacing, noise, noiseFloor }, [k1.buffer, k2.buffer, area.buffer])
+    } catch (e) {
+      post({ type: 'error', requestId: msg.requestId, message: errorText(e) })
+    }
     return
   }
 

@@ -21,6 +21,7 @@ import { useShell } from '../src/state/shellStore'
 import { useStore } from '../src/state/store'
 import { useThickness } from '../src/state/thicknessStore'
 import { useMark } from '../src/state/markStore'
+import { useCurvature } from '../src/state/curvatureStore'
 
 type Listener = ((event: { data: unknown }) => void) | null
 
@@ -58,6 +59,7 @@ export function resetStores(): void {
   useDeviation.setState(useDeviation.getInitialState(), true)
   useThickness.setState(useThickness.getInitialState(), true)
   useMark.setState(useMark.getInitialState(), true)
+  useCurvature.setState(useCurvature.getInitialState(), true)
   useShell.getState().setWorkspace('elements')
   clearHistory()
   useHistory.setState({ past: [], future: [] })
