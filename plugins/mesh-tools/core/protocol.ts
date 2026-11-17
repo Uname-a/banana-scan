@@ -18,6 +18,10 @@ import type { ReduceReport, ReduceSettings } from './reduce'
 import type { SmoothReport, SmoothSettings } from './smooth'
 import type { DensifyReport } from './densify'
 import type { TrimReport, TrimSettings } from './trimToScan'
+import type { MergeReport } from './merge'
+import type { Rigid } from '../../../src/core/deviation/rigid'
+import type { PointPair } from '../../../src/core/deviation/align'
+import type { OverlapResult } from '../../../src/core/deviation/overlap'
 
 /** The plugin's id, which its worker part answers to. */
 export const MESH_TOOLS = 'mesh-tools'
@@ -38,7 +42,9 @@ export type PieceCount = Omit<PieceSurvey, 'islandMask' | 'islandCentres'>
  *  mesh and the union of the solids — their triangles, in the scan's frame,
  *  and their names — one by `op` (core/boolean); Shrink / expand moves the
  *  surface along its normal (core/offset); Shell hollows a closed mesh
- *  (core/hollow) or thickens an open one into a solid (core/offset). */
+ *  (core/hollow) or thickens an open one into a solid (core/offset); Merge
+ *  adds the other scan, carried by `transform` into the scan's frame, less
+ *  its triangles within `dropWithin` of the mesh (core/merge). */
 export type ScanEditRequest =
   | { type: 'delete-marked'; vertices: Uint32Array }
   | { type: 'flip'; vertices?: Uint32Array }
@@ -51,6 +57,7 @@ export type ScanEditRequest =
   | { type: 'offset'; settings: OffsetSettings }
   | { type: 'hollow'; thickness: number }
   | { type: 'thicken'; thickness: number; side: ThickenSide }
+  | { type: 'merge'; transform: Rigid; dropWithin: number | null }
 
 /** What an edit did, tool by tool. */
 export type MeshEditReport =
@@ -65,6 +72,7 @@ export type MeshEditReport =
   | { kind: 'offset'; report: OffsetReport }
   | { kind: 'hollow'; report: HollowReport }
   | { kind: 'thicken'; report: ThickenReport }
+  | { kind: 'merge'; report: MergeReport }
 
 /** The mesh as an edit leaves it, in scan coordinates, and every old
  *  vertex's new number — −1 for one that went. The worker's own mesh is left
@@ -183,4 +191,14 @@ export interface MeshToolsOps {
   /** The body cut to fit the mesh's break (core/trimToScan) — a piece beside
    *  the mesh, not an edit of it. Nothing changes. */
   'trim-to-scan': { payload: { body: TrimBody; settings: TrimSettings }; result: TrimResult }
+  /** A staged load becomes the other scan, held beside the mesh to be
+   *  placed on it and merged into it (core/merge); its size back. */
+  'other-open': { payload: { staged: number }; result: { vertices: number; triangles: number } }
+  /** The other scan placed on the mesh: automatically, or from three or more
+   *  picked pairs, refined on their overlap (src/core/deviation/overlap). */
+  'other-place': { payload: { pairs?: PointPair[] }; result: OverlapResult }
+  /** The other scan's triangles, in its own frame, to draw it by. */
+  'other-triangles': { payload: Record<string, never>; result: { positions: Float32Array; indices: Uint32Array } }
+  /** The other scan let go. */
+  'other-clear': { payload: Record<string, never>; result: null }
 }

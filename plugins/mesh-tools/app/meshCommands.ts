@@ -14,10 +14,13 @@ import { useStore } from '../../../src/state/store'
 import { useMark } from '../../../src/state/markStore'
 import { historyAsync, historyBlocked, pick } from '../../../src/state/historyStore'
 import { CommandError, type Command } from '../../../src/plugins/api'
-import { arr, bool, enumOf, int, num, obj, oneOf, str, vec3, type JsonSchema } from '../../../src/commands/schema'
+import { arr, bool, bytes, enumOf, int, num, obj, oneOf, str, vec3, type JsonSchema } from '../../../src/commands/schema'
 import { findElement, parsePlaneName, requireScan } from '../../../src/commands/refs'
 import { requireScene, sceneOf } from '../../../src/commands/host'
-import { invalid, lastError, nextFrame, requireFlatFree, requireMeasureFree } from '../../../src/commands/core/common'
+import { fileNameSchema, fileOf, invalid, lastError, nextFrame, requireFlatFree, requireMeasureFree } from '../../../src/commands/core/common'
+import { unitsSchema } from '../../../src/commands/core/scan'
+import type { MeshUnits } from '../../../src/core/meshUnits'
+import { roundTo } from '../../../src/core/round'
 import { cutAxisOf, type SectionRef } from '../../../src/core/section/frame'
 import type { Vec3 } from '../../../src/core/types'
 import { offeredSolids, type OfferedSolid } from '../../../src/app/solids'
@@ -658,6 +661,100 @@ const boolean: Command<{ op: BooleanOp; solids: string[] }> = {
   },
 }
 
+// ---- merging another scan ---------------------------------------------------------
+
+const mergeOpen: Command<{ bytes: Uint8Array; name: string; units?: MeshUnits }> = {
+  name: 'merge_open',
+  title: 'Open another scan to merge',
+  description:
+    'Open another scan of the same part — its other side, scanned on its own — beside the mesh, to be placed on it (mesh.merge_place) and merged into it (mesh.merge). STL, PLY, OBJ or 3MF. Opening another lets the last one go. Changes nothing on the mesh. Returns its size.',
+  input: obj({ bytes: bytes('The file’s contents.'), name: fileNameSchema('"bracket underside.ply"'), units: unitsSchema }, ['bytes', 'name']),
+  history: false,
+  run: async ({ bytes: data, name, units }) => {
+    requireScan()
+    useStore.setState({ errorText: null })
+    if (!(await session().openOtherScan(fileOf(data, name), units ?? 'mm'))) throw new CommandError('failed', lastError(`${name} could not be opened.`))
+    inHand('merge')
+    const o = m().other!
+    return { other: { name: o.name, vertices: o.vertices, triangles: o.triangles }, status: useStore.getState().statusText }
+  },
+}
+
+interface MergePair {
+  other: Vec3
+  mesh: Vec3
+}
+
+const mergePlace: Command<{ pairs?: MergePair[] }> = {
+  name: 'merge_place',
+  title: 'Place the other scan on the mesh',
+  description:
+    'Place the other scan (mesh.merge_open) on the mesh where the two share surface — fitted on that overlap alone, so a scan that shares only a band round the middle places as well as one that shares most. With no pairs, by itself: its file’s own frame first, then a search for the shape the two have in common. With three or more pairs of the same place on each (on the other scan as its file has it, and on the mesh, mm), from them. Shown in orange. Returns the placement: source (frame, auto or points); overlap, the share of the other scan lying on the mesh, 0–1; rms over it, mm; gate, mm, how close a point must lie to count as on the mesh, and what mesh.merge leaves out within; ambiguous, another placement fitted nearly as well — look at it, or give pairs. A search that finds nothing fitting closely says so: give pairs then. Changes nothing on the mesh.',
+  input: obj({
+    pairs: arr(
+      obj({ other: vec3('On the other scan, in its file’s coordinates, mm.'), mesh: vec3('The same place on the mesh, mm.') }, ['other', 'mesh']),
+      'Three or more places on both, spread over the part (not along a line).',
+      { minItems: 3 },
+    ),
+  }),
+  history: false,
+  run: async ({ pairs }) => {
+    requireScan()
+    if (!m().other) throw new CommandError('invalid_state', 'There is no other scan open: open it with mesh.merge_open first.')
+    useStore.setState({ errorText: null })
+    const placed = await session().placeOtherScan(pairs?.map((p) => ({ scan: p.other, nominal: p.mesh })))
+    if (!placed) throw new CommandError('failed', lastError('The other scan could not be placed.'))
+    inHand('merge')
+    return {
+      placement: {
+        source: placed.source,
+        overlap: roundTo(placed.overlap, 4),
+        rms: roundTo(placed.rms, 4),
+        gate: roundTo(placed.gate, 4),
+        ambiguous: placed.ambiguous,
+        // Row-major 3×3 then the move, mm: the other scan's coordinates into the mesh's.
+        rotation: Array.from(placed.transform.r, (v) => roundTo(v, 6)),
+        translation: Array.from(placed.transform.t, (v) => roundTo(v, 4)),
+      },
+      status: useStore.getState().statusText,
+    }
+  },
+}
+
+const mergeCommand: Command<{ dropDoubled?: boolean }> = {
+  name: 'merge',
+  title: 'Merge the other scan into the mesh',
+  description:
+    'Add the other scan, as placed (mesh.merge_place), to the mesh: its triangles carried into the mesh’s frame. dropDoubled (true to start) leaves out its triangles that only scan again what the mesh has — every corner within the placement’s gate — so the shared band is not there twice; what is left meets the mesh along a seam, which mesh.fill_holes closes, or mesh.wrap makes one skin of the two. Lets the other scan go once merged. Edits the copy. One undo step. Returns the edit (triangles added and left out) and the mesh after it.',
+  input: obj({ dropDoubled: bool('Leave out what only scans the mesh again — true to start.') }),
+  history: false,
+  run: async ({ dropDoubled }) => {
+    requireScan()
+    const o = m().other
+    if (!o) throw new CommandError('invalid_state', 'There is no other scan open: open it with mesh.merge_open first.')
+    if (!o.placed) throw new CommandError('invalid_state', 'The other scan is not placed on the mesh yet: place it with mesh.merge_place first.')
+    return editAnswer(
+      await step(`merge ${o.name}`, 'The merge', async () => {
+        inHand('merge')
+        if (dropDoubled !== undefined) m().setMergeDrop(dropDoubled)
+        return session().mergeOtherScan({ inStep: true })
+      }, true),
+    )
+  },
+}
+
+const mergeClear: Command = {
+  name: 'merge_clear',
+  title: 'Let the other scan go',
+  description: 'Close the other scan opened to merge (mesh.merge_open), without merging it. Changes nothing on the mesh.',
+  input: noInput,
+  history: false,
+  run: async () => {
+    await session().clearOtherScan()
+    return { status: 'The other scan is closed.' }
+  },
+}
+
 const shell: Command<{ thickness?: number; side?: ThickenSide; mode?: 'hollow' | 'thicken' }> = {
   name: 'shell',
   title: 'Hollow or thicken',
@@ -917,6 +1014,10 @@ export const meshCommands = [
   densify,
   offset,
   boolean,
+  mergeOpen,
+  mergePlace,
+  mergeCommand,
+  mergeClear,
   shell,
   wrapCommand,
   applyWrap,

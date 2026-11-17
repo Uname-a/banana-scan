@@ -87,6 +87,7 @@ export type ScanEditJson =
   | { kind: 'fill'; maxSize: number; mode: 'curved' | 'flat'; holes: number; triangles: number }
   | { kind: 'smooth'; size: number; limit: number; maxMove: number; region?: number }
   | { kind: 'densify'; maxEdge: number; added: number; triangles: number }
+  | { kind: 'merge'; name: string; added: number; doubled: number; overlap: number; rms: number }
   | { kind: 'boolean'; op: 'subtract' | 'add' | 'intersect'; solid: string; removed: number; added: number; volume: number }
   | { kind: 'offset'; distance: number; maxMove: number; region?: number }
   | { kind: 'reduce'; tolerance: number; held: boolean; p999: number; triangles: number }
@@ -228,6 +229,9 @@ function validateMeshPart(raw: unknown): MeshPart {
         if (edit.region !== undefined && typeof edit.region !== 'number') invalid(`${where}.region`)
       } else if (edit.kind === 'densify') {
         fields(edit, 'maxEdge added triangles', 'number', where)
+      } else if (edit.kind === 'merge') {
+        fields(edit, 'name', 'string', where)
+        fields(edit, 'added doubled overlap rms', 'number', where)
       } else if (edit.kind === 'boolean') {
         fields(edit, 'solid', 'string', where)
         fields(edit, 'removed added volume', 'number', where)
@@ -280,6 +284,8 @@ function scanEditOf(e: ScanEditJson): ScanEdit {
       return { kind: e.kind, size: e.size, limit: e.limit, maxMove: e.maxMove, ...(e.region !== undefined ? { region: e.region } : {}) }
     case 'densify':
       return { kind: e.kind, maxEdge: e.maxEdge, added: e.added, triangles: e.triangles }
+    case 'merge':
+      return { kind: e.kind, name: e.name, added: e.added, doubled: e.doubled, overlap: e.overlap, rms: e.rms }
     case 'boolean':
       return { kind: e.kind, op: e.op, solid: e.solid, removed: e.removed, added: e.added, volume: e.volume }
     case 'offset':

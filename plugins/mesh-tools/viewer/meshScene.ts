@@ -45,6 +45,8 @@ const SOLID_OFFER_COLOR = 0x8b95a3
 /** The mirror image Mirror would make, and the plane it is made across: a
  *  violet none of the boolean's colours nor the markings' are. */
 const MIRROR_COLOR = 0x8e6bd8
+/** Another scan placed on the mesh to be merged into it. */
+const OTHER_SCAN_COLOR = 0xe8833a
 /** Where the wrap bridges an opening rather than lying on the part: an amber
  *  that reads as surface made, not as a warning — and none of the
  *  markings' colours. */
@@ -71,6 +73,8 @@ export class MeshScene {
   /** The piece Trim to scan made, and its mating face's gap to the part at
    *  each vertex — see setTrimmedPiece. */
   private piece: THREE.Mesh | null = null
+  /** Another scan, where it was placed on the mesh — see setOtherScan. */
+  private otherMesh: THREE.Mesh | null = null
   private pieceGap: Float32Array | null = null
   /** Its edges are the point of it, so its mesh mode is always on. */
   private reducedWire = { uWire: { value: 1 } }
@@ -211,7 +215,7 @@ export class MeshScene {
       partMoved: (m) => {
         // Moved in place: the mirror image is drawn again on the next frame.
         this.mirrorSource = null
-        for (const made of [this.reducedMesh, this.piece, this.wrap]) {
+        for (const made of [this.reducedMesh, this.piece, this.wrap, this.otherMesh]) {
           if (!made) continue
           const geometry = made.geometry as THREE.BufferGeometry
           const at = geometry.getAttribute('position') as THREE.BufferAttribute
@@ -240,6 +244,7 @@ export class MeshScene {
         this.disposeCutCap()
         this.disposeMirror()
         this.disposeBooleanSolids()
+        this.disposeOther()
       },
       // An orbit pivots on the reduced mesh while it stands in for the scan,
       // and on the piece while it is shown.
@@ -253,6 +258,7 @@ export class MeshScene {
         this.disposeCutCap()
         this.disposeMirror()
         this.disposeBooleanSolids()
+        this.disposeOther()
         this.caps.dispose()
         this.islandRing?.dispose()
       },
@@ -505,6 +511,37 @@ export class MeshScene {
     for (const material of this.piece.material as THREE.Material[]) material.dispose()
     this.host.partGroup.remove(this.piece)
     this.piece = null
+  }
+
+  /**
+   * Another scan of the part where it was placed on the mesh, in the scan's
+   * frame (its vertices carried there), or null to take it away: orange, so
+   * what it adds and where it laps over the mesh both show before it is
+   * merged.
+   */
+  setOtherScan(mesh: { positions: Float32Array; indices: Uint32Array } | null): void {
+    this.disposeOther()
+    if (mesh) {
+      const theme = this.host.theme()
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3))
+      geometry.setIndex(new THREE.BufferAttribute(mesh.indices, 1))
+      geometry.computeVertexNormals()
+      geometry.computeBoundingSphere()
+      const material = new THREE.MeshStandardMaterial({ color: OTHER_SCAN_COLOR, side: THREE.DoubleSide })
+      applyFinish(material, theme)
+      this.otherMesh = new THREE.Mesh(geometry, material)
+      this.host.partGroup.add(this.otherMesh)
+    }
+    this.host.invalidate()
+  }
+
+  private disposeOther(): void {
+    if (!this.otherMesh) return
+    this.otherMesh.geometry.dispose()
+    ;(this.otherMesh.material as THREE.Material).dispose()
+    this.host.partGroup.remove(this.otherMesh)
+    this.otherMesh = null
   }
 
   private disposeReduced(): void {

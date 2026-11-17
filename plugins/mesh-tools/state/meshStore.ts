@@ -32,12 +32,14 @@ import { defaultWrapGap, type WrapEdges, type WrapReport } from '../core/wrap'
 
 export type { CopyDeviationStats, MirrorMode }
 import type { SectionRef } from '../../../src/core/section/frame'
+import type { Rigid } from '../../../src/core/deviation/rigid'
+import type { OverlapSource } from '../../../src/core/deviation/overlap'
 import type { PieceCount } from '../core/protocol'
 import { fmtLen, fmtVol, type DisplayUnits } from '../../../src/core/units'
 import { typedLen } from '../ui/meshFormat'
 
 /** The tool in hand. */
-export type MeshTool = 'reduce' | 'islands' | 'delete' | 'flip' | 'cut' | 'mirror' | 'holes' | 'smooth' | 'densify' | 'offset' | 'boolean' | 'trim' | 'shell' | 'wrap'
+export type MeshTool = 'reduce' | 'islands' | 'delete' | 'flip' | 'cut' | 'mirror' | 'holes' | 'smooth' | 'densify' | 'offset' | 'boolean' | 'trim' | 'shell' | 'wrap' | 'merge'
 
 /** What the viewport shows of a reduction: the reduced mesh with its
  *  triangles drawn, the scan painted with how far the reduced mesh strays
@@ -107,6 +109,10 @@ export type ScanEdit =
   /** The triangles cut until no edge was longer than maxEdge, mm; the
    *  vertices it added and the triangles there are now. */
   | { kind: 'densify'; maxEdge: number; added: number; triangles: number }
+  /** Another scan of the part merged in, by its file's name: its triangles
+   *  added, those left out where it doubled the mesh, and how it lay on it
+   *  — the share of it that overlapped, and the residual there, mm. */
+  | { kind: 'merge'; name: string; added: number; doubled: number; overlap: number; rms: number }
   | {
       kind: 'boolean'
       op: BooleanOp
@@ -262,6 +268,36 @@ export type WrapView = 'wrap' | 'inside' | 'scan'
 /** The wrap on hand, as it was made: the worker's report, and the volume of
  *  the mesh it was made of where that is closed. The wrap itself lives in
  *  the scene and the session. */
+/** Another scan of the part, held beside the mesh to merge into it. */
+export interface OtherScan {
+  /** Its file's name. */
+  name: string
+  vertices: number
+  triangles: number
+  /** Where it lies on the mesh, once placed (src/core/deviation/overlap):
+   *  null until then, and again once the mesh has moved under it. */
+  placed: OtherPlacement | null
+}
+
+export interface OtherPlacement {
+  /** Carries the other scan's coordinates into the mesh's. */
+  transform: Rigid
+  /** auto: found by the search; frame: its file's own frame was right
+   *  already; points: from picked pairs. */
+  source: OverlapSource
+  /** The share of it that lies on the mesh, 0–1, and the residual there, mm. */
+  overlap: number
+  rms: number
+  /** How close a point had to come to count as lying on the mesh, mm —
+   *  what Merge leaves out within. */
+  gate: number
+  /** Another placement fitted nearly as well: the part may sit either way. */
+  ambiguous: boolean
+  /** The pose the scan stood in when it was placed, as text: placed on a
+   *  scan since moved, it is placed again before it is merged. */
+  frame: string
+}
+
 export interface WrapMade {
   report: WrapReport
   volumeBefore: number | null
@@ -452,6 +488,17 @@ interface MeshState {
    *  looked at: a hint that it needs growing. */
   wrapOpen: number | null
 
+  // ---- Merge another scan -------------------------------------------------------
+  /** Another scan of the part, held beside the mesh to be placed on it and
+   *  merged into it — null with none (core/merge). */
+  other: OtherScan | null
+  otherStatus: MeshStatus
+  /** What placing it said, while placing or after it failed. */
+  otherMessage: string | null
+  /** Leave out the other scan's triangles that only scan again what the mesh
+   *  has, so the surface is not there twice. */
+  mergeDrop: boolean
+
   /** What has been done to the scan in use since it was opened, oldest
    *  first — edits taken into use with Use for analysis. */
   edits: ScanEdit[]
@@ -560,6 +607,10 @@ interface MeshState {
    *  away. */
   dropWrap: () => void
   setWrapOpen: (open: number | null) => void
+  setOther: (other: OtherScan | null) => void
+  otherBegin: (message: string) => void
+  otherFail: (message: string) => void
+  setMergeDrop: (drop: boolean) => void
   /** Size the settings to a part just loaded, where the user has not said
    *  what they should be — by its size, and how fine its mesh is. */
   suggestForPart: (bboxDiagonal: number, edgeLength?: number) => void
@@ -584,6 +635,9 @@ const CLEARED = {
   wrapMessage: null,
   wrapMade: null,
   wrapOpen: null,
+  other: null,
+  otherStatus: 'idle' as MeshStatus,
+  otherMessage: null,
   trimBreak: null,
   trimBreakError: null,
   trimStatus: 'idle' as MeshStatus,
@@ -658,6 +712,7 @@ export const useMeshTools = create<MeshState>()((set) => ({
   wrapGapAuto: true,
   wrapGrow: 0,
   wrapEdges: 'sharp',
+  mergeDrop: true,
   wrapVersion: 0,
   wrapView: 'wrap',
 
@@ -841,6 +896,14 @@ export const useMeshTools = create<MeshState>()((set) => ({
 
   setWrapOpen: (wrapOpen) => set({ wrapOpen }),
 
+  setOther: (other) => set({ other, otherStatus: other ? 'ready' : 'idle', otherMessage: null }),
+
+  otherBegin: (otherMessage) => set({ otherStatus: 'running', otherMessage }),
+
+  otherFail: (otherMessage) => set((s) => ({ otherStatus: s.other ? 'ready' : 'idle', otherMessage })),
+
+  setMergeDrop: (mergeDrop) => set({ mergeDrop }),
+
   suggestForPart: (bboxDiagonal, edgeLength) =>
     set((s) => ({
       ...(s.toleranceAuto ? { tolerance: defaultTolerance(bboxDiagonal) } : {}),
@@ -950,6 +1013,8 @@ export function scanEditText(e: ScanEdit, units: DisplayUnits = 'mm'): string {
         : `Thickened ${len(e.thickness)} ${e.side === 'out' ? 'outward' : e.side === 'both' ? 'to both sides' : 'inward'}`
     case 'reduce':
       return `Reduced to within ${e.held ? len(e.tolerance) : fmtLen(e.p999, units, 3)}`
+    case 'merge':
+      return `Merged ${e.name}`
     case 'wrap':
       return `Wrapped, gaps under ${len(e.gap)} closed${e.grow > 0 ? `, grown ${len(e.grow)}` : ''}`
   }
@@ -982,6 +1047,8 @@ export function scanEditFigure(e: ScanEdit, units: DisplayUnits = 'mm'): string 
       return e.mode === 'hollow' && e.volume !== undefined ? `−${fmtVol(e.volume, units, 1)}` : `+${count(e.triangles)} △`
     case 'reduce':
       return `−${count(e.triangles)} △`
+    case 'merge':
+      return `+${count(e.added)} △`
     case 'wrap':
       return `${count(e.triangles)} △`
   }
