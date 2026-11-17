@@ -605,8 +605,8 @@ function handle(msg: Exclude<WorkerRequest, { type: 'align-abort' }>): void {
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(msg.positions, 3))
     geometry.setIndex(new THREE.BufferAttribute(msg.indices, 1))
-    const { roots, indirectBuffer } = MeshBVH.serialize(new MeshBVH(geometry, { indirect: true } as MeshBVHOptions), { cloneBuffers: false }) as unknown as SerializedTree
-    post({ type: 'bounds-tree-ok', requestId: msg.requestId, tree: { roots, indirectBuffer } }, [...roots, indirectBuffer.buffer as ArrayBuffer])
+    const { version, roots, indirectBuffer } = MeshBVH.serialize(new MeshBVH(geometry, { indirect: true } as MeshBVHOptions), { cloneBuffers: false }) as unknown as SerializedTree
+    post({ type: 'bounds-tree-ok', requestId: msg.requestId, tree: { version, roots, indirectBuffer } }, [...roots, indirectBuffer.buffer as ArrayBuffer])
     return
   }
 

@@ -393,14 +393,17 @@ export type WorkerResponse =
   | { type: 'plugin-ok'; requestId: number; result: unknown }
   | { type: 'error'; requestId: number; message: string }
 
-/** A bounds tree as it crosses between threads: its nodes, and the order it
- *  keeps the triangles in. Indirect — the tree sorts that list of triangle
+/** A bounds tree as it crosses between threads: its nodes, the order it
+ *  keeps the triangles in, and the layout version of those nodes. Indirect — the tree sorts that list of triangle
  *  numbers and never the index it was built over — so it is laid back over
  *  the render thread's geometry as it stands, and the index already drawn
  *  and read by triangle keeps every triangle where it was. See three-mesh-bvh
  *  MeshBVH.serialize; the index it would carry is left out, being the render
- *  thread's own. */
+ *  thread's own. The version goes with the nodes: three-mesh-bvh takes a tree
+ *  without one for the older layout and rewrites its nodes to match, which
+ *  spoils a tree laid out the current way. */
 export interface SerializedTree {
+  version: number
   roots: ArrayBuffer[]
   indirectBuffer: Uint32Array | Uint16Array
 }

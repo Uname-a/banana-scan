@@ -108,7 +108,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     } else {
       if (sp + 2u > 64u) { bestFace = 0xffffffffu; break; }
       let l = n + 8u;
-      let r = nodes[n + 6u];
+      // Its right child's distance on, in nodes of eight words each.
+      let r = n + nodes[n + 6u] * 8u;
       let dl = boxDist2(l, p);
       let dr = boxDist2(r, p);
       // The nearer child goes on top, to be opened first.
