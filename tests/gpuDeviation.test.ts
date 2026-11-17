@@ -43,7 +43,7 @@ function shaderNearestFaces(surface: NominalSurface, points: Float32Array): Int3
           if (d < best) { best = d; bestFace = t }
         }
       } else {
-        const l = node + 8, r = nodes[node + 6]
+        const l = node + 8, r = node + nodes[node + 6] * 8
         const dl = box(l, x, y, z), dr = box(r, x, y, z)
         const [far, dFar, near, dNear] = dl < dr ? [r, dr, l, dl] : [l, dl, r, dr]
         if (dFar < best) stack.push(far)
