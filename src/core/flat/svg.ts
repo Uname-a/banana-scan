@@ -131,7 +131,7 @@ export function buildFlatSvg(r: FlatDrawingInput): string {
     `  <desc>${esc(
       `${r.scaleNote}. One unit is one ${r.unit === 'mm' ? 'millimetre' : 'image pixel'}; ` +
         `y runs down and the origin is the top-left corner of the sheet as shown${describeRoll(r.alignDir, r.turns, r.mirror)}. ` +
-        `Layers: edges (${r.edgePieces ? 'the outline as lines, arcs and circles' : 'the detected edge chains'}), elements (the fitted geometry), labels (names, readings and notes).`,
+        `Layers: edges (${r.edgePieces ? 'the outline as lines, arcs and circles' : (r.edgesNote ?? 'the detected edge chains')}), elements (the fitted geometry), labels (names, readings and notes).`,
     )}</desc>`,
   )
 

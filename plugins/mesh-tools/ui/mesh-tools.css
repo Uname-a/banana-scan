@@ -41,6 +41,21 @@
   color: var(--faint);
 }
 
+/* Unroll / flatten's pattern drawn small, the outline filled and the holes
+   cut out of it. */
+.pattern-preview {
+  display: block;
+  width: 100%;
+  height: 150px;
+  margin-bottom: 8px;
+}
+
+.pattern-preview path {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1.2px;
+}
+
 /* Boolean's three operations side by side, across the panel. */
 .moderow.boolean-ops,
 .moderow.shell-sides {

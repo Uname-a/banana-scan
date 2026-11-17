@@ -18,6 +18,7 @@ import {
   type MeshTool,
 } from '../state/meshStore'
 import { useStore } from '../../../src/state/store'
+import { usePattern } from '../state/patternStore'
 import { useUnits } from '../../../src/app/useUnits'
 import { Icon } from '../../../src/ui/icons'
 import { MeshIcon } from './meshIcons'
@@ -41,6 +42,7 @@ import { OffsetTool } from './tools/OffsetTool'
 import { ShellTool } from './tools/ShellTool'
 import { WrapTool } from './tools/WrapTool'
 import { MergeTool } from './tools/MergeTool'
+import { PatternTool } from './tools/PatternTool'
 import type { MeshFormat } from '../../../src/core/exportMesh'
 
 const TOOLS: { id: MeshTool; icon: ReactNode; label: string; title: string }[] = [
@@ -134,6 +136,12 @@ const TOOLS: { id: MeshTool; icon: ReactNode; label: string; title: string }[] =
     label: 'Wrap',
     title: 'One closed skin round the part — everything inside dropped, every opening narrower than a gap you set bridged — for an assembly in one file, a part full of channels, a cracked scan',
   },
+  {
+    id: 'pattern',
+    icon: <MeshIcon name="unrollFlat" />,
+    label: 'Unroll/flatten',
+    title: 'A flat pattern of the scan, true to size, as a DXF or an SVG — a cylinder or cone unrolled by the element fitted to it, or a bent sheet flattened to its blank',
+  },
 ]
 
 export function MeshPanel({
@@ -167,6 +175,8 @@ export function MeshPanel({
   onExportEdited,
   onUseEdited,
   onDiscardEdited,
+  onMakePattern,
+  onExportPattern,
 }: {
   onOpenScan: (file: File) => void
   onReduce: () => void
@@ -206,13 +216,17 @@ export function MeshPanel({
   /** Take the edited copy into use for every workspace, or throw it away. */
   onUseEdited: () => void
   onDiscardEdited: () => void
+  /** Unroll or flatten as Unroll / flatten says, and save the pattern. */
+  onMakePattern: () => void
+  onExportPattern: (format: 'dxf' | 'svg') => void
 }) {
   const scanName = useStore((s) => s.fileName)
   const scanTriangles = useStore((s) => s.triangleCount)
   const scanBusy = useStore((s) => s.busy)
   const tool = useMeshTools((s) => s.tool)
   const setTool = useMeshTools((s) => s.setTool)
-  const running = useMeshTools((s) => s.status === 'running' || s.trimStatus === 'running' || s.wrapStatus === 'running' || s.editing)
+  const patternRunning = usePattern((s) => s.running)
+  const running = useMeshTools((s) => s.status === 'running' || s.trimStatus === 'running' || s.wrapStatus === 'running' || s.editing) || patternRunning
   const edits = useMeshTools((s) => s.edits)
   const units = useUnits()
 
@@ -236,7 +250,8 @@ export function MeshPanel({
               goes on measuring the scan as it was until <b>Use for analysis</b> takes the copy into
               use. <b>Reduce mesh</b> makes a light mesh beside it — of the copy, when there is one —
               which <b>Apply</b> makes the edited copy, <b>Wrap</b> a closed skin round it the same way,
-              and <b>Trim to scan</b> a piece cut to fit its break.
+              <b>Trim to scan</b> a piece cut to fit its break, and <b>Unroll/flatten</b> a flat
+              pattern of it.
             </p>
           </InfoDot>
         </div>
@@ -314,6 +329,8 @@ export function MeshPanel({
         <ShellTool ready={Boolean(scanName)} busy={busy} onShell={onShell} />
       ) : tool === 'merge' ? (
         <MergeTool ready={Boolean(scanName)} busy={busy} onOpen={onOpenOther} onPlace={onPlaceOther} onMerge={onMergeOther} onClose={onCloseOther} />
+      ) : tool === 'pattern' ? (
+        <PatternTool ready={Boolean(scanName)} busy={busy} onMake={onMakePattern} onExport={onExportPattern} onClear={onClearMarking} />
       ) : tool === 'wrap' ? (
         <WrapTool ready={Boolean(scanName)} busy={busy} onWrap={onWrap} onCancel={onCancelWrap} onApply={onApplyWrap} onDiscard={onDiscardWrap} />
       ) : (

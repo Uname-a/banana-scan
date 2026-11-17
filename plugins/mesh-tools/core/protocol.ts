@@ -22,6 +22,8 @@ import type { MergeReport } from './merge'
 import type { Rigid } from '../../../src/core/deviation/rigid'
 import type { PointPair } from '../../../src/core/deviation/align'
 import type { OverlapResult } from '../../../src/core/deviation/overlap'
+import type { UnrollReport, UnrollSurface } from './unroll'
+import type { FlattenReport } from './flatten'
 
 /** The plugin's id, which its worker part answers to. */
 export const MESH_TOOLS = 'mesh-tools'
@@ -143,6 +145,14 @@ export interface MeshFigures extends Closedness {
   volume: number | null
 }
 
+/** A flat pattern as the worker hands it back: its loops (core/flatPattern's
+ *  FlatPattern) and what laying it out found. */
+export interface PatternResult<R> {
+  points: Float64Array
+  offsets: Uint32Array
+  report: R
+}
+
 /** Each operation's request and its answer. */
 export interface MeshToolsOps {
   /** The mesh reduced to a light one for CAD, held within a tolerance of it
@@ -201,4 +211,11 @@ export interface MeshToolsOps {
   'other-triangles': { payload: Record<string, never>; result: { positions: Float32Array; indices: Uint32Array } }
   /** The other scan let go. */
   'other-clear': { payload: Record<string, never>; result: null }
+  /** The region on a cylinder or cone laid out flat by its geometry
+   *  (core/unroll) — `vertices`, or with null every vertex within `band` of
+   *  the surface and facing off it. Nothing changes. */
+  unroll: { payload: { surface: UnrollSurface; vertices: Uint32Array | null; band: number; offset: number }; result: PatternResult<UnrollReport> }
+  /** The region flattened with the least distortion (core/flatten).
+   *  Nothing changes. */
+  flatten: { payload: { vertices: Uint32Array; iterations?: number }; result: PatternResult<FlattenReport> }
 }

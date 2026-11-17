@@ -10,6 +10,20 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Unroll / flatten** (Mesh Tools, 2026-11-17). A flat pattern of a
+  surface of the scan, true to size, to cut it from sheet: drawn in the
+  panel and saved as a DXF or an SVG in millimetres, the outline and the
+  holes in it as closed polylines. **Unroll** lays a cylinder or a cone out
+  by the element fitted to it — the arc round the axis across, the height
+  along it up, a cone as its sector about the apex — each point taken at
+  the fitted surface so the scan's scatter does not stretch it, and an
+  offset for a sheet's neutral fibre; a whole tube is cut along a seam.
+  **Flatten** lays a marked sheet — a bent bracket, a formed panel — out
+  flat with the least distortion (a conformal layout refined as rigid as
+  possible) and says how far it had to stretch the surface, at most and on
+  average: a fraction of a per cent for a sheet bent from flat. The agent's
+  commands are `mesh.unroll`, `mesh.flatten` and `mesh.export_pattern`,
+  and the guide `flat-patterns` says how to use them.
 - **Curvature shading** (2026-11-17). Under the model in the Measure
   panel: the scan coloured by how it bends — red convex, pale flat, blue
   concave, sharp edges darker — read off a quadric fitted round every

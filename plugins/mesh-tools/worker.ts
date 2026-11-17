@@ -32,6 +32,8 @@ import { mergeScan, type OtherScan } from './core/merge'
 import { overlapAuto, overlapFromPairs } from '../../src/core/deviation/overlap'
 import { MESH_TOOLS, type MeshEditReport, type MeshToolsOps, type TrimBody } from './core/protocol'
 import { extentOf } from '../../src/core/geometry/bounds'
+import { surfaceRegion, unroll } from './core/unroll'
+import { flatten } from './core/flatten'
 import { tetraVolume6 } from '../../src/core/geometry/centroid'
 
 /** The copy of the scan the workspace edits — null until its first edit,
@@ -263,6 +265,22 @@ const ops: { [K in keyof MeshToolsOps]: (payload: Payload<K>, ctx: WorkerContext
     const g = subjectOf(ctx)
     const vertices = selectVertices(g.positions, g.normals, g.vertexCount, region)
     return { result: { vertices, vertexCount: g.vertexCount }, transfer: [vertices.buffer] }
+  },
+
+  unroll({ surface, vertices, band, offset }, ctx) {
+    const g = subjectOf(ctx)
+    ctx.progress('Unrolling…')
+    const region = vertices ?? surfaceRegion(g.positions, g.normals, g.vertexCount, surface, band)
+    if (region.length === 0) throw new Error(`No surface of the mesh lies on the ${surface.kind} within the band, facing off it — mark the region, or widen the band.`)
+    const { pattern, report } = unroll(g.positions, g.indices, g.vertexCount, region, surface, offset)
+    return { result: { points: pattern.points, offsets: pattern.offsets, report }, transfer: [pattern.points.buffer, pattern.offsets.buffer] }
+  },
+
+  flatten({ vertices, iterations }, ctx) {
+    const g = subjectOf(ctx)
+    ctx.progress('Flattening…')
+    const { pattern, report } = flatten(g.positions, g.indices, g.vertexCount, vertices, { iterations }, (round) => ctx.progress(`Flattening — round ${round}…`))
+    return { result: { points: pattern.points, offsets: pattern.offsets, report }, transfer: [pattern.points.buffer, pattern.offsets.buffer] }
   },
 
   'set-edited'({ staged }, ctx) {

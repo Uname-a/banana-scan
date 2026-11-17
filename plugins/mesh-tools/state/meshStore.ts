@@ -39,7 +39,23 @@ import { fmtLen, fmtVol, type DisplayUnits } from '../../../src/core/units'
 import { typedLen } from '../ui/meshFormat'
 
 /** The tool in hand. */
-export type MeshTool = 'reduce' | 'islands' | 'delete' | 'flip' | 'cut' | 'mirror' | 'holes' | 'smooth' | 'densify' | 'offset' | 'boolean' | 'trim' | 'shell' | 'wrap' | 'merge'
+export type MeshTool =
+  | 'reduce'
+  | 'islands'
+  | 'delete'
+  | 'flip'
+  | 'cut'
+  | 'mirror'
+  | 'holes'
+  | 'smooth'
+  | 'densify'
+  | 'offset'
+  | 'boolean'
+  | 'trim'
+  | 'shell'
+  | 'wrap'
+  | 'merge'
+  | 'pattern'
 
 /** What the viewport shows of a reduction: the reduced mesh with its
  *  triangles drawn, the scan painted with how far the reduced mesh strays
