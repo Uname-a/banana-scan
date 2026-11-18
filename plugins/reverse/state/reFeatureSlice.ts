@@ -231,7 +231,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
           draft = { kind: 'thicken', ...head, sheet: f.sheet, thickness: f.thickness, side: f.side, op: f.op }
           break
         case 'wrap':
-          draft = { kind: 'wrap', ...head, sketchId: f.sketchId, regions: [...f.regions], ...(f.regionPick ? { regionPick: f.regionPick } : {}), surface: f.surface, depth: f.depth, flip: Boolean(f.flip), op: f.op, ...(f.exprs ? { exprs: f.exprs } : {}) }
+          draft = { kind: 'wrap', ...head, sketchId: f.sketchId, regions: [...f.regions], ...(f.regionPick ? { regionPick: f.regionPick } : {}), surface: f.region ? null : f.surface, ...(f.region ? { region: f.region } : {}), ...(f.maxStretchPct !== undefined ? { maxStretchPct: f.maxStretchPct } : {}), depth: f.depth, flip: Boolean(f.flip), op: f.op, ...(f.exprs ? { exprs: f.exprs } : {}) }
           break
         case 'pattern':
           draft = { kind: 'pattern', ...head, body: f.body, mode: f.mode, axis: f.axis, count: f.count, step: f.step, axis2: f.axis2 ?? null, count2: f.count2 ?? 2, step2: f.step2 ?? 10 }
@@ -328,6 +328,12 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
   addToRegion: (vertices, remove) =>
     set((s) => {
       const d = s.featureDraft
+      if (d?.kind === 'wrap' && d.region) {
+        const gone = remove ? new Set(vertices) : null
+        const have = new Set(d.region)
+        const region = gone ? d.region.filter((v) => !gone.has(v)) : Uint32Array.from([...d.region, ...Array.from(vertices).filter((v) => !have.has(v))])
+        return { featureDraft: { ...d, region } }
+      }
       if (!d || d.kind !== 'surface') return {}
       if (remove) {
         const gone = new Set(vertices)
@@ -343,7 +349,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
       return { featureDraft: { ...unboxed(d), region } }
     }),
   setRegion: (region) =>
-    set((s) => (s.featureDraft?.kind === 'surface' ? { featureDraft: { ...unboxed(s.featureDraft), region } } : {})),
+    set((s) => (s.featureDraft?.kind === 'surface' ? { featureDraft: { ...unboxed(s.featureDraft), region } } : s.featureDraft?.kind === 'wrap' && s.featureDraft.region ? { featureDraft: { ...s.featureDraft, region } } : {})),
   toggleDraftFace: (bodyId, face, group) =>
     set((s) => {
       const d = s.featureDraft

@@ -43,7 +43,7 @@ import { colormapById } from '../../../src/core/field/colormap'
 import { usePrefs } from '../../../src/state/prefsStore'
 import { fmtLen, toDisplay, unitWord } from '../../../src/core/units'
 import { useRePrefs } from '../state/rePrefs'
-import { bodyColor, coordinatePlaneShown, featureOfDraft, gripFieldValue, historyEditOf, reEditorOpen, selectionItems, sketchesUsedBy, snapDraftOf, useReverse, type BodyPick } from '../state/reStore'
+import { bodyColor, coordinatePlaneShown, draftRegion, featureOfDraft, gripFieldValue, historyEditOf, reEditorOpen, selectionItems, sketchesUsedBy, snapDraftOf, useReverse, type BodyPick } from '../state/reStore'
 import type { NetworkData } from '../state/reTypes'
 import { useShell } from '../../../src/state/shellStore'
 import { useStore } from '../../../src/state/store'
@@ -1113,8 +1113,8 @@ export function useReverseWorkspace({
   // changed it (a flood, Clear, a reopened feature) and comes back from
   // the scene when the tools did (App's paint change); `regionShown`
   // tells the two apart so neither echoes the other.
-  const surfaceRegion = featureDraft?.kind === 'surface' ? featureDraft.region : null
-  const surfaceOpen = featureDraft?.kind === 'surface'
+  const surfaceRegion = draftRegion(featureDraft)?.region ?? null
+  const surfaceOpen = draftRegion(featureDraft) !== null
   useEffect(() => {
     const scene = sceneRef.current
     if (!scene) return

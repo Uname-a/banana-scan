@@ -20,7 +20,7 @@ import { planMoves, type SnapPlan } from '../core/snapEdit'
 import { threadProblem } from '../core/thread'
 import { cloneData, networkReady } from './reNetworkDraft'
 import type { ReState } from './reStore'
-import type { BodyInfo, DraftFace, ExtrudeDraft, FeatureDraft, RevolveDraft } from './reTypes'
+import { type BodyInfo, DEFAULT_FLOOD_DEG, type DraftFace, type ExtrudeDraft, type FeatureDraft, type RevolveDraft } from './reTypes'
 
 /** Whether the workspace has an editor open — the row keys stand down. */
 export function reEditorOpen(s: Pick<ReState, 'sketchDraft' | 'extrudeDraft' | 'revolveDraft' | 'featureDraft'>): boolean {
@@ -75,7 +75,7 @@ export function featureDraftReady(d: FeatureDraft): boolean {
     case 'thicken':
       return d.sheet !== null && d.thickness > 0
     case 'wrap':
-      return d.sketchId !== null && d.regions.length > 0 && d.surface !== null && d.depth > 0
+      return d.sketchId !== null && d.regions.length > 0 && (d.surface !== null || (d.region?.length ?? 0) > 0) && d.depth > 0
     case 'loft':
       return d.sketches.length >= 2
     case 'sweep':
@@ -243,7 +243,7 @@ export function featureOfDraft(d: FeatureDraft, id: number, name: string): Featu
     case 'thicken':
       return { id, kind: 'thicken', name, sheet: d.sheet!, thickness: d.thickness, side: d.side, op: d.op, visible: true }
     case 'wrap':
-      return { id, kind: 'wrap', name, sketchId: d.sketchId!, regions: [...d.regions], ...(d.regionPick ? { regionPick: d.regionPick } : {}), surface: d.surface!, depth: d.depth, ...(d.flip ? { flip: true } : {}), op: d.op, ...(d.exprs ? { exprs: d.exprs } : {}), visible: true }
+      return { id, kind: 'wrap', name, sketchId: d.sketchId!, regions: [...d.regions], ...(d.regionPick ? { regionPick: d.regionPick } : {}), surface: d.region?.length ? 0 : d.surface!, ...(d.region?.length ? { region: d.region } : {}), ...(d.maxStretchPct !== undefined ? { maxStretchPct: d.maxStretchPct } : {}), depth: d.depth, ...(d.flip ? { flip: true } : {}), op: d.op, ...(d.exprs ? { exprs: d.exprs } : {}), visible: true }
     case 'pattern':
       return { id, kind: 'pattern', name, body: d.body!, mode: d.mode, axis: d.axis!, count: d.count, step: d.step, ...(d.mode === 'linear' && d.axis2 && d.count2 >= 2 ? { axis2: d.axis2, count2: d.count2, step2: d.step2 } : {}), visible: true }
     case 'surface':
@@ -360,6 +360,15 @@ export type KeyUnit = 'mm' | '°'
 
 // units-ok: the id of the unit a length is held in, not a word on screen.
 const LENGTH_UNIT: KeyUnit = 'mm'
+
+/** The region of the scan a box gathers by clicks and the marking tools —
+ *  a Fit Surface's, or a Wrap's set onto a region — with how a click
+ *  floods and whether the tools mark it; null for any other box. */
+export function draftRegion(d: FeatureDraft | null | undefined): { region: Uint32Array; paint: boolean; floodDeg: number; featureId?: number } | null {
+  if (d?.kind === 'surface') return { region: d.region, paint: d.paint, floodDeg: d.floodDeg, featureId: d.featureId }
+  if (d?.kind === 'wrap' && d.region) return { region: d.region, paint: Boolean(d.paint), floodDeg: d.floodDeg ?? DEFAULT_FLOOD_DEG, featureId: d.featureId }
+  return null
+}
 
 /** The one number a feature's row reads and takes, or null for a feature
  *  that has none — a sketch, an extrude reaching to a plane. */

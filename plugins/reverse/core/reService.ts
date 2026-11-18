@@ -65,7 +65,10 @@ export type ReWorkerRequest =
    *  requests, in the frame the bodies are built in. Positions left out
    *  keep the scan already here; null puts it away. The vertex normals
    *  come along when there are no triangles to work them out from. */
-  | { type: 'scan'; requestId: number; positions: Float32Array | null | undefined; indices?: Uint32Array | null; normals?: Float32Array | null; transform: Rigid | null }
+  /** `triangles`: the scan's triangles where `indices` are not given — a
+   *  session with no viewport — for laying a region out (a wrap onto it),
+   *  not for the split's surface. */
+  | { type: 'scan'; requestId: number; positions: Float32Array | null | undefined; indices?: Uint32Array | null; normals?: Float32Array | null; triangles?: Uint32Array | null; transform: Rigid | null }
   /** The live map: the scan's signed distance to the last preview's solid,
    *  or to the given bodies of the last build, for the vertices within
    *  reach of it — see liveMap.ts. */
@@ -159,7 +162,7 @@ export function createReService(loadKernel: () => Promise<ReKernel>, loadManifol
   /** The scan, for the live map: the vertices as the viewport holds them —
    *  every datum alignment baked in — so a body built in that frame is
    *  compared in it too. */
-  let scan: { positions: Float32Array; indices: Uint32Array | null; normals: Float32Array | null; transform: Rigid | null } | null = null
+  let scan: { positions: Float32Array; indices: Uint32Array | null; normals: Float32Array | null; triangles: Uint32Array | null; transform: Rigid | null } | null = null
   /** The steps the kernel trapped on, by their keys (stepKeys), with what it
    *  said: built as failed — not played — until the step is changed, so a
    *  step that crashes the kernel crashes it once. */
@@ -197,7 +200,7 @@ export function createReService(loadKernel: () => Promise<ReKernel>, loadManifol
     parallel = null
     lastPreview = null
     const b = await load()
-    b.setScan(scan && scan.indices && !scan.transform ? surfaceOfMeshes([{ positions: scan.positions, normals: new Float32Array(0), indices: scan.indices }]) : null, scan && !scan.transform ? scan.positions : null)
+    b.setScan(scan && scan.indices && !scan.transform ? surfaceOfMeshes([{ positions: scan.positions, normals: new Float32Array(0), indices: scan.indices }]) : null, scan && !scan.transform ? scan.positions : null, scan && !scan.transform ? scan.triangles : null)
     return b
   }
 
@@ -326,13 +329,13 @@ export function createReService(loadKernel: () => Promise<ReKernel>, loadManifol
           // The normals the map and the comparison read the scan's side by:
           // the triangles' winding, as the scan was loaded.
           const normals = msg.normals ?? (msg.indices ? computeVertexNormals(msg.positions, msg.indices) : null)
-          scan = { positions: msg.positions, indices: msg.indices ?? null, normals, transform: msg.transform }
+          scan = { positions: msg.positions, indices: msg.indices ?? null, normals, triangles: msg.indices ?? msg.triangles ?? null, transform: msg.transform }
         } else if (scan) scan = { ...scan, transform: msg.transform }
         // The scan as a surface for a split's cell test: built once per scan,
         // the moment it is here — a few hundred milliseconds on a big scan,
         // spent in the worker. The scan is not watertight, so only the
         // distance is read, never the sign.
-        b.setScan(scan && scan.indices && !scan.transform ? surfaceOfMeshes([{ positions: scan.positions, normals: new Float32Array(0), indices: scan.indices }]) : null, scan && !scan.transform ? scan.positions : null)
+        b.setScan(scan && scan.indices && !scan.transform ? surfaceOfMeshes([{ positions: scan.positions, normals: new Float32Array(0), indices: scan.indices }]) : null, scan && !scan.transform ? scan.positions : null, scan && !scan.transform ? scan.triangles : null)
         return answer({ type: 'scan-ok', requestId: msg.requestId })
       }
       if (msg.type === 'map') {

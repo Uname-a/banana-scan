@@ -32,7 +32,7 @@ import { isFeatureSide } from '../core/preview'
 import { VIEW_MESH_MAP_SPACING } from '../core/compare'
 import { useReverseWorkspace } from './useReverseWorkspace'
 import { useSketchSceneSync } from './useSketchSceneSync'
-import { bodyColor, chainArcStart, reEditorOpen, snapFaceOf, useReverse } from '../state/reStore'
+import { bodyColor, chainArcStart, draftRegion, reEditorOpen, snapFaceOf, useReverse } from '../state/reStore'
 import { useRePrefs } from '../state/rePrefs'
 import type { TangentEdges } from '../core/edgeLines'
 import { installCompareInDeviation, reverseSession } from './reSession'
@@ -176,15 +176,15 @@ export function useReversePlugin(host: PluginHost): PluginRuntime {
     if (!store.fileName || store.busy || !clientRef.current) return
     // A Fit Surface gathers its region by clicks: the face under the click,
     // flooded by normal angle, into the region — or out of it with Ctrl.
-    if (re.featureDraft?.kind === 'surface') {
+    // A Wrap onto a region of the scan gathers it the same way.
+    const gathering = draftRegion(re.featureDraft)
+    if (gathering) {
       if (useMark.getState().gesture !== null) return
-      const d = re.featureDraft
       try {
-        const vertices = await clientRef.current.flood(hit.vertices[0], d.floodDeg)
-        const now = useReverse.getState().featureDraft
-        if (!now || now.kind !== 'surface') return
+        const vertices = await clientRef.current.flood(hit.vertices[0], gathering.floodDeg)
+        if (!draftRegion(useReverse.getState().featureDraft)) return
         useReverse.getState().addToRegion(vertices, hit.ctrlKey)
-        store.setStatus(`${vertices.length.toLocaleString('en-US')} points ${hit.ctrlKey ? 'taken out of' : 'added to'} the region — ${useReverse.getState().featureDraft?.kind === 'surface' ? (useReverse.getState().featureDraft as { region: Uint32Array }).region.length.toLocaleString('en-US') : ''} in all. Click more of the scan, or Create.`)
+        store.setStatus(`${vertices.length.toLocaleString('en-US')} points ${hit.ctrlKey ? 'taken out of' : 'added to'} the region — ${(draftRegion(useReverse.getState().featureDraft)?.region.length ?? 0).toLocaleString('en-US')} in all. Click more of the scan, or Create.`)
       } catch (e) {
         store.setError(`The flood failed: ${e instanceof Error ? e.message : String(e)}`)
       }
@@ -255,7 +255,7 @@ export function useReversePlugin(host: PluginHost): PluginRuntime {
   /** A Fit Surface's region, marked with the tools: the marking is the
    *  region, stroke by stroke. */
   const paintChange = (): boolean => {
-    if (useReverse.getState().featureDraft?.kind !== 'surface') return false
+    if (!draftRegion(useReverse.getState().featureDraft)) return false
     reverse.regionPainted(sceneRef.current?.paintedVertices() ?? new Uint32Array(0))
     return true
   }
@@ -424,10 +424,11 @@ export function useReversePlugin(host: PluginHost): PluginRuntime {
   // stay drawn.
   // Two selections, each a plain value: a store's selector that built an
   // object would be a new one every time it is asked.
-  const markColor = useReverse((s) =>
-    s.featureDraft?.kind === 'surface' ? bodyColor(s.featureDraft.featureId ?? s.nextFeatureId) : null,
-  )
-  const markGestures = useReverse((s) => s.featureDraft?.kind === 'surface' && Boolean(s.featureDraft.paint))
+  const markColor = useReverse((s) => {
+    const r = draftRegion(s.featureDraft)
+    return r ? bodyColor(r.featureId ?? s.nextFeatureId) : null
+  })
+  const markGestures = useReverse((s) => Boolean(draftRegion(s.featureDraft)?.paint))
   // The measured elements and sections, as the datums the model is built
   // against, behind a key of its own.
   const elementsShown = useReverse((s) => s.elementsShown)

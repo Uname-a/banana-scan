@@ -721,6 +721,13 @@ export async function resolveFits(s: ReverseSession, kind: string, input: Json, 
       await s.syncScan()
       return { input: { ...input, region, regionBox: asked.box ? asked : null }, fitted: {} }
     }
+    case 'wrap': {
+      // A wrap's region is laid out whole: every vertex in it, none thinned
+      // out — the layout runs over its triangles.
+      const region = await regionOf({ ...(input.region as Json), limit: Number.MAX_SAFE_INTEGER })
+      await s.syncScan()
+      return { input: { ...input, region }, fitted: {} }
+    }
   }
   return { input, fitted: {} }
 }

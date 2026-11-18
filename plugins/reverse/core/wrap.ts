@@ -33,6 +33,9 @@ export type WrapSurface =
   | { kind: 'plane'; center: Vec3; normal: Vec3 }
   | { kind: 'cylinder'; center: Vec3; axis: Vec3; radius: number }
   | { kind: 'cone'; center: Vec3; axis: Vec3; radius: number; halfAngle: number }
+  /** A free-form region of the scan, by its vertices: laid out flat by
+   *  flattening it (core/wrapRegion.ts), where the scan is — not here. */
+  | { kind: 'region'; region: Uint32Array }
 
 /** The kinds of element a sketch wraps onto. */
 export const WRAP_KINDS = ['cylinder', 'cone', 'plane'] as const
@@ -66,6 +69,9 @@ export interface Development {
   place(x: number, y: number, w?: number): { point: Vec3; normal: Vec3 } | null
   /** A point on (or off) the surface read back as x, y: the unroll. */
   develop(p: Vec3): Vec2
+  /** The step an outline is sampled at on it, mm, where the surface sets
+   *  its own (a region's mesh); else read off its curvature (wrapStep). */
+  step?: number
 }
 
 const unit = (v: Vec3, what: string): Vec3 => {
@@ -93,6 +99,7 @@ function rotationBetween(from: Vec3, to: Vec3): (v: Vec3) => Vec3 {
 export function developmentFor(surface: WrapSurface, sketch: { normal: Vec3 }, middle: Vec3): Development | string {
   const N = normalize(sketch.normal)
   if (!N) return 'The sketch’s plane has no normal.'
+  if (surface.kind === 'region') return 'A region of the scan is laid out where the scan is (regionDevelopment).'
   if (surface.kind === 'plane') {
     const n0 = normalize(surface.normal)
     if (!n0) return 'The plane has no normal.'
@@ -302,6 +309,7 @@ function densify(pts: readonly Vec3[], maxStep: number): Vec3[] {
 /** The step a surface is sampled at, mm along it. */
 export function wrapStep(surface: WrapSurface, reach: number): number {
   if (surface.kind === 'plane') return Infinity
+  if (surface.kind === 'region') return 0.5
   const r = surface.kind === 'cylinder' ? surface.radius : Math.max(1e-3, Math.min(surface.radius, reach))
   return Math.max(0.05, (r * WRAP_STEP_DEG * Math.PI) / 180)
 }
@@ -310,7 +318,7 @@ export function wrapStep(surface: WrapSurface, reach: number): number {
  *  sampled — or why one does not lie on the surface. */
 export function wrapProfiles(profiles: readonly Profile[], dev: Development): WrappedProfile[] | string {
   const reach = coneReach(profiles, dev)
-  const step = wrapStep(dev.surface, reach)
+  const step = dev.step ?? wrapStep(dev.surface, reach)
   const out: WrappedProfile[] = []
   for (const profile of profiles) {
     const loop = (pieces: readonly LoopPiece[]): WrappedLoop => ({
@@ -347,6 +355,7 @@ function coneReach(profiles: readonly Profile[], dev: Development): number {
 }
 
 function offSurfaceWords(s: WrapSurface): string {
+  if (s.kind === 'region') return 'The sketch reaches past the marked region — mark more of the surface round it, or move the sketch onto it.'
   if (s.kind === 'cylinder') return `The sketch is wider than half a turn round the cylinder either way from where it touches — ${round2(Math.PI * s.radius)} mm of arc each way at R${round2(s.radius)}. Move it, or wrap it in pieces.`
   if (s.kind === 'cone') return 'The sketch reaches past the cone’s apex, or further round it than half a turn either way from where it touches — move it onto the cone.'
   return 'The sketch does not lie on the plane.'
@@ -554,7 +563,7 @@ export function wrapFacts(profiles: readonly WrappedProfile[], dev: Development)
   let t0 = Infinity
   let t1 = -Infinity
   const perimeters: number[] = []
-  const c = dev.surface.kind === 'plane' ? null : dev.surface
+  const c = dev.surface.kind === 'cylinder' || dev.surface.kind === 'cone' ? dev.surface : null
   const a = c ? normalize(c.axis)! : null
   const r0 = a ? normalize(sub(dev.touch.normal, scale(a, dot(dev.touch.normal, a))))! : null
   const e1 = a && r0 ? cross(a, r0) : null
@@ -602,8 +611,8 @@ export interface WrapGeometry {
 }
 
 /** The development and the wrapped profiles of a step — or why not. */
-export function wrapOfGeometry(g: Pick<WrapGeometry, 'surface' | 'profiles' | 'normal' | 'middle'>): { dev: Development; wrapped: WrappedProfile[] } | string {
-  const dev = developmentFor(g.surface, { normal: g.normal }, g.middle)
+export function wrapOfGeometry(g: Pick<WrapGeometry, 'surface' | 'profiles' | 'normal' | 'middle'>, regionDev?: (surface: Extract<WrapSurface, { kind: 'region' }>, normal: Vec3, middle: Vec3) => Development | string): { dev: Development; wrapped: WrappedProfile[] } | string {
+  const dev = g.surface.kind === 'region' && regionDev ? regionDev(g.surface, g.normal, g.middle) : developmentFor(g.surface, { normal: g.normal }, g.middle)
   if (typeof dev === 'string') return dev
   const wrapped = wrapProfiles(g.profiles, dev)
   if (typeof wrapped === 'string') return wrapped
@@ -619,7 +628,7 @@ export function wrapDepthProblem(g: Pick<WrapGeometry, 'surface' | 'from' | 'to'
   for (const p of wrapped)
     for (const loop of [p.outer, ...p.holes])
       for (const piece of loop.pieces)
-        for (const f of piece.flat) if (!dev.place(f[0], f[1], lo)) return `The cut goes ${round3(-lo)} mm in, past the cone’s axis under the sketch — less depth, or the sketch further from the apex.`
+        for (const f of piece.flat) if (!dev.place(f[0], f[1], lo)) return g.surface.kind === 'cone' ? `The cut goes ${round3(-lo)} mm in, past the cone’s axis under the sketch — less depth, or the sketch further from the apex.` : `The cut goes ${round3(-lo)} mm in, past what the surface allows under the sketch — less depth.`
   return null
 }
 

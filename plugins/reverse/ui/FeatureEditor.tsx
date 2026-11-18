@@ -16,6 +16,7 @@ import { RefPicker } from '../../../src/ui/RefPicker'
 import { NameField } from '../../../src/ui/RefSelect'
 import { COINCIDENCE_MM, type Relation, relationsFor, relationWords, TILT_TOLERANCE_DEG } from '../core/autoConstrain'
 import { findRegions } from '../core/regions'
+import { WRAP_REGION_MAX_STRETCH_PCT } from '../core/wrapRegion'
 import { type AxisRef, type ChamferMode, constrainRefs, type SketchFeature, type SplitKeep, type SurfaceShape, type ThickenSide, type TrimTool } from '../core/features'
 import { INSERT_SIZES, insertHole, insertSize } from '../core/inserts'
 import { snapFitKind } from '../core/snapFace'
@@ -23,6 +24,7 @@ import { symmetryPlaneRef } from '../core/symmetryPlane'
 import { chamferRadius, faceAgainstThread, maxThreadOffset, minorDiameter, sizeForFace, sizeOf, THREAD_STANDARDS, threadDepth, threadDesignation, threadName, threadProblem, threadSizes, threadsPerInch, type ThreadStandard } from '../core/thread'
 import { describeEdgeIn, describeFaceIn } from '../core/topo'
 import { DEFAULT_SPLIT_TOLERANCE_MM } from '../state/reDrafts'
+import { DEFAULT_FLOOD_DEG } from '../state/reTypes'
 import { DEFAULT_WALL_MM, type FeatureDraft, type FeatureDraftKind, featureDraftReady, filletModeSwitch, historyEditOf, snapDraftOf, snapPlanOf, trimToleranceFor, useReverse } from '../state/reStore'
 import { AnalysisRow, BuildSays, ClearPicks, Num, OpFields, PreviewLine, StepFileKey, XyzField } from './featureFields'
 import { fileSize } from './featureReading'
@@ -44,6 +46,7 @@ export function FeatureEditor() {
   const results = useReverse((s) => s.results)
   const elements = useStore((s) => s.elements)
   const sections = useStore((s) => s.sections)
+  const fileName = useStore((s) => s.fileName)
   const len = useLength()
   const re = useReverse
   if (!d) return null
@@ -882,15 +885,49 @@ export function FeatureEditor() {
           )}
           <label className="field">
             <span>Onto</span>
-            <select data-test="wrap-surface" value={d.surface ?? ''} onChange={(e) => set({ surface: e.target.value === '' ? null : Number(e.target.value) })}>
-              <option value="">{surfaces.length === 0 ? 'Measure a cylinder, cone or plane first' : 'Select…'}</option>
+            <select
+              data-test="wrap-surface"
+              value={d.region ? 'region' : (d.surface ?? '')}
+              onChange={(e) =>
+                set(
+                  e.target.value === 'region'
+                    ? { surface: null, region: d.region ?? new Uint32Array(0), floodDeg: d.floodDeg ?? DEFAULT_FLOOD_DEG, paint: false }
+                    : { surface: e.target.value === '' ? null : Number(e.target.value), region: null, paint: false },
+                )
+              }
+            >
+              <option value="">{surfaces.length === 0 ? 'Measure a cylinder, cone or plane, or take a region' : 'Select…'}</option>
               {surfaces.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.name}
                 </option>
               ))}
+              {fileName && <option value="region">A region of the scan…</option>}
             </select>
           </label>
+          {d.region && (
+            <>
+              <div className="field">
+                <span>Region</span>
+                <span className="unitfield">
+                  <b data-test="wrap-region" style={{ fontSize: 12 }}>
+                    {d.region.length === 0 ? 'None — click the scan' : `${d.region.length.toLocaleString('en-US')} points`}
+                  </b>
+                  <button data-test="wrap-region-clear" disabled={d.region.length === 0} title="Start the region over" onClick={() => re.getState().setRegion(new Uint32Array(0))}>
+                    Clear
+                  </button>
+                </span>
+              </div>
+              <Num label="Flood angle" unit="°" testId="wrap-flood" value={d.floodDeg ?? DEFAULT_FLOOD_DEG} onCommit={(v) => set({ floodDeg: Math.min(89, Math.max(0.1, Math.abs(v))) })} hint="How far the normals may turn over one edge for a click's flood to cross it" />
+              <label className="checkrow">
+                <input type="checkbox" data-test="wrap-paint" checked={Boolean(d.paint)} onChange={(e) => set({ paint: e.target.checked })} />
+                <span>Mark with the tools</span>
+              </label>
+              {d.paint && <MarkTools escapeNote="Esc puts the tools away" showCount={false} onClear={() => re.getState().setRegion(new Uint32Array(0))} />}
+              <Num label="Most stretch" unit="%" testId="wrap-max-stretch" value={d.maxStretchPct ?? WRAP_REGION_MAX_STRETCH_PCT} onCommit={(v) => set({ maxStretchPct: Math.max(0.01, Math.abs(v)) })} hint="How far laying the region out flat may stretch a length under the sketch before the wrap is refused: the sketch's lengths on the scan are true to that" />
+              <p className="hint">Click the scan to take the face under the click into the region, Ctrl-click to take it out, or mark it with the tools. Take more than the sketch covers, one skin, bending gently: a sheet bent without stretching lays out exactly; a dome does not.</p>
+            </>
+          )}
           <Num label="Depth" testId="wrap-depth" slot="depth" value={d.depth} nominal="length" onCommit={(v) => set({ depth: Math.abs(v) })} hint="How far the wrapped regions stand out of the surface, or sink into it, along its normal" />
           <label className="checkrow">
             <input type="checkbox" data-test="wrap-flip" checked={d.flip} onChange={(e) => set({ flip: e.target.checked })} />
