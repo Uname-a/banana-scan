@@ -123,6 +123,10 @@ describe('reducing a scan', () => {
     expect(report.triangles).toBeLessThanOrEqual(Math.floor(free.triangles / 4))
     expect(report.held).toBe(false)
     expect(report.p999).toBeGreaterThan(0.02)
+    // The plain pass already needs more than the limit, and pins only keep
+    // more: no pinning passes, straight to the reduction to the limit.
+    expect(report.passes).toBe(2)
+    expect(report.pinned).toBe(0)
   })
 
   it('leaves a limit alone when the tolerance already needs fewer', () => {

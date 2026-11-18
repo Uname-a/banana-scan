@@ -21,7 +21,10 @@ import { pickedProfiles, sweepPath } from '../core/profiles'
 import { curveLength, curveOfCircle, curveOfPieces, curveOfPoints, PATH_PLANES_MAX, type PathCurve, type PathPlane, planesAlong, stationLengths, type StationsAsk } from '../core/pathPlanes'
 import { wrapSurfaceOf } from '../core/resolve'
 import { routePieces, type SweepRoute } from '../core/sweepRoute'
-import { placeFlat, polygonOf, profilesMiddle, wrapDepthProblem, wrapFacts, wrapOfGeometry, wrapStep } from '../core/wrap'
+import { placeFlat, polygonOf, profilesMiddle, wrapDepthProblem, wrapFacts, wrapOfGeometry, type WrapSurface, wrapStep } from '../core/wrap'
+import { layOutRegion, regionDevelopment, type RegionLayout, stretchProblem, stretchUnder, WRAP_REGION_MAX_STRETCH_PCT } from '../core/wrapRegion'
+import { regionOf } from './reSurfaceRegion'
+import { commandHost } from '../../../src/commands/host'
 import { ready, type Ref, regionKeys, regionPickOf, sketchNamed } from './reCommandCore'
 import { featureRef, regionsIn } from './reSchemas'
 
@@ -35,38 +38,70 @@ const elementRefIn = oneOf([int('The element’s id.'), str('The element’s nam
 /** The most points of a loop an answer lists, unless asked otherwise. */
 const WRAP_READ_POINTS = 120
 
-export const wrapRead: Command<{ sketchId: Ref; regions?: unknown; surface: Ref; depth?: number; op?: 'new' | 'join' | 'cut'; flip?: boolean; maxPoints?: number }> = {
+/** The scan's vertices and triangles as the mesh worker holds them — what a
+ *  region of it is laid out by here. */
+async function scanMesh(): Promise<{ positions: Float32Array; triangles: Uint32Array; count: number }> {
+  const s = useStore.getState()
+  if (!s.fileName) throw new CommandError('no_scan', 'A wrap onto a region is laid out on the scan, and none is open.')
+  const worker = commandHost().session.clientRef.current
+  if (!worker) throw new CommandError('unavailable', 'The mesh worker is not running.')
+  const all = await worker.query({ min: [-Infinity, -Infinity, -Infinity], max: [Infinity, Infinity, Infinity], limit: Math.max(1, s.vertexCount) })
+  const tri = await worker.scanIndices()
+  if (all.step !== 1 || tri.vertexCount !== all.vertices.length) throw new CommandError('failed', 'The scan’s vertices and triangles did not come back whole.')
+  return { positions: all.positions, triangles: tri.indices, count: tri.vertexCount }
+}
+
+export const wrapRead: Command<{ sketchId: Ref; regions?: unknown; surface?: Ref; region?: unknown; maxStretchPct?: number; depth?: number; op?: 'new' | 'join' | 'cut'; flip?: boolean; maxPoints?: number }> = {
   name: 'wrap_read',
   title: 'Read where a wrapped sketch lands',
   description:
-    'Where a sketch wrapped onto a measured cylinder, cone or plane lands, before any wrap feature is made — the same reading reverse.feature.add { kind: "wrap" } builds from. touch: the line it is rolled on from — a point on it, the surface’s outward normal there, across (x on the development, round the surface) and along (y: up the axis, or up a cone’s slant from its apex); tiltDeg: how far the sketch’s plane is turned from the plane touching there (0 for a sketch drawn tangent or parallel to it; the sketch is laid onto it rigidly about its middle). per profile: across and along, the box it takes on the development, mm; arcDeg, the arc round the axis it covers; perimeter, its outer loop’s length along the surface — the sketch’s own, lengths being kept; outline, its outer loop lifted onto the surface, [x, y, z] mm, thinned to maxPoints; inside, a point inside it on the surface. With depth (op, flip as the feature takes them), offsets says the offsets of the surface the solid lies between and problem why it would not build. Changes nothing.',
+    'Where a sketch wrapped onto a measured cylinder, cone or plane lands, before any wrap feature is made — the same reading reverse.feature.add { kind: "wrap" } builds from. touch: the line it is rolled on from — a point on it, the surface’s outward normal there, across (x on the development, round the surface) and along (y: up the axis, or up a cone’s slant from its apex); tiltDeg: how far the sketch’s plane is turned from the plane touching there (0 for a sketch drawn tangent or parallel to it; the sketch is laid onto it rigidly about its middle). per profile: across and along, the box it takes on the development, mm; arcDeg, the arc round the axis it covers; perimeter, its outer loop’s length along the surface — the sketch’s own, lengths being kept; outline, its outer loop lifted onto the surface, [x, y, z] mm, thinned to maxPoints; inside, a point inside it on the surface. With depth (op, flip as the feature takes them), offsets says the offsets of the surface the solid lies between and problem why it would not build. With region in place of surface — a free-form region of the scan, as the feature takes it — the region is laid out flat and stretch says how far that stretched the scan under the sketch: maxPct (and at, where), meanPct over its area, triangles under it, limitPct and, past it, problem; the sketch’s lengths on the scan are true to maxPct. Changes nothing.',
   input: obj(
     {
       sketchId: { ...featureRef('sketch'), description: 'The sketch, by id or name.' },
       regions: { ...regionsIn, description: 'As reverse.feature.add takes them: "all" (the default), "largest", keys or points inside them.' },
-      surface: { ...elementRefIn, description: 'The cylinder, cone or plane element, by id or name.' },
+      surface: { ...elementRefIn, description: 'The cylinder, cone or plane element, by id or name. Or region.' },
+      region: { description: 'In place of surface: a region of the scan — its vertices by number, { marked: true }, or { box, normal?, exclude? } — as reverse.feature.add { kind: "wrap" } takes it.' },
+      maxStretchPct: num('With region: the stretch past which the wrap is refused, per cent (2 by default).', { exclusiveMinimum: 0 }),
       depth: num('mm — to have the offsets and whether it builds.', { exclusiveMinimum: 0 }),
       op: enumOf(['new', 'join', 'cut']),
       flip: bool('As the feature’s flip.'),
       maxPoints: int(`Points per outline at most (${WRAP_READ_POINTS} by default).`, { minimum: 4, maximum: 2000 }),
     },
-    ['sketchId', 'surface'],
+    ['sketchId'],
   ),
   readOnly: true,
-  run: async ({ sketchId, regions, surface, depth, op = 'join', flip, maxPoints = WRAP_READ_POINTS }) => {
+  long: true,
+  run: async ({ sketchId, regions, surface, region, maxStretchPct = WRAP_REGION_MAX_STRETCH_PCT, depth, op = 'join', flip, maxPoints = WRAP_READ_POINTS }) => {
     const s = await ready()
     const sketch = sketchNamed(sketchId)
-    const e = findElement(surface)
-    const wrapOn = wrapSurfaceOf(e.id, s.resolveContext())
+    if ((surface === undefined) === (region === undefined || region === null)) invalid('Give surface — a measured cylinder, cone or plane — or region, a region of the scan; one of them.')
+    const e = surface !== undefined ? findElement(surface) : null
+    let layout: RegionLayout | null = null
+    let wrapOn: WrapSurface | string
+    if (e) wrapOn = wrapSurfaceOf(e.id, s.resolveContext())
+    else {
+      const vertices = Array.isArray(region) ? (region as number[]) : await regionOf({ ...(region as object), limit: Number.MAX_SAFE_INTEGER })
+      const mesh = await scanMesh()
+      const off = vertices.find((v) => !(v >= 0 && v < mesh.count))
+      if (off !== undefined) invalid(`region: the scan has ${mesh.count} vertices; ${off} is not one of them.`)
+      const laid = layOutRegion(mesh.positions, mesh.triangles, mesh.count, vertices)
+      if (typeof laid === 'string') invalid(`region: ${laid}`)
+      layout = laid as RegionLayout
+      wrapOn = { kind: 'region', region: Uint32Array.from(vertices) }
+    }
     if (typeof wrapOn === 'string') invalid(`surface: ${wrapOn}`)
     const pick = regions ?? 'all'
     const keys = regionKeys(s, sketch, pick)
     const profiles = pickedProfiles({ regions: keys, regionPick: regionPickOf(pick, keys) }, sketch, s.regionsOf)
     if (typeof profiles === 'string') invalid(profiles)
-    const surfaceOn = wrapOn as Exclude<typeof wrapOn, string>
-    const made = wrapOfGeometry({ surface: surfaceOn, profiles: profiles as Exclude<typeof profiles, string>, normal: sketch.frame.normal, middle: profilesMiddle(profiles as Exclude<typeof profiles, string>) })
+    const surfaceOn = wrapOn as WrapSurface
+    const laidOut = layout
+    const made = wrapOfGeometry({ surface: surfaceOn, profiles: profiles as Exclude<typeof profiles, string>, normal: sketch.frame.normal, middle: profilesMiddle(profiles as Exclude<typeof profiles, string>) }, laidOut ? (sf, n, m) => regionDevelopment(laidOut, sf, n, m) : undefined)
     if (typeof made === 'string') throw new CommandError('invalid_input', made)
     const { dev, wrapped } = made
+    const stretch = laidOut ? stretchUnder(laidOut, wrapped) : null
+    const stretchSaid = stretch ? stretchProblem(stretch, maxStretchPct) : null
     const offsets = depth !== undefined ? wrapOffsets({ depth, op, flip }) : null
     const problem = offsets ? wrapDepthProblem({ surface: surfaceOn, ...offsets }, wrapped, dev) : null
     const per = wrapped.map((p) => {
@@ -86,13 +121,19 @@ export const wrapRead: Command<{ sketchId: Ref; regions?: unknown; surface: Ref;
     const all = wrapFacts(wrapped, dev)
     return {
       sketch: { id: sketch.id, name: sketch.name },
-      surface: { id: e.id, name: e.name, ...surfaceOn, ...('center' in surfaceOn ? { center: p3(surfaceOn.center) } : {}) },
+      ...(e ? { surface: { id: e.id, name: e.name, ...surfaceOn, ...('center' in surfaceOn ? { center: p3(surfaceOn.center) } : {}) } } : {}),
+      ...(laidOut && stretch
+        ? {
+            region: { points: (surfaceOn as Extract<WrapSurface, { kind: 'region' }>).region.length, triangles: laidOut.patch.indices.length / 3, leftOut: laidOut.patch.leftOut, layout: { iterations: laidOut.iterations, converged: laidOut.converged } },
+            stretch: { maxPct: r4(stretch.maxPct), meanPct: r4(stretch.meanPct), ...(stretch.at ? { at: p3(stretch.at) } : {}), triangles: stretch.triangles, limitPct: maxStretchPct, ...(stretchSaid ? { problem: stretchSaid } : {}) },
+          }
+        : {}),
       touch: { point: p3(dev.touch.point), normal: p6(dev.touch.normal), across: p6(dev.touch.across), along: p6(dev.touch.along) },
       tiltDeg: r3(dev.tiltDeg),
       across: p3(all.across),
       along: p3(all.along),
       ...(all.arcDeg !== undefined ? { arcDeg: r3(all.arcDeg) } : {}),
-      sampledEveryMm: Number.isFinite(wrapStep(surfaceOn, Infinity)) ? r4(wrapStep(surfaceOn, Infinity)) : null,
+      sampledEveryMm: dev.step !== undefined ? r4(dev.step) : Number.isFinite(wrapStep(surfaceOn, Infinity)) ? r4(wrapStep(surfaceOn, Infinity)) : null,
       profiles: per,
       ...(offsets ? { offsets, ...(problem ? { problem } : {}) } : {}),
     }

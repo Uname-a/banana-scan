@@ -385,7 +385,7 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
               <SweepIcon />
               <span>Sweep</span>
             </button>
-            <button data-test="feature-wrap" disabled={!ready || sketches.length === 0 || !hasWrapSurface} title="Wrap a sketch onto a measured cylinder, cone or plane, its lengths kept along the surface, and stand it out of it or sink it in — lettering round a bottle, a logo on a cone. Draw the sketch on a plane tangent to the surface" onClick={() => re.getState().startFeature('wrap')}>
+            <button data-test="feature-wrap" disabled={!ready || sketches.length === 0 || (!hasWrapSurface && !fileName)} title="Wrap a sketch onto a measured cylinder, cone or plane, or a region of the scan, its lengths kept along the surface, and stand it out of it or sink it in — lettering round a bottle, a logo on a cone. Draw the sketch on a plane tangent to the surface" onClick={() => re.getState().startFeature('wrap')}>
               <Icon name="extrude" />
               <span>Wrap</span>
             </button>

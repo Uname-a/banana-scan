@@ -18,21 +18,24 @@ import { validateFolders, type BodyFolder } from '../core/bodyFolders'
 import { evaluateParameters, type Parameter } from '../core/parameters'
 import { useReverse, type BodyStyles } from '../state/reStore'
 
-/** A feature as the file holds it: a surface's region — a typed array in
- *  the store — as a plain list, the way an element's marked surface
+/** A feature as the file holds it: a surface's region and a wrap's — typed
+ *  arrays in the store — as plain lists, the way an element's marked surface
  *  travels; everything else is plain data already. A Move face saved
  *  before several faces could be picked holds its one `face`. */
 export type FeatureJson =
-  | Exclude<Feature, { kind: 'surface' }>
+  | Exclude<Feature, { kind: 'surface' | 'wrap' }>
   | (Omit<Extract<Feature, { kind: 'surface' }>, 'region'> & { region: number[] })
+  | (Omit<Extract<Feature, { kind: 'wrap' }>, 'region'> & { region?: number[] })
   | (Omit<MoveFaceFeature, 'faces'> & { face: FaceRef })
 
 export function featureToJson(f: Feature): FeatureJson {
-  return f.kind === 'surface' ? { ...f, region: Array.from(f.region) } : f
+  if (f.kind === 'wrap' && f.region) return { ...f, region: Array.from(f.region) }
+  return f.kind === 'surface' ? { ...f, region: Array.from(f.region) } : (f as FeatureJson)
 }
 
 function featureFromJson(f: FeatureJson): Feature {
   if (f.kind === 'surface') return { ...f, region: Uint32Array.from(f.region) }
+  if (f.kind === 'wrap') return { ...f, ...(f.region ? { region: Uint32Array.from(f.region) } : {}) } as Feature
   if (f.kind === 'moveFace' && 'face' in f) {
     const { face, ...rest } = f
     return { ...rest, faces: [face] }
@@ -106,6 +109,7 @@ export function validateFeatureJson(e: Record<string, unknown>): void {
   if (e.kind === 'wrap') {
     fields(e, 'sketchId surface depth', 'number', 'wrap')
     array(e.regions, 'wrap.regions')
+    if (e.region !== undefined) indices(e.region, 'wrap.region')
   }
   // The queries a feature's picks were given by, each with what it found,
   // and how an extrude's or a revolve's regions were asked for.

@@ -676,6 +676,16 @@ function handle(msg: Exclude<WorkerRequest, { type: 'align-abort' }>): void {
     return
   }
 
+  if (msg.type === 'scan-indices') {
+    if (!graph) {
+      post({ type: 'error', requestId: msg.requestId, message: 'No model loaded.' })
+      return
+    }
+    const indices = graph.indices.slice(0, graph.triangleCount * 3)
+    post({ type: 'scan-indices-ok', requestId: msg.requestId, indices, vertexCount: graph.vertexCount }, [indices.buffer])
+    return
+  }
+
   if (msg.type === 'query') {
     if (!graph) {
       post({ type: 'error', requestId: msg.requestId, message: 'No model loaded.' })

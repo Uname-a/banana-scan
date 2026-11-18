@@ -879,8 +879,18 @@ export interface WrapFeature extends FeatureFlags {
   /** The sketch's regions wrapped, by their keys — as an extrude picks. */
   regions: string[]
   regionPick?: RegionPick
-  /** The cylinder, cone or plane element wrapped onto. */
+  /** The cylinder, cone or plane element wrapped onto — or 0, where the
+   *  wrap is onto `region`. */
   surface: number
+  /** A free-form region of the scan wrapped onto in place of an element,
+   *  by its vertices: laid out flat by flattening it, the sketch carried
+   *  back through the layout (core/wrapRegion.ts), and stood on a sheet
+   *  fitted through it. */
+  region?: Uint32Array
+  /** How far the region's layout may stretch a length under the sketch,
+   *  per cent, before the wrap is refused (WRAP_REGION_MAX_STRETCH_PCT
+   *  when absent). */
+  maxStretchPct?: number
   /** Millimetres along the surface's normal. */
   depth: number
   /** Which way the depth goes: out of the surface for an emboss and in for

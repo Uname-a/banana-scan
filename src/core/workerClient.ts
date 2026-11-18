@@ -614,6 +614,14 @@ export class MeshWorkerClient {
     return { min: res.min, max: res.max }
   }
 
+  /** The scan's triangles, three vertex numbers each — the numbers query
+   *  answers with — and how many vertices they number. */
+  async scanIndices(): Promise<{ indices: Uint32Array; vertexCount: number }> {
+    const requestId = this.nextId++
+    const res = await this.request<Extract<WorkerResponse, { type: 'scan-indices-ok' }>>({ type: 'scan-indices', requestId })
+    return { indices: res.indices, vertexCount: res.vertexCount }
+  }
+
   /** The scan's vertices inside a box — facing a direction within an angle
    *  if asked — with their positions and normals, at most `limit` of them
    *  spread evenly through what matched. See geometry/query. */

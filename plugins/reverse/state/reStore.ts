@@ -41,7 +41,7 @@ import { solidSlice } from './reSolidSlice'
 import { sketchSlice } from './reSketchSlice'
 export { nameBodies, sketchesUsedBy } from './reFeatureHelpers'
 export { chainArcStart, dragHandleAt, type SketchHover, sketchHoverAt, splineClosesAt } from './reSketchDraft'
-export { bodyColor, coordinatePlaneShown, DEFAULT_FILLET_MM, DEFAULT_WALL_MM, editingFeatureId, extrudeDraftReady, featureDraftReady, featureOfDraft, featuresToBuild, filletModeSwitch, gripFieldValue, gripSlotPath, historyEditOf, keyParameterOf, reEditorOpen, revolveAngle, revolveDraftReady, roundFaceLength, snapDraftOf, snapFaceOf, snapPlanOf, trimToleranceFor, withKeyParameter } from './reDrafts'
+export { bodyColor, coordinatePlaneShown, DEFAULT_FILLET_MM, draftRegion, DEFAULT_WALL_MM, editingFeatureId, extrudeDraftReady, featureDraftReady, featureOfDraft, featuresToBuild, filletModeSwitch, gripFieldValue, gripSlotPath, historyEditOf, keyParameterOf, reEditorOpen, revolveAngle, revolveDraftReady, roundFaceLength, snapDraftOf, snapFaceOf, snapPlanOf, trimToleranceFor, withKeyParameter } from './reDrafts'
 export { BODY_SWATCHES, bodyColorOf, type BodyHover, type BodyInfo, type BodyPick, type BodyStyle, type BodyStyles, type DraftEdge, type DraftFace, type ExtrudeDraft, type FeatureDraft, type FeatureDraftKind, type FilletEstimate, type ImagePickMode, type KernelStatus, type MapReport, type Playback, type PreviewInfo, type ReSelection, type RevolveDraft, selectionItems, type SketchDraft, type SketchTool, type SymmetryFinding, type ViewHint } from './reTypes'
 
 export interface ReState {

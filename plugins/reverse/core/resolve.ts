@@ -481,7 +481,7 @@ export function resolveFeatures(
         failed(f, absent(f, f.sketchId, 'The sketch this wrap lays on the surface is gone.'))
         continue
       }
-      const surface = wrapSurfaceOf(f.surface, ctx)
+      const surface: WrapSurface | string = f.region ? { kind: 'region', region: f.region } : wrapSurfaceOf(f.surface, ctx)
       if (typeof surface === 'string') {
         failed(f, surface)
         continue
@@ -492,11 +492,13 @@ export function resolveFeatures(
         continue
       }
       const middle = profilesMiddle(profiles)
-      const made = wrapOfGeometry({ surface, profiles, normal: sketch.frame.normal, middle })
       const { from, to } = wrapOffsets(f)
-      const problem = typeof made === 'string' ? made : wrapDepthProblem({ surface, from, to }, made.wrapped, made.dev)
+      // A region is laid out where the scan is: the builder says what it
+      // comes to.
+      const made = surface.kind === 'region' ? null : wrapOfGeometry({ surface, profiles, normal: sketch.frame.normal, middle })
+      const problem = !made ? null : typeof made === 'string' ? made : wrapDepthProblem({ surface, from, to }, made.wrapped, made.dev)
       if (problem) failed(f, problem)
-      else steps.push({ kind: 'wrap', id: f.id, name: f.name, sketchId: f.sketchId, regions: f.regions, ...byPlaceOf(f), surface, profiles, normal: sketch.frame.normal, middle, from, to, sketches: [f.sketchId], op: f.op, target: f.target })
+      else steps.push({ kind: 'wrap', id: f.id, name: f.name, sketchId: f.sketchId, regions: f.regions, ...byPlaceOf(f), surface, profiles, normal: sketch.frame.normal, middle, from, to, ...(f.maxStretchPct !== undefined ? { maxStretchPct: f.maxStretchPct } : {}), sketches: [f.sketchId], op: f.op, target: f.target })
       continue
     }
     if (f.kind === 'thicken') {

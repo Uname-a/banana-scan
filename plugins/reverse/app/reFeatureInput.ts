@@ -288,12 +288,21 @@ function boxFields(s: ReverseSession, kind: FeatureDraftKind, input: Json, box: 
         out.regions = keys
         out.regionPick = regionPickOf(pick, keys)
       }
+      if (has('surface') && has('region') && input.region !== null) invalid('A wrap goes onto surface — a measured element — or onto region, a region of the scan; not both.')
       if (has('surface')) {
         const e = findElement(input.surface as Ref)
-        if (!e.fit || !(WRAP_KINDS as readonly string[]).includes(e.fit.kind)) invalid(`surface: ${e.name} is a ${e.kind} — a sketch wraps onto a cylinder, a cone or a plane.`)
-        out.surface = e.id
+        if (!e.fit || !(WRAP_KINDS as readonly string[]).includes(e.fit.kind)) invalid(`surface: ${e.name} is a ${e.kind} — a sketch wraps onto a cylinder, a cone or a plane; onto anything else, mark it and give region.`)
+        Object.assign(out, { surface: e.id, region: null })
       }
-      for (const k of ['depth', 'flip', 'op']) if (has(k)) out[k] = input[k]
+      if (has('region') && input.region !== null) {
+        if (!useStore.getState().fileName) throw new CommandError('no_scan', 'A wrap onto a region is laid out on the scan, and none is open.')
+        const n = useStore.getState().vertexCount
+        const region = input.region as number[]
+        const off = region.find((v) => v >= n)
+        if (off !== undefined) invalid(`The scan has ${n} vertices; ${off} is not one of them.`)
+        Object.assign(out, { region: Uint32Array.from(region), surface: null })
+      }
+      for (const k of ['depth', 'flip', 'op', 'maxStretchPct']) if (has(k)) out[k] = input[k]
       if (has('target') && input.target !== null && !has('op')) out.op = 'join'
       break
     }
@@ -430,7 +439,7 @@ function notReady(d: FeatureDraft): string {
   if (d.kind === 'fillet' && (d.variable ?? []).some((v) => !(v.radius[0] > 0 && v.radius[1] > 0))) return 'An edge at a varying radius needs both its radii above zero.'
   if (d.kind === 'pattern' && !(d.count >= 2)) return 'A pattern needs a count of two or more.'
   if (d.kind === 'thicken') return d.sheet === null ? 'Name the sheet to thicken (sheet).' : 'The thicken needs a thickness above zero.'
-  if (d.kind === 'wrap') return d.sketchId === null ? 'Name the sketch to wrap (sketchId).' : d.surface === null ? 'Name the cylinder, cone or plane it wraps onto (surface).' : d.regions.length === 0 ? 'The sketch has no closed region to wrap.' : 'The wrap needs a depth above zero.'
+  if (d.kind === 'wrap') return d.sketchId === null ? 'Name the sketch to wrap (sketchId).' : d.surface === null && !d.region ? 'Name the cylinder, cone or plane it wraps onto (surface), or a region of the scan (region).' : d.regions.length === 0 ? 'The sketch has no closed region to wrap.' : 'The wrap needs a depth above zero.'
   if (d.kind === 'split' && d.keep === 'between' && d.tools.length < 2) return 'Keeping what lies between the sheets takes two sheets or more (tools).'
   if (d.kind === 'network') return d.curves.length === 0 ? 'A patch network needs curves (curves, between nodes) — reverse.network.create makes one from points on the scan.' : 'A patch network needs a region filled (cells: a seed inside it) — reverse.network.create and edit fill them (fill: "all").'
   return `The ${d.kind} is missing something it needs — see the feature’s fields.`
