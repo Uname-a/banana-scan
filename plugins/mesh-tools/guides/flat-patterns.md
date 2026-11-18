@@ -6,7 +6,7 @@ Guiding principle: **a flat pattern is only as true as the surface it was laid o
 
 Two ways to lay a scanned surface out flat, both in the Mesh Tools workspace, both made beside the scan (never an edit of it, never a step of the history):
 
-- **Unroll** (`mesh_unroll`) — a cylinder or a cone, by the element fitted to it. Exact by construction: the arc round the axis becomes x, the height along it y; a cone becomes its sector about the apex. For a tube, a pipe, a rolled shell, a cone's flat blank, a label or a pattern of holes round a bore.
+- **Unroll** (`mesh_unroll`) — a cylinder or a cone, by the element fitted to it. Exact by construction: the arc round the axis becomes x, the height along it y; a cone becomes its sector about the apex. For a tube, a pipe, a rolled shell, a cone's flat blank, a label or a pattern of holes round a bore. The other way round — a sketch rolled onto the cylinder or cone, its lengths kept, and embossed or debossed — is the Reverse engineer's `wrap` feature (`reverse_feature_add { kind: "wrap" }`).
 - **Flatten** (`mesh_flatten`) — any sheet that was bent from flat, or nearly: a bent bracket, a formed panel, a duct. Solved for the least distortion; the answer says how much stretch was left.
 
 Both write their pattern with `mesh_export_pattern` as a DXF or an SVG, in millimetres.

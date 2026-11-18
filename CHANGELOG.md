@@ -10,6 +10,25 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Wrap a sketch onto a surface, and planes along a path** (Reverse
+  engineer, 2026-11-17). **Wrap** rolls a sketch's closed regions — an
+  outline, letters, a logo — onto a measured cylinder, cone or plane with
+  their lengths kept along the surface, the inverse of Mesh Tools' unroll:
+  round a cylinder the sketch's width is arc, on a cone it is laid on the
+  sector about the apex. The sketch lands where it is drawn, rolled on
+  from the line where a plane like its own touches the surface. It then
+  stands a depth out of the surface (an emboss, joined to the body) or
+  sinks into it (a deboss, cut), as a feature in the tree: its walls stand
+  square to the surface, its faces are the surface and its offset, exact.
+  **Planes on path** makes plane elements square to a curve — a sketch's
+  chain, a measured line, circle or axis, a traced tube's route, a run of
+  points — every so far or so many along it, their sheets carried round
+  the bends the same way up: for sections across a bent part and a
+  sweep's profile. The agent's commands are `reverse.feature.add { kind:
+  "wrap" }`, `reverse.sketch.wrap_read` (where it lands, changing nothing)
+  and `reverse.plane.along_path`; the model guide's 2f says how to use
+  them.
+
 - **scan.qa and mesh.inspect run as jobs** (agent server, 2026-11-17).
   Both read the whole scan. On a few million triangles, or on a busy
   computer, they outlast the server's answer limit (40 s in Scan2CAD

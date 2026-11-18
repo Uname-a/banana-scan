@@ -9,11 +9,12 @@ import { radialFrame, type SectionFrame, sketchFrameOn, WORLD_AXES, type WorldAx
 import type { FitData, Vec3 } from '../../../src/core/types'
 import { addScaled, cross, dot, normalize, scale } from '../../../src/core/vec'
 import { type BuildStep, type PlaneGeometry, type ResolveContext, type SketchOnFace, SURFACE_MIN_REGION } from './buildSteps'
-import { type AxisRef, constrainRefs, type EdgeRef, type RegionPick, type ExtrudeUntil, type FaceRef, type Feature, FULL_TURN_DEG, type HoleAxis, MIN_SWEEP_RAD, movableFace, type PatternFeature, type PlaneRef, type Primitive, revolveMaxDeg, type SketchFeature, type SurfaceFeature, toolsOf, type TrimPrimitive } from './features'
+import { type AxisRef, constrainRefs, type EdgeRef, type RegionPick, type ExtrudeUntil, type FaceRef, type Feature, FULL_TURN_DEG, type HoleAxis, wrapOffsets, MIN_SWEEP_RAD, movableFace, type PatternFeature, type PlaneRef, type Primitive, revolveMaxDeg, type SketchFeature, type SurfaceFeature, toolsOf, type TrimPrimitive } from './features'
 import type { Profile } from './kernel'
 import { moveMatrix } from './move'
 import { shadowPrimitive } from './shadowPieces'
 import { liftPoint, loftProblem, loftProfile, pickedProfiles, routeSweepGeometry, sketchPieces, sweepGeometry } from './profiles'
+import { profilesMiddle, wrapDepthProblem, wrapOfGeometry, type WrapSurface } from './wrap'
 import type { Region } from './regions'
 import { threadProblem } from './thread'
 import type { StoredPick } from './where'
@@ -229,7 +230,7 @@ export function resolveFeatures(
     const s = features[at]
     if (!s || s.kind !== 'sketch') return gone
     const named = `Sketch ${id} (${s.name})`
-    const what = f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'loft' || f.kind === 'sweep' || f.kind === 'sheet' ? f.kind : 'feature'
+    const what = f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'loft' || f.kind === 'sweep' || f.kind === 'sheet' || f.kind === 'wrap' ? f.kind : 'feature'
     if (s.suppressed) return `${named} is suppressed — build it again (reverse.feature.update { set: { suppressed: false } }), or take it out of this ${what}.`
     if (at > features.indexOf(f)) return `${named} stands after this ${what} — a feature takes only the sketches above it. Move it above: add the ${what} again below the sketch, or roll back to before the ${what} (reverse.feature.rollback { after }) and make the sketch there.`
     return gone
@@ -474,6 +475,30 @@ export function resolveFeatures(
       else steps.push({ kind: 'sweep', id: f.id, name: f.name, ...swept, sketches: [f.profile, f.path!], op: f.op, target: f.target })
       continue
     }
+    if (f.kind === 'wrap') {
+      const sketch = sketches.get(f.sketchId)
+      if (!sketch) {
+        failed(f, absent(f, f.sketchId, 'The sketch this wrap lays on the surface is gone.'))
+        continue
+      }
+      const surface = wrapSurfaceOf(f.surface, ctx)
+      if (typeof surface === 'string') {
+        failed(f, surface)
+        continue
+      }
+      const profiles = pickedProfiles(f, sketch, regionsOf)
+      if (typeof profiles === 'string') {
+        failed(f, profiles)
+        continue
+      }
+      const middle = profilesMiddle(profiles)
+      const made = wrapOfGeometry({ surface, profiles, normal: sketch.frame.normal, middle })
+      const { from, to } = wrapOffsets(f)
+      const problem = typeof made === 'string' ? made : wrapDepthProblem({ surface, from, to }, made.wrapped, made.dev)
+      if (problem) failed(f, problem)
+      else steps.push({ kind: 'wrap', id: f.id, name: f.name, sketchId: f.sketchId, regions: f.regions, ...byPlaceOf(f), surface, profiles, normal: sketch.frame.normal, middle, from, to, sketches: [f.sketchId], op: f.op, target: f.target })
+      continue
+    }
     if (f.kind === 'thicken') {
       if (!(f.thickness > 0)) failed(f, 'The sheet needs a thickness.')
       else steps.push({ kind: 'thicken', id: f.id, name: f.name, sheet: f.sheet, thickness: f.thickness, side: f.side, op: f.op, target: f.target })
@@ -589,4 +614,18 @@ export function resolveFeatures(
     steps.push({ kind: 'revolve', id: f.id, name: f.name, sketchId: f.sketchId, profiles, regions: f.regions, ...byPlaceOf(f), origin: axis.origin, dir: axis.dir, angleRad: (angleDeg * Math.PI) / 180, pitch, leftHanded: pitch !== 0 && Boolean(f.leftHanded), op: f.op, target: f.target, ...onFace, ...(f.axis.kind === 'sketchLine' ? { axisInSketch: true, axisLine: f.axis.entity } : {}) })
   }
   return steps
+}
+
+/** The surface a wrap lies on, read off its element as the element is
+ *  drawn (an assumed diameter held) — or why it is none. */
+export function wrapSurfaceOf(id: number, ctx: Pick<ResolveContext, 'elements'>): WrapSurface | string {
+  const e = ctx.elements.find((x) => x.id === id)
+  if (!e) return 'The element this wrap lies on is gone.'
+  const name = e.name ?? `Element ${id}`
+  if (!e.fit) return `${name} has no geometry to wrap onto.`
+  const f = drawnFit(e.fit, e.assumed, e.extend)
+  if (f.kind === 'cylinder') return { kind: 'cylinder', center: f.center, axis: f.axis, radius: f.radius }
+  if (f.kind === 'cone') return { kind: 'cone', center: f.center, axis: f.axis, radius: f.radius, halfAngle: f.halfAngle }
+  if (f.kind === 'plane') return { kind: 'plane', center: f.center, normal: f.normal }
+  return `${name} is a ${f.kind} — a sketch wraps onto a cylinder, a cone or a plane.`
 }

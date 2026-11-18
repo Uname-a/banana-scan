@@ -537,6 +537,24 @@ function coordinatePlane(axis: WorldAxis, made: { id: number; name: string }[]):
   }
 }
 
+/**
+ * A plane through `point` square to `normal`, made an element as the
+ * panel's plane-coords method makes one (free of any source), named `name`
+ * where given — for a change command that makes datum planes inside its
+ * own step: a plugin's planes along a path. Its id.
+ */
+export function createPlaneElement(point: Vec3, normal: Vec3, name?: string): number {
+  const m = commandHost().session.measure
+  try {
+    m.startDraft('plane')
+    useStore.getState().setDraftMethod('plane-coords')
+    ;[...normal, ...point].forEach((v, i) => useStore.getState().setDraftParam(i, v))
+    return finishAndCreate(name ? { name } : {})
+  } finally {
+    closeDraft()
+  }
+}
+
 const construct: Command<{
   kind: ElementKind
   method: string

@@ -1,6 +1,6 @@
 {
   "app": "0.11.2",
-  "saved": "2026-11-17T20:30:01.451Z",
+  "saved": "2026-11-18T01:55:41.113Z",
   "commands": [
     {
       "name": "align.auto",
@@ -3990,7 +3990,8 @@
       },
       "readOnly": true,
       "returnsFile": false,
-      "returnsImage": false
+      "returnsImage": false,
+      "long": true
     },
     {
       "name": "scan.query",

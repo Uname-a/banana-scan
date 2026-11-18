@@ -35,6 +35,7 @@ import { PlaybackBar, PlaybackKey } from './Playback'
 import { KeyIcon } from './reIcons'
 import { StepFileKey } from './featureFields'
 import { PlaneSelect } from './PlaneSelect'
+import { PathPlanes } from './PathPlanes'
 import { ExtrudeEditor } from './ExtrudeEditor'
 import { ExportMeshButton } from '../../../src/ui/ExportMeshButton'
 import type { MeshFormat } from '../../../src/core/exportMesh'
@@ -157,6 +158,7 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
     const picked = [...new Set([...bodies.filter((b) => listed.has(b.id)).map((b) => b.id), ...selectionItems(s.selection).map((i) => i.bodyId)])]
     return picked.length > 0 ? picked : bodies.length === 1 ? [bodies[0].id] : []
   }
+  const hasWrapSurface = elements.some((e) => e.fit && (e.fit.kind === 'plane' || e.fit.kind === 'cylinder' || e.fit.kind === 'cone'))
   const hasSolidElement = elements.some((e) => e.fit && (e.fit.kind === 'plane' || e.fit.kind === 'cylinder' || e.fit.kind === 'cone' || e.fit.kind === 'sphere' || e.fit.kind === 'torus'))
   const hasShadow = sections.some((x) => x.kind === 'shadow')
   // A Patch network's sheet is a skin of the part: it goes into the file too.
@@ -168,6 +170,7 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
   // it is let go. While dragged it is drawn where it would land.
   const featureListRef = useRef<HTMLDivElement | null>(null)
   const [rollDrag, setRollDrag] = useState<number | null>(null)
+  const [pathPlanesOpen, setPathPlanesOpen] = useState(false)
   // A playback moves the bar itself, and the rows stand down while it runs:
   // the row it has come to is lit and kept in sight.
   const barLocked = editorOpen || playback !== null
@@ -382,6 +385,14 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
               <SweepIcon />
               <span>Sweep</span>
             </button>
+            <button data-test="feature-wrap" disabled={!ready || sketches.length === 0 || !hasWrapSurface} title="Wrap a sketch onto a measured cylinder, cone or plane, its lengths kept along the surface, and stand it out of it or sink it in — lettering round a bottle, a logo on a cone. Draw the sketch on a plane tangent to the surface" onClick={() => re.getState().startFeature('wrap')}>
+              <Icon name="extrude" />
+              <span>Wrap</span>
+            </button>
+            <button data-test="path-planes-open" disabled={!ready || (sketches.length === 0 && !elements.some((e) => e.fit && (e.fit.kind === 'line' || e.fit.kind === 'circle' || e.fit.kind === 'cylinder' || e.fit.kind === 'cone')))} title="Planes square to a curve — a sketch's chain, a measured line, circle or axis — every so far or so many along it, made plane elements: for sections across a bent part, or a sweep's profile" onClick={() => setPathPlanesOpen((v) => !v)}>
+              <Icon name="sheet" />
+              <span>Planes on path</span>
+            </button>
             <button data-test="feature-pattern" disabled={!hasBody} title="Copies of the body about an axis, along a direction, or in a grid" onClick={() => re.getState().startFeature('pattern')}>
               <Icon name="pattern" />
               <span>Pattern</span>
@@ -411,6 +422,7 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
               <span>Thicken</span>
             </button>
           </div>
+          {pathPlanesOpen && <PathPlanes onClose={() => setPathPlanesOpen(false)} />}
           {sketches.length === 0 && fileName && <p className="hint">Start with a sketch: choose a plane above, or cut a section in the 3D Measure workspace.</p>}
           {sketches.length === 0 && !fileName && <p className="hint">Start with a sketch: choose a coordinate plane above. No scan is needed to model.</p>}
         </div>
@@ -507,7 +519,7 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
             const bodyOf =
               f.kind === 'sketch'
                 ? null
-                : f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'extract' || f.kind === 'loft' || f.kind === 'sweep' || f.kind === 'thicken'
+                : f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'extract' || f.kind === 'loft' || f.kind === 'sweep' || f.kind === 'wrap' || f.kind === 'thicken'
                   ? (r?.bodies?.[0] ?? f.target ?? f.id)
                   : f.kind === 'sheet' || f.kind === 'surface' || f.kind === 'network' || f.kind === 'trim'
                     ? f.id
