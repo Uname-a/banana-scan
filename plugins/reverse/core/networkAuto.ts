@@ -51,6 +51,22 @@
 // that made fewer cells and patches, a worse worst patch, in five times
 // the time, so letting go is the default.
 //
+// Where the creases then leave most of the part one region — half the
+// scan or more, of three loops or more, or touched by curves that close
+// none: a part whose edges are rounds, which Suggest creases takes for no
+// crease, its creases islands in it — the part is laid out from its faces
+// instead (networkRounds.ts). Its curves are let go; every face grows until
+// it meets the next down a round's middle, or at a sharp edge; and the
+// lines where they meet are its curves, a node where three meet, a crease
+// where Suggest creases found one along the line. A smaller region the
+// rules below cannot lay out (a disk or ring no cut stays inside, three
+// loops or more, a tangle, a box that is not round its middle) gets its
+// rounds' middles drawn the same way, once. A region laid out so is cut
+// more freely after: along the scan inside it where a straight section
+// leaves it (networkRounds.regionPath), a five- or six-sided cell cut into
+// a four-sided one and another, a curve its face runs both ways round let
+// go, a loop pinched to its longest at a node cut to it once.
+//
 // Each round places what the last read asked for and reads the scan
 // again — a crossing its cuts made with a curve snapped into a node first; a region whose cut runs out of it, a region of three loops or
 // more, or one bounded by the scan's own rim (an open scan: no curve is
@@ -82,6 +98,7 @@ import { CORNER_DEG, curveSides, faceSides, type GraphFace, type HalfEdge, readC
 import { suggestCreases } from './networkCreases'
 import { type CurveTrace, endTangent, traceCurve } from './networkCurve'
 import { cellMesh } from './networkMap'
+import { regionPath, roundMiddles } from './networkRounds'
 import { Bends, type Closing, closeCreases, type ClosingWork, gripsOf, march, marchStep, snapCrossings, TraceGrid } from './networkClose'
 
 /** How a layout is made. */
@@ -102,6 +119,9 @@ export interface AutoOptions {
    *  curves to another — let go ('drop', the default), given a second cut
    *  beside it ('cut'), or left as it is ('keep'). See unbridge. */
   bridges?: 'cut' | 'drop' | 'keep'
+  /** Draw tangent curves down the middles of the rounds of a region the
+   *  creases leave no way to lay out (true by default). */
+  rounds?: boolean
 }
 
 /** What a region of the scan was, as the creases left it, and what was
@@ -114,8 +134,9 @@ export interface AutoRegion {
   /** The loops of curves round it. */
   loops: number
   /** cell: a cell as it was; corners: its corners chosen; cut: cut into
-   *  cells; box: laid out as a box; left: not laid out (why). */
-  action: 'cell' | 'corners' | 'cut' | 'box' | 'left'
+   *  cells; box: laid out as a box; rounds: curves drawn down the middles
+   *  of its rounds; left: not laid out (why). */
+  action: 'cell' | 'corners' | 'cut' | 'box' | 'rounds' | 'left'
   /** Curves cut across it. */
   cuts?: number
   why?: string
@@ -150,6 +171,9 @@ export interface AutoLayout {
   bridging: Bridging | null
   /** Crossings the layout's own cuts made with curves, snapped into nodes. */
   crossings: number
+  /** The regions laid out down the middles of their rounds, the faces
+   *  found in them, the curves drawn, and the time it took. */
+  roundsLaid: RoundsLaid
   /** The tangent curves cut across regions, and the box's curves. */
   cuts: number
   regions: AutoRegion[]
@@ -170,7 +194,30 @@ export interface AutoLayout {
  *  at a node, not a region. */
 const CRUMB_TRIANGLES = 12
 /** The most rounds of placing and reading again. */
-const ROUNDS = 14
+const ROUNDS = 24
+/** A region is laid out down its rounds' middles if it has this many
+ *  triangles, and this share of the scan's. */
+const ROUNDS_MIN_TRIANGLES = 500
+const ROUNDS_MIN_SHARE = 0.01
+/** A line where two faces meet shorter than this (mm, and mean edges)
+ *  between two junctions makes them one. */
+const ROUND_SHORT_MM = 1.5
+const ROUND_SHORT_EDGES = 6
+/** The creases leave most of the part one region when it holds this share
+ *  of the scan's triangles. */
+const WHOLE_SHARE = 0.5
+/** A line where two faces meet is a crease if this share of its points
+ *  lies within CREASE_NEAR_EDGES mean edges of a crease Suggest creases
+ *  found. */
+const CREASE_SHARE = 0.6
+const CREASE_NEAR_EDGES = 4
+/** The most pairs of corners a large cell is cut between along the scan. */
+const ALONG_TRIES = 6
+/** A cut along the scan keeps this many mean edges off the region's
+ *  boundary where it can. */
+const ALONG_OFF_EDGES = 6
+/** A curve down a round's middle has a grip every this many mm. */
+const ROUND_GRIP_MM = 3
 /** The share of a cut's points that must lie in the region it cuts. */
 const CUT_INSIDE = 0.8
 /** A corner of the other loop is taken for a cut's end if it is no further
@@ -438,17 +485,52 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
       read = w.read()
     }
   }
+  // The rounds' middles, for a region the creases leave no way to lay out.
+  const roundsTried = new Uint8Array(scan.triangleCount)
+  const roundsMin = Math.max(ROUNDS_MIN_TRIANGLES, ROUNDS_MIN_SHARE * scan.triangleCount)
+  const roundsLaid: RoundsLaid = { regions: 0, faces: 0, curves: 0, creases: 0, whole: false, ms: 0 }
+  // Where the creases leave most of the part one region of many loops or
+  // none — a part whose edges are rounds, its creases islands in it — the
+  // part is laid out from its faces instead: the curves all let go, every
+  // face grown until it meets the next down a round's middle or at a sharp
+  // edge, the line a crease where Suggest creases found one along it.
+  if (opts.rounds !== false && read.regions.length > 0) {
+    const largest = read.regions.reduce((a, b) => (b.triangles.length > a.triangles.length ? b : a))
+    const tangled = largest.faces.length >= 3 || (largest.faces.length === 0 && largest.curveEdges > 0)
+    if (tangled && largest.triangles.length >= WHOLE_SHARE * scan.triangleCount) {
+      const creaseGrid = new TraceGrid(Math.max(marchStep(scan), 2 * scan.edge))
+      for (const c of w.curves) if (c.crease) creaseGrid.add(c.id, w.traceOf(c).points)
+      w.curves = []
+      w.nodes = []
+      w.chosen.clear()
+      const all = new Uint32Array(scan.triangleCount)
+      for (let t = 0; t < all.length; t++) all[t] = t
+      const near = CREASE_NEAR_EDGES * scan.edge
+      const onCrease = (points: readonly Vec3[]) => points.filter((q) => creaseGrid.nearest(q, near, () => true)).length >= CREASE_SHARE * points.length
+      layRounds(w, { triangles: all, faces: [], rimEdges: 0, curveEdges: 0 }, roundsLaid, onCrease)
+      roundsLaid.whole = true
+      roundsTried.fill(1)
+      read = w.read()
+    }
+  }
   // A region is known by its first triangle and its size: one the creases
   // left is reported once, as found, with what was done with it.
   const keyOf = (r: ScanRegion) => `${r.triangles[0]}:${r.triangles.length}`
   const first = new Set(read.regions.map(keyOf))
   const reported = new Set<string>()
+  // A large region laid out down its rounds' middles — none the creases
+  // lay out alone — is cut more freely: along the scan inside it where a
+  // straight section leaves it, its five- and six-sided cells cut into
+  // four-sided ones, a curve its face runs both ways round let go, a loop
+  // pinched to its longest cut once.
+  const along = (r: ScanRegion) => roundsTried[r.triangles[0]] === 1 && r.triangles.length >= roundsMin
   // Why a region was last left, by a triangle of it: what the end says of
   // the region that triangle is in then.
   const lastWhy = new Map<number, string>()
   for (; rounds < ROUNDS; rounds++) {
     let changed = false
     let ringCut = false
+    const roundsBefore = roundsLaid.curves
     // Rings first: their cuts' ends are the corners of the disks beside
     // them, so the top of a can and its side share them — the disks read
     // the next round, with the cuts in.
@@ -464,9 +546,20 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
         reported.add(key)
         regions.push({ kind, at: round4(at), triangles: region.triangles.length, loops: region.faces.length, action, ...extra })
       }
+      // A large region the creases leave no way to lay out: the middles
+      // of its rounds drawn (layRounds), once — whether any were or not.
+      const rounds = (kind: AutoRegion['kind']): boolean => {
+        if (opts.rounds === false || region.triangles.length < roundsMin || roundsTried[region.triangles[0]]) return false
+        for (const t of region.triangles) roundsTried[t] = 1
+        const did = layRounds(w, region, roundsLaid)
+        if (did === 0) return false
+        entry(kind, 'rounds', { cuts: did })
+        changed = true
+        return true
+      }
       if (region.faces.length === 0) {
         if (region.curveEdges > 0) {
-          entry('loops', 'left', { why: TANGLED_WHY })
+          if (!rounds('loops')) entry('loops', 'left', { why: TANGLED_WHY })
           continue
         }
         if (region.rimEdges > 0) {
@@ -476,12 +569,12 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
         if (layBox(w, region)) {
           entry('closed', 'box', { cuts: 12 })
           changed = true
-        } else entry('closed', 'left', { why: 'laid out as a box, a ray from its middle left it nowhere — it is not round its middle' })
+        } else if (!rounds('closed')) entry('closed', 'left', { why: 'laid out as a box, a ray from its middle left it nowhere — it is not round its middle' })
         continue
       }
       if (region.faces.length === 1) {
         const face = read.faces[region.faces[0]]
-        const did = disk(w, read, face, region)
+        const did = disk(w, read, face, region, along(region))
         if (did === 'cell') entry('disk', 'cell')
         else if (did === 'corners') {
           entry('disk', 'corners')
@@ -489,21 +582,26 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
         } else if (did === 'cut') {
           entry('disk', 'cut', { cuts: 1 })
           changed = true
-        } else entry('disk', 'left', { why: did.why })
+        } else if (!rounds('disk')) entry('disk', 'left', { why: did.why })
         continue
       }
       if (region.faces.length === 2) {
-        const did = ring(w, read, region)
+        const did = ring(w, read, region, along(region))
         if (typeof did === 'number') {
           entry('ring', 'cut', { cuts: did })
           changed = true
           ringCut = true
-        } else entry('ring', 'left', { why: did.why })
+        } else if (!rounds('ring')) entry('ring', 'left', { why: did.why })
         continue
       }
+      // Three loops or more: its rounds first, where it has any.
+      if (rounds('loops')) continue
       const did = multiLoop(w, read, region, bends)
       if (typeof did === 'number') {
         entry('loops', 'cut', { cuts: did })
+        changed = true
+      } else if (along(region) && pinchCut(w, read, region)) {
+        entry('loops', 'cut', { cuts: 1 })
         changed = true
       } else entry('loops', 'left', { why: did.why })
     }
@@ -512,6 +610,14 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
     // island, one a bridge leads to: the crossing made a node.
     snapCrossings(w, snapped)
     read = w.read()
+    // A round's middle drawn to a tangle can be a bridge of its own.
+    if (roundsLaid.curves > roundsBefore && opts.bridges !== 'keep') {
+      const tally = bridging ?? { duplicates: 0, found: 0, cut: 0, dropped: 0, knots: 0, knotCurves: 0, passes: 0 }
+      for (let pass = 0; pass < BRIDGE_PASSES && unbridge(w, read, bends, 'drop', tally); pass++) {
+        snapCrossings(w, snapped)
+        read = w.read()
+      }
+    }
   }
   // A node only two curves of a kind run through, smoothly, and no cell's
   // corner, is a grip of one curve: a leftover of a crease cut in four,
@@ -592,6 +698,7 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
     untangled,
     bridging,
     crossings: snapped.crossings,
+    roundsLaid,
     creasesWeak,
     creasesChips,
     cuts: w.cuts,
@@ -703,11 +810,30 @@ function pointRound(read: Read, face: GraphFace, s: number): { at: Vec3; curve: 
 
 /** A disk read: a cell as it is, its corners chosen, cut across, or why
  *  not. */
-function disk(w: Work, read: Read, face: GraphFace, region: ScanRegion): 'cell' | 'corners' | 'cut' | { why: string } {
+function disk(w: Work, read: Read, face: GraphFace, region: ScanRegion, along = false): 'cell' | 'corners' | 'cut' | { why: string } {
   const rule = faceSides(face, read.traced.nodes, read.traced.curves)
-  if (!('corners' in rule) && !rule.message.startsWith('one side')) return { why: rule.message }
+  if (!('corners' in rule) && !rule.message.startsWith('one side')) {
+    // A large region's face run both ways along a curve — one the labels
+    // read two regions either side of, so the bridges kept: let go.
+    const twice = new Set(face.edges.filter((h) => face.edges.some((g) => g.curve === h.curve && g.forward !== h.forward)).map((h) => h.curve))
+    if (along && twice.size > 0) {
+      w.curves = w.curves.filter((c) => !twice.has(c.id))
+      pruneLoose(w)
+      return 'cut'
+    }
+    return { why: rule.message }
+  }
   const corners = cornersOf(w, read, face)
   const count = corners?.list.length ?? 0
+  // A large cell of five or six corners cut into a four-sided one and
+  // another, where a cut stays inside it: the build splits such a cell from
+  // its centre, and on a bent one the split folds.
+  if (along && (count === 5 || count === 6)) {
+    const list = corners!.list
+    const step = count === 6 ? 3 : 2
+    const pairs = list.map((a, i) => ({ a, b: list[(i + step) % count] })).sort((p, q) => dist(w.at(p.a), w.at(p.b)) - dist(w.at(q.a), w.at(q.b)))
+    for (const p of pairs.slice(0, 3)) if (tryCut(w, read, region, p.a, p.b) || tryCut(w, read, region, p.a, p.b, true)) return 'cut'
+  }
   if (count >= SIDES_MIN && count <= SIDES_MAX) return 'cell'
   if (count < SIDES_MIN) {
     const nodes = loopNodes(face)
@@ -735,6 +861,17 @@ function disk(w: Work, read: Read, face: GraphFace, region: ScanRegion): 'cell' 
   }
   pairs.sort((p, q) => p.d - q.d)
   for (const p of pairs.slice(0, 6)) if (tryCut(w, read, region, p.a, p.b)) return 'cut'
+  if (along) {
+    // Along the scan: the nearest pairs no curve joins yet, a few.
+    const joined = (a: number, b: number) => w.curves.some((c) => (c.from === a && c.to === b) || (c.from === b && c.to === a))
+    let tried = 0
+    for (const p of pairs) {
+      if (tried >= ALONG_TRIES) break
+      if (joined(p.a, p.b)) continue
+      tried++
+      if (tryCut(w, read, region, p.a, p.b, true)) return 'cut'
+    }
+  }
   return { why: `${n} corners, and no cut between two of them stays inside it` }
 }
 
@@ -745,10 +882,20 @@ function regionIndex(read: Read, region: ScanRegion): number {
 
 /** A tangent curve from node a to node b, kept if its trace keeps to the
  *  region. */
-function tryCut(w: Work, read: Read, region: ScanRegion, a: number, b: number): boolean {
+function tryCut(w: Work, read: Read, region: ScanRegion, a: number, b: number, along = false): boolean {
   if (a === b) return false
   if (w.curves.some((c) => (c.from === a && c.to === b) || (c.from === b && c.to === a))) return false
-  const trace = traceCurve(w.scan, [w.at(a), w.at(b)])
+  // Along: the shortest way inside the region, kept off its boundary,
+  // gripped every ROUND_GRIP_MM — where a straight section leaves it.
+  let via: Vec3[] = []
+  if (along) {
+    const path = regionPath(w.scan, region.triangles, w.at(a), w.at(b), ALONG_OFF_EDGES * w.scan.edge)
+    if (!path) return false
+    let length = 0
+    for (let i = 1; i < path.length; i++) length += dist(path[i], path[i - 1])
+    via = gripsAlong(path, Math.min(Math.max(ROUND_GRIP_MM, 4 * marchStep(w.scan)), Math.max(length / 3, marchStep(w.scan))))
+  }
+  const trace = traceCurve(w.scan, [w.at(a), ...via, w.at(b)])
   const n = trace.points.length / 3
   if (n < 3) return false
   const own = regionIndex(read, region)
@@ -761,14 +908,31 @@ function tryCut(w: Work, read: Read, region: ScanRegion, a: number, b: number): 
     if (read.label[c.triangle] === own) inside++
   }
   if (counted === 0 || inside / counted < CUT_INSIDE) return false
-  w.curve(a, b, [], false)
+  w.curve(a, b, via, false)
   w.cuts++
   return true
 }
 
+/** Points along a path every `every` mm, short of its ends. */
+function gripsAlong(path: readonly Vec3[], every: number): Vec3[] {
+  let length = 0
+  for (let i = 1; i < path.length; i++) length += dist(path[i], path[i - 1])
+  const via: Vec3[] = []
+  let next = every
+  let s = 0
+  for (let i = 1; i < path.length; i++) {
+    s += dist(path[i], path[i - 1])
+    if (s >= next && length - s > every / 2) {
+      via.push(path[i])
+      next = s + every
+    }
+  }
+  return via
+}
+
 /** A ring cut across from each corner of one loop to the other: the
  *  cuts made, or why none. */
-function ring(w: Work, read: Read, region: ScanRegion): number | { why: string } {
+function ring(w: Work, read: Read, region: ScanRegion, along = false): number | { why: string } {
   let [fa, fb] = region.faces.map((f) => read.faces[f])
   let ca = cornersOf(w, read, fa)?.list ?? []
   let cb = cornersOf(w, read, fb)?.list ?? []
@@ -803,7 +967,7 @@ function ring(w: Work, read: Read, region: ScanRegion): number | { why: string }
     }
     if (target < 0) target = w.splitAt(near.curve, near.at)
     if (used.has(target)) continue
-    if (tryCut(w, read, region, a, target)) {
+    if (tryCut(w, read, region, a, target) || (along && tryCut(w, read, region, a, target, true))) {
       used.add(target)
       // Both ends corners of the loops they are on, for the disks beside.
       w.chosen.add(a)
@@ -1353,4 +1517,161 @@ function unbridge(w: Work, read: Read, bends: Bends, mode: 'cut' | 'drop', tally
  *  on. */
 function pointAlong(read: Read, edges: readonly HalfEdge[], s: number): { at: Vec3; curve: number } | null {
   return pointRound(read, { edges: edges.slice(), nodes: [] }, s)
+}
+
+/** What layRounds did, over the layout. */
+export interface RoundsLaid {
+  regions: number
+  faces: number
+  curves: number
+  /** Of the curves, those along a sharp edge Suggest creases found. */
+  creases: number
+  /** The whole part laid out from its faces, its creases let go. */
+  whole: boolean
+  ms: number
+}
+
+/** Tangent curves down the middles of a region's rounds (networkRounds.ts):
+ *  a node where three faces meet, a line where two do a curve, gripped
+ *  every ROUND_GRIP_MM along it; a line that reaches the region's boundary
+ *  ends on the curve there, split; two junctions a short line apart are
+ *  one node. The curves made. */
+function layRounds(w: Work, region: ScanRegion, tally: RoundsLaid, onCrease?: (points: readonly Vec3[]) => boolean): number {
+  const r = roundMiddles(w.scan, region.triangles)
+  tally.ms += r.ms
+  if (r.faces < 2 || r.chains.length === 0) return 0
+  const scan = w.scan
+  const lengthOf = (p: readonly Vec3[]) => p.reduce((s, q, i) => (i === 0 ? 0 : s + dist(q, p[i - 1])), 0)
+  const short = Math.max(ROUND_SHORT_MM, ROUND_SHORT_EDGES * scan.edge)
+  // Junctions a short line apart are one.
+  const parent = r.junctions.map((_, i) => i)
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])))
+  for (const c of r.chains) {
+    if (c.from && c.to && 'junction' in c.from && 'junction' in c.to && lengthOf(c.points) < short) parent[find(c.from.junction)] = find(c.to.junction)
+  }
+  // The curves round the region as they stand, for the lines' ends on it.
+  const step = marchStep(scan)
+  const grid = new TraceGrid(Math.max(step, 2 * scan.edge))
+  for (const c of w.curves) grid.add(c.id, w.traceOf(c).points)
+  const reach = Math.min(4 * NODE_EDGES * scan.edge, Math.max(step, 2 * scan.edge))
+  const nodeOf = new Map<number, number>()
+  const onScan = (p: Vec3): Vec3 => {
+    const q = scan.closest(p)
+    return q ? [q.point[0], q.point[1], q.point[2]] : p
+  }
+  const junction = (j: number): number => {
+    const root = find(j)
+    let id = nodeOf.get(root)
+    if (id === undefined) {
+      const members = r.junctions.filter((_, i) => find(i) === root)
+      const c: Vec3 = [0, 0, 0]
+      for (const m of members) for (let k = 0; k < 3; k++) c[k] += m[k] / members.length
+      id = w.node(onScan(c))
+      nodeOf.set(root, id)
+    }
+    return id
+  }
+  const border = (p: Vec3): number => {
+    let hit = grid.nearest(p, reach, () => true)
+    // Past the grid's reach, the nearest of every curve's points.
+    if (!hit) {
+      let best: { curve: number; at: Vec3; d: number } | null = null
+      for (const c of w.curves) {
+        const q = w.nearestOn(c, p)
+        if (q && q.d < 4 * reach && (!best || q.d < best.d)) best = { curve: c.id, at: q.at, d: q.d }
+      }
+      hit = best
+    }
+    if (!hit) return -1
+    return w.splitAt(hit.curve, hit.at)
+  }
+  const endOf = (e: { junction: number } | { border: Vec3 }): number => ('junction' in e ? junction(e.junction) : border(e.border))
+  // A junction a short line from the boundary is a node on it.
+  for (const c of r.chains) {
+    if (!c.from || !c.to || lengthOf(c.points) >= short) continue
+    const [j, b] = 'junction' in c.from && 'border' in c.to ? [c.from.junction, c.to.border] : 'junction' in c.to && 'border' in c.from ? [c.to.junction, c.from.border] : [-1, null]
+    if (j < 0 || !b || nodeOf.has(find(j))) continue
+    const id = border(b)
+    if (id >= 0) nodeOf.set(find(j), id)
+  }
+  let made = 0
+  for (const c of r.chains) {
+    const length = lengthOf(c.points)
+    if (length < short) continue
+    let a: number
+    let b: number
+    if (!c.from || !c.to) {
+      // A loop: a node on it, the curve round from it.
+      if (c.from || c.to || length < 4 * short) continue
+      a = b = w.node(onScan(c.points[0]))
+    } else {
+      a = endOf(c.from)
+      b = endOf(c.to)
+      if (a < 0 || b < 0 || a === b) continue
+    }
+    // Grips every ROUND_GRIP_MM along the line, short of its ends.
+    const via: Vec3[] = []
+    const every = Math.max(ROUND_GRIP_MM, 4 * step)
+    let next = every
+    let s = 0
+    for (let i = 1; i < c.points.length; i++) {
+      s += dist(c.points[i], c.points[i - 1])
+      if (s >= next && length - s > every / 2) {
+        via.push(onScan(c.points[i]))
+        next = s + every
+      }
+    }
+    if (a === b && via.length < 2) continue
+    const crease = onCrease?.(c.points) ?? false
+    w.curve(a, b, via, crease)
+    if (crease) tally.creases++
+    made++
+  }
+  pruneLoose(w)
+  tally.regions++
+  tally.faces += r.faces
+  tally.curves += made
+  return made
+}
+
+/** Curves with an end no other curve reaches let go, and those that then
+ *  are; the nodes no curve reaches gone. */
+function pruneLoose(w: Work): void {
+  for (;;) {
+    const count = new Map<number, number>()
+    for (const c of w.curves) for (const n of [c.from, c.to]) count.set(n, (count.get(n) ?? 0) + (c.from === c.to ? 2 : 1))
+    const loose = w.curves.filter((c) => count.get(c.from) === 1 || count.get(c.to) === 1)
+    if (loose.length === 0) break
+    const drop = new Set(loose.map((c) => c.id))
+    w.curves = w.curves.filter((c) => !drop.has(c.id))
+  }
+  const used = new Set(w.curves.flatMap((c) => [c.from, c.to]))
+  w.nodes = w.nodes.filter((n) => used.has(n.id))
+  for (const n of [...w.chosen]) if (!used.has(n)) w.chosen.delete(n)
+}
+
+/** A large region of three loops or more one of which meets its longest
+ *  at a node — the graph pinched there, so no two cuts from loop to loop
+ *  are needed: one cut along the scan inside it, from that loop's node
+ *  farthest from where they meet to the longest loop's nearest node,
+ *  splits it in two. Whether one was made. */
+function pinchCut(w: Work, read: Read, region: ScanRegion): boolean {
+  const loops = region.faces.map((f) => read.faces[f])
+  const len = new Map(read.traced.curves.map((c) => [c.id, c.trace.length]))
+  const lengthOf = (f: GraphFace) => f.edges.reduce((s, h) => s + (len.get(h.curve) ?? 0), 0)
+  const outer = loops.reduce((a, b) => (lengthOf(b) > lengthOf(a) ? b : a))
+  const outerNodes = [...new Set(outer.nodes)]
+  for (const f of loops) {
+    if (f === outer) continue
+    const own = [...new Set(f.nodes)]
+    const shared = own.filter((n) => outerNodes.includes(n))
+    if (shared.length === 0) continue
+    // The loop's node farthest from where it meets the longest.
+    const far = own.filter((n) => !shared.includes(n)).sort((a, b) => Math.min(...shared.map((m) => dist(w.at(b), w.at(m)))) - Math.min(...shared.map((m) => dist(w.at(a), w.at(m)))))
+    for (const a of far.slice(0, 2)) {
+      const targets = outerNodes.filter((n) => !own.includes(n)).sort((x, y) => dist(w.at(x), w.at(a)) - dist(w.at(y), w.at(a)))
+      for (const b of targets.slice(0, 2)) if (tryCut(w, read, region, a, b, true)) return true
+    }
+  }
+  return false
 }

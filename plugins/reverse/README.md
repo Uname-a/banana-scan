@@ -989,18 +989,30 @@ from its centre and mapped as the build does it — is left out and said
 why, and the build leaves out a patch whose surface the kernel cannot
 follow, its cell refused, instead of failing the whole network.
 
+A part whose edges are rounds rather than creases leaves Suggest creases
+little to lay it out from. Where the creases leave one region holding half
+the scan or more, of three loops or more (or curves that close none), the
+part is laid out from its faces instead (`core/networkRounds.ts`): a vertex
+is on a face where the scan bends less than twice its own bumps' curvature
+either way (PR 24's curvature fitter), the face vertices the scan's edges
+join make the faces, every other vertex goes to the face nearest it along
+the scan, and the lines where two faces meet — down the middles of the
+rounds — are drawn as the network's curves, a node where three meet, a
+crease where Suggest creases found one along the line. A smaller region the
+creases leave no way to lay out gets its rounds' middles the same way. Such
+a region is cut more freely: along the scan inside it where a straight
+section leaves it, its five- and six-sided cells cut into four-sided ones.
+
 Not there yet: a loft through curves on the mesh (Loft lofts between
 sketches today), Auto layout on an open scan, and a whole real mechanical
-part. On the sample fridge bracket (288,582 triangles) closing carries
-every loose crease end on to another curve (31 of them; 56 creases were
-let go before), 101 curves that separate nothing are let go, and the
-network builds: 9 cells, 8 made, 10 patches, 0.031 mm RMS at the median,
-0.19 mm at worst (it failed on a patch 0.48 mm RMS before). But they cover
-about 1.5 % of it: the bracket's edges are rounds, which Suggest creases
-takes for no crease, and 92 % of it is one region whose only curves are
-islands of crease. Laying it out whole needs curves down the rounds'
-middles; until then join its creases by hand (`network.edit`) and fill
-what they close.
+part. On the sample fridge bracket (288,582 triangles) the creases left one
+region of 95 % of it; laid out from its 21 faces, 17 cells in 24 s hold
+60.7 % of its triangles, and the build makes 14 of them — 44.3 % of the
+bracket, 23 patches, 0.043 mm RMS at the median, 0.30 mm at worst (it was
+1.5 %, 10 patches). Left: a region of 49,000 triangles of three loops
+pinched together, and three cells the build refuses (a map that folds, a
+split whose curves cross). Join or cut those by hand (`network.edit`) and
+fill what they close.
 
 ## Agents: modelling through the commands
 

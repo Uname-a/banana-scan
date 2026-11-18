@@ -10,6 +10,21 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Auto layout lays out a part from its faces, down the middles of its
+  rounds** (Reverse engineer, 2026-11-18). Where Suggest creases leaves
+  most of a part one region — its edges rounds, its creases islands in it
+  — the part is laid out from its faces: where the scan bends less than
+  twice its bumps either way is a face, every other point goes to the
+  nearest face along the scan, and the lines where two faces meet, down
+  the rounds' middles, become the network's curves (creases where Suggest
+  creases found one along them). A large region laid out so is cut along
+  the scan where a straight cut leaves it, and its five- and six-sided
+  cells into four-sided ones. The sample fridge bracket: 17 cells hold
+  60.7 % of it (1.5 % before); the build makes 14, 44.3 % of the part, 23
+  patches, 0.043 mm RMS at the median and 0.30 at worst; the layout takes
+  24 s (10 before). Not reached: a region of 49,000 triangles is left, and
+  the build refuses three cells.
+
 - **Auto layout lets bridges go, and the sample bracket builds** (Reverse
   engineer, 2026-11-18). A patch network's faces are now read by where
   each curve is 8 mean edges from its node, not by its tangent there:
