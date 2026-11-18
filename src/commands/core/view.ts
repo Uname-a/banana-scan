@@ -12,6 +12,8 @@ import { round4, roundTo } from '../../core/round'
 import { canCutAlong, isWorldAxis, tiltOf, worldPlaneName, type SectionRef } from '../../core/section/frame'
 import type { Vec3 } from '../../core/types'
 import { useComb } from '../../state/combStore'
+import { useCurvature } from '../../state/curvatureStore'
+import { ensureCurvature } from '../../app/curvatureShading'
 import { useDeviation } from '../../state/deviationStore'
 import { usePrefs } from '../../state/prefsStore'
 import { sectionViewFrames, useSectionView } from '../../state/sectionViewStore'
@@ -19,7 +21,7 @@ import { useShell, type Workspace } from '../../state/shellStore'
 import { useStore } from '../../state/store'
 import type { StandardView } from '../../viewer/orthoViewport'
 import type { SceneManager } from '../../viewer/SceneManager'
-import { requireScene, sceneOf, sessionBusy } from '../host'
+import { commandHost, requireScene, sceneOf, sessionBusy } from '../host'
 import { mapReportOf } from '../mapReports'
 import { elementRefSchema, findElement, parsePlaneName, type ElementRef } from '../refs'
 import { arr, bool, enumOf, int, num, obj, oneOf, vec3, type JsonSchema } from '../schema'
@@ -73,6 +75,25 @@ export function baseToggles(scene: SceneManager): ViewToggle[] {
     { key: 'labels', description: 'the name tags and readouts over the part', shown: () => scene.labelsShown(), show: (on) => scene.setLabelsVisible(on) },
     // One comb for both views, as its switch in either panel is.
     { key: 'comb', description: 'the curvature comb along the sections and the 2D sheet’s edges and curves (flat.curvature reads it in numbers)', shown: () => useComb.getState().on, show: (on) => useComb.getState().setOn(on) },
+    // Curvature shading, the Measure workspace's: its switch, and the
+    // reading the worker makes when it is first shown.
+    {
+      key: 'curvature',
+      description: 'curvature shading on the scan in the Measure workspace (scan.curvature sets it and reads it in numbers)',
+      shown: () => useCurvature.getState().on && useCurvature.getState().values !== null && useShell.getState().workspace === 'elements',
+      show: (on) => useCurvature.getState().setOn(on),
+      why: () => {
+        const c = useCurvature.getState()
+        if (!c.on) return null
+        if (useShell.getState().workspace !== 'elements') return 'curvature shading is painted in the Measure workspace only — session.set measure shows it'
+        return c.status === 'error' ? `the curvature could not be read: ${c.message ?? 'no reason given'}` : 'the curvature is still being read'
+      },
+      settle: async (ms) => {
+        const client = commandHost().session.clientRef.current
+        if (!client || !useStore.getState().fileName) return
+        await Promise.race([ensureCurvature(client).catch(() => {}), new Promise((r) => setTimeout(r, ms))])
+      },
+    },
     // The Deviation workspace's map, under the key Reverse engineer's map
     // has, so the one call reads in both (issue 42): its Map switch — off,
     // the bare surface, the map still measured.
@@ -80,12 +101,12 @@ export function baseToggles(scene: SceneManager): ViewToggle[] {
   ]
 }
 
-const BASE_KEYS = ['scan', 'reference', 'sections', 'elements', 'labels', 'comb', 'map']
+const BASE_KEYS = ['scan', 'reference', 'sections', 'elements', 'labels', 'comb', 'curvature', 'map']
 
 const showSchema = (): JsonSchema => ({
   type: 'object',
   description:
-    'Keys to show (true) or put away (false): scan, reference, sections, elements (with dimensions), labels, comb (the curvature comb), map (the deviation map, in Deviation and in Reverse engineer), and a workspace’s own (view.set lists every key standing now).',
+    'Keys to show (true) or put away (false): scan, reference, sections, elements (with dimensions), labels, comb (the curvature comb), curvature (curvature shading, in Measure), map (the deviation map, in Deviation and in Reverse engineer), and a workspace’s own (view.set lists every key standing now).',
   properties: Object.fromEntries(BASE_KEYS.map((k) => [k, bool()])),
 })
 

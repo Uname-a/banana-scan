@@ -171,7 +171,7 @@ export class NominalSurface {
     geometry.setIndex(new THREE.BufferAttribute(indices.slice(), 1))
     // SAH costs a little more to build than the median split and pays it back
     // many times over: every scan vertex is one descent of this tree.
-    this.bvh = new MeshBVH(geometry, { strategy: SAH, maxLeafTris: 8 })
+    this.bvh = new MeshBVH(geometry, { strategy: SAH, targetLeafSize: 8 })
     // MeshBVH reorders the index buffer in place, so the normals below — which
     // are looked up by the face index the BVH reports — must be built from the
     // buffer as it stands *after* the tree.
@@ -342,8 +342,8 @@ export class NominalSurface {
 
   /** The tree flattened for a GPU search: three-mesh-bvh's own node buffer,
    *  32 bytes a node — six float bounds, then for a leaf the first triangle
-   *  and a 16-bit count flagged 0xFFFF, and for an inner node the word offset
-   *  of its right child, the left following directly. Its triangle order is
+   *  and a 16-bit count flagged 0xFFFF, and for an inner node how many nodes
+   *  on from it its right child is, the left following directly. Its triangle order is
    *  the reordered `index`, so a leaf's triangles are the face ids `closest`
    *  reports. Null for a tree built in more than one root. */
   flatTree(): Uint32Array | null {

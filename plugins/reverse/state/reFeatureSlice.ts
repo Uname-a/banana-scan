@@ -116,6 +116,14 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
           draft = { kind, profile: profile?.id ?? null, path: path?.id ?? null, op: 'join' }
           break
         }
+        case 'wrap': {
+          // The last sketch with a closed region, every region of it: a
+          // logo or a line of letters is wrapped whole.
+          const sketch = s.features.filter((f): f is SketchFeature => f.kind === 'sketch' && findRegions(f.sketch).length > 0).pop()
+          const keys = sketch ? findRegions(sketch.sketch).map((r) => r.key) : []
+          draft = { kind, sketchId: sketch?.id ?? null, regions: keys, ...(sketch ? { regionPick: { given: 'all', keys } } : {}), surface: null, depth: 1, flip: false, op: 'join' }
+          break
+        }
         case 'thicken': {
           // The last sheet there is, made a body of its own: a wall from a
           // skin is a part of its own more often than a boss on another.
@@ -221,6 +229,9 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
           break
         case 'thicken':
           draft = { kind: 'thicken', ...head, sheet: f.sheet, thickness: f.thickness, side: f.side, op: f.op }
+          break
+        case 'wrap':
+          draft = { kind: 'wrap', ...head, sketchId: f.sketchId, regions: [...f.regions], ...(f.regionPick ? { regionPick: f.regionPick } : {}), surface: f.surface, depth: f.depth, flip: Boolean(f.flip), op: f.op, ...(f.exprs ? { exprs: f.exprs } : {}) }
           break
         case 'pattern':
           draft = { kind: 'pattern', ...head, body: f.body, mode: f.mode, axis: f.axis, count: f.count, step: f.step, axis2: f.axis2 ?? null, count2: f.count2 ?? 2, step2: f.step2 ?? 10 }

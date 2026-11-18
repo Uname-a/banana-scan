@@ -14,10 +14,13 @@ import { useStore } from '../../../src/state/store'
 import { useMark } from '../../../src/state/markStore'
 import { historyAsync, historyBlocked, pick } from '../../../src/state/historyStore'
 import { CommandError, type Command } from '../../../src/plugins/api'
-import { arr, bool, enumOf, int, num, obj, oneOf, str, vec3, type JsonSchema } from '../../../src/commands/schema'
+import { arr, bool, bytes, enumOf, int, num, obj, oneOf, str, vec3, type JsonSchema } from '../../../src/commands/schema'
 import { findElement, parsePlaneName, requireScan } from '../../../src/commands/refs'
 import { requireScene, sceneOf } from '../../../src/commands/host'
-import { invalid, lastError, nextFrame, requireFlatFree, requireMeasureFree } from '../../../src/commands/core/common'
+import { fileNameSchema, fileOf, invalid, lastError, nextFrame, requireFlatFree, requireMeasureFree } from '../../../src/commands/core/common'
+import { unitsSchema } from '../../../src/commands/core/scan'
+import type { MeshUnits } from '../../../src/core/meshUnits'
+import { roundTo } from '../../../src/core/round'
 import { cutAxisOf, type SectionRef } from '../../../src/core/section/frame'
 import type { Vec3 } from '../../../src/core/types'
 import { offeredSolids, type OfferedSolid } from '../../../src/app/solids'
@@ -52,6 +55,9 @@ import { MESH_FORMATS, type MeshFormat } from '../../../src/core/exportMesh'
 import { editOut, partsOut, pieceOut, pointOut, reductionOut, wrapOut } from './meshReadout'
 import { meshToolsSession, type EditLanded, type MeshToolsSession } from './meshToolsSession'
 import { errorMessage } from '../../../src/commands/types'
+import { bandFor, buildPatternFile, surfaceOf, unrollable } from './flatPatterns'
+import { usePattern, type PatternMade } from '../state/patternStore'
+import { FLATTEN_ITERATIONS } from '../core/flatten'
 
 type Ref = number | string
 type Json = Record<string, unknown>
@@ -327,6 +333,8 @@ const inspect: Command<{ pieceSize?: number; holeSize?: number; deviation?: bool
     deviation: bool('Measure the edited copy against the scan in use.'),
   }),
   readOnly: true,
+  // Over the whole mesh, as scan.qa: run as a job, not refused at the answer limit.
+  long: true,
   run: async ({ pieceSize, holeSize, deviation }) => {
     requireScan()
     const t = client()
@@ -658,6 +666,100 @@ const boolean: Command<{ op: BooleanOp; solids: string[] }> = {
   },
 }
 
+// ---- merging another scan ---------------------------------------------------------
+
+const mergeOpen: Command<{ bytes: Uint8Array; name: string; units?: MeshUnits }> = {
+  name: 'merge_open',
+  title: 'Open another scan to merge',
+  description:
+    'Open another scan of the same part — its other side, scanned on its own — beside the mesh, to be placed on it (mesh.merge_place) and merged into it (mesh.merge). STL, PLY, OBJ or 3MF. Opening another lets the last one go. Changes nothing on the mesh. Returns its size.',
+  input: obj({ bytes: bytes('The file’s contents.'), name: fileNameSchema('"bracket underside.ply"'), units: unitsSchema }, ['bytes', 'name']),
+  history: false,
+  run: async ({ bytes: data, name, units }) => {
+    requireScan()
+    useStore.setState({ errorText: null })
+    if (!(await session().openOtherScan(fileOf(data, name), units ?? 'mm'))) throw new CommandError('failed', lastError(`${name} could not be opened.`))
+    inHand('merge')
+    const o = m().other!
+    return { other: { name: o.name, vertices: o.vertices, triangles: o.triangles }, status: useStore.getState().statusText }
+  },
+}
+
+interface MergePair {
+  other: Vec3
+  mesh: Vec3
+}
+
+const mergePlace: Command<{ pairs?: MergePair[] }> = {
+  name: 'merge_place',
+  title: 'Place the other scan on the mesh',
+  description:
+    'Place the other scan (mesh.merge_open) on the mesh where the two share surface — fitted on that overlap alone, so a scan that shares only a band round the middle places as well as one that shares most. With no pairs, by itself: its file’s own frame first, then a search for the shape the two have in common. With three or more pairs of the same place on each (on the other scan as its file has it, and on the mesh, mm), from them. Shown in orange. Returns the placement: source (frame, auto or points); overlap, the share of the other scan lying on the mesh, 0–1; rms over it, mm; gate, mm, how close a point must lie to count as on the mesh, and what mesh.merge leaves out within; ambiguous, another placement fitted nearly as well — look at it, or give pairs. A search that finds nothing fitting closely says so: give pairs then. Changes nothing on the mesh.',
+  input: obj({
+    pairs: arr(
+      obj({ other: vec3('On the other scan, in its file’s coordinates, mm.'), mesh: vec3('The same place on the mesh, mm.') }, ['other', 'mesh']),
+      'Three or more places on both, spread over the part (not along a line).',
+      { minItems: 3 },
+    ),
+  }),
+  history: false,
+  run: async ({ pairs }) => {
+    requireScan()
+    if (!m().other) throw new CommandError('invalid_state', 'There is no other scan open: open it with mesh.merge_open first.')
+    useStore.setState({ errorText: null })
+    const placed = await session().placeOtherScan(pairs?.map((p) => ({ scan: p.other, nominal: p.mesh })))
+    if (!placed) throw new CommandError('failed', lastError('The other scan could not be placed.'))
+    inHand('merge')
+    return {
+      placement: {
+        source: placed.source,
+        overlap: roundTo(placed.overlap, 4),
+        rms: roundTo(placed.rms, 4),
+        gate: roundTo(placed.gate, 4),
+        ambiguous: placed.ambiguous,
+        // Row-major 3×3 then the move, mm: the other scan's coordinates into the mesh's.
+        rotation: Array.from(placed.transform.r, (v) => roundTo(v, 6)),
+        translation: Array.from(placed.transform.t, (v) => roundTo(v, 4)),
+      },
+      status: useStore.getState().statusText,
+    }
+  },
+}
+
+const mergeCommand: Command<{ dropDoubled?: boolean }> = {
+  name: 'merge',
+  title: 'Merge the other scan into the mesh',
+  description:
+    'Add the other scan, as placed (mesh.merge_place), to the mesh: its triangles carried into the mesh’s frame. dropDoubled (true to start) leaves out its triangles that only scan again what the mesh has — every corner within the placement’s gate — so the shared band is not there twice; what is left meets the mesh along a seam, which mesh.fill_holes closes, or mesh.wrap makes one skin of the two. Lets the other scan go once merged. Edits the copy. One undo step. Returns the edit (triangles added and left out) and the mesh after it.',
+  input: obj({ dropDoubled: bool('Leave out what only scans the mesh again — true to start.') }),
+  history: false,
+  run: async ({ dropDoubled }) => {
+    requireScan()
+    const o = m().other
+    if (!o) throw new CommandError('invalid_state', 'There is no other scan open: open it with mesh.merge_open first.')
+    if (!o.placed) throw new CommandError('invalid_state', 'The other scan is not placed on the mesh yet: place it with mesh.merge_place first.')
+    return editAnswer(
+      await step(`merge ${o.name}`, 'The merge', async () => {
+        inHand('merge')
+        if (dropDoubled !== undefined) m().setMergeDrop(dropDoubled)
+        return session().mergeOtherScan({ inStep: true })
+      }, true),
+    )
+  },
+}
+
+const mergeClear: Command = {
+  name: 'merge_clear',
+  title: 'Let the other scan go',
+  description: 'Close the other scan opened to merge (mesh.merge_open), without merging it. Changes nothing on the mesh.',
+  input: noInput,
+  history: false,
+  run: async () => {
+    await session().clearOtherScan()
+    return { status: 'The other scan is closed.' }
+  },
+}
+
 const shell: Command<{ thickness?: number; side?: ThickenSide; mode?: 'hollow' | 'thicken' }> = {
   name: 'shell',
   title: 'Hollow or thicken',
@@ -828,6 +930,127 @@ const trim: Command<{ body: string; offset?: number; depth?: number; flip?: bool
   },
 }
 
+// ---- flat patterns -------------------------------------------------------------------------
+
+/** A pattern as a command answers it: its figures, how true it is, and
+ *  what laying it out found. Its points stay in the workspace —
+ *  mesh.export_pattern writes them. */
+function patternOut(made: PatternMade): Json {
+  const r = made.report
+  const { stray, ...figures } = r.figures
+  return {
+    pattern: { ...figures, loops: made.offsets.length - 1 },
+    distortion: {
+      lengthPercent: r.distortion.length,
+      areaPercent: r.distortion.area,
+      totalAreaPercent: r.distortion.totalArea,
+      flipped: r.distortion.flipped,
+    },
+    ...(made.mode === 'unroll'
+      ? {
+          surface: made.report.surface,
+          coverage: made.report.coverage,
+          seam: made.report.seam,
+          ...(made.report.radius !== undefined ? { radius: made.report.radius } : {}),
+          ...(made.report.sector ? { sector: made.report.sector } : {}),
+          offset: made.offset,
+          residual: made.report.residual,
+        }
+      : { iterations: made.report.iterations, converged: made.report.converged }),
+    vertices: r.vertices,
+    triangles: r.triangles,
+    ...(r.leftOut.triangles > 0 ? { leftOut: r.leftOut } : {}),
+    ...(stray > 0 ? { strayEdges: stray } : {}),
+  }
+}
+
+/** The panel's work in hand, which a pattern waits for. */
+function requirePatternFree(): void {
+  const busy = meshBusy()
+  if (busy) throw new CommandError('invalid_state', `The workspace is busy — ${busy}. Wait for it, then ask again.`)
+}
+
+const unrollCommand: Command<{ element: Ref; region?: RegionIn; band?: number; offset?: number }> = {
+  name: 'unroll',
+  title: 'Unroll a cylinder or cone',
+  description:
+    'A flat pattern of the scan on a cylinder or cone, laid out by the element fitted to it: the arc round the axis becomes x and the height along it y, so an outline and the holes in it come out true to size; a cone unrolls to its sector about its apex. Each point is taken at the fitted surface — the scatter does not stretch the pattern — and offset lays out a surface that far outside it (inside, negative): half the thickness, for a sheet’s neutral fibre. A region wrapping right round the axis is cut along a seam at the widest gap in it, or between two columns of vertices round a closed tube. Without region, the scan within band of the surface (four times the fit’s scatter, at least 0.2 mm) with its normal within 30° of the surface’s, either way; with one, that region. Only the largest connected piece is laid out. Made beside the scan, not an edit of it, and shown in the Mesh Tools panel (Unroll/flatten); mesh.export_pattern writes it as a DXF or an SVG. Returns the pattern’s size (width, height, area, perimeter, mm; the holes with their centres and sizes; x and y on the pattern, its low corner the origin), how far the region lies off the surface (residual: RMS and most), the arc covered and where the seam was cut, degrees, a cone’s sector (its angle, its apex on the pattern, the radii), and the stretch laying it out took (distortion, per cent — near zero when the region is the surface, more where it takes in something that is not).',
+  input: obj(
+    {
+      element: oneOf([str('The element’s name.', { minLength: 1 }), int('The element’s id.', { minimum: 1 })], 'A fitted cylinder or cone.'),
+      region: regionSchema('The surface to unroll; absent, the scan lying on the element.'),
+      band: sizeIn('How far off the element’s surface the scan may lie and be taken, mm — without a region only.'),
+      offset: num('Lay out the surface this far outside the fitted one, mm; inside when negative.'),
+    },
+    ['element'],
+  ),
+  history: false,
+  run: async ({ element, region, band, offset = 0 }) => {
+    requireScan()
+    requirePatternFree()
+    const el = findElement(element)
+    const surface = surfaceOf(el)
+    if (typeof surface === 'string') {
+      const options = unrollable(useStore.getState().elements)
+      return invalid(`${surface} ${options.length === 0 ? 'Fit one with element.fit first.' : `The cylinders and cones: ${options.map((e) => `${e.name} (${e.id})`).join(', ')}.`}`)
+    }
+    if (region !== undefined && band !== undefined) invalid('band finds the surface when no region is named — give one or the other.')
+    if (!Number.isFinite(offset)) invalid('The offset must be a number of millimetres.')
+    if (surface.kind === 'cylinder' && !(surface.radius + offset > 0)) invalid('An offset that far inside leaves no cylinder.')
+    const vertices = region !== undefined ? await regionVertices(region) : null
+    inHand('pattern')
+    const p = usePattern.getState()
+    p.setMode('unroll')
+    p.setElement(el.id)
+    p.setOffset(offset)
+    p.setScope(region === 'marked' ? 'marked' : 'surface')
+    const made = await session().makeFlatPattern({ mode: 'unroll', element: el, region: vertices, band: band ?? bandFor(el), offset })
+    if (!made) throw new CommandError('failed', lastError('The unroll did not go through.'))
+    return { ...patternOut(made), status: useStore.getState().statusText }
+  },
+}
+
+const flattenCommand: Command<{ region: RegionIn; iterations?: number }> = {
+  name: 'flatten',
+  title: 'Flatten a curved sheet',
+  description:
+    'A flat pattern of a region of the scan that is a bent sheet — developable, or nearly — laid out flat with the least distortion: a conformal layout (least-squares conformal maps) refined as rigid as possible, so a sheet bent without stretching flattens to its blank, its lengths kept. Name one skin of the sheet, not both: the region is a surface, and only its largest connected piece is laid out. Made beside the scan, not an edit of it, and shown in the Mesh Tools panel (Unroll/flatten); mesh.export_pattern writes it as a DXF or an SVG. Returns the pattern’s size (width, height, area, perimeter, mm; the holes with their centres and sizes; turned so the smallest rectangle round it lies along x and y, its long side along x, its low corner the origin) and its distortion, per cent: lengthPercent — a length on the pattern against the same length on the scan, in the direction each triangle changed most — and areaPercent, each as the most anywhere, the mean and the 95th percentile over the surface; totalAreaPercent, the whole pattern’s area against the scan’s; flipped, triangles turned over (the pattern overlapping itself). A sheet bent from flat reads a fraction of a per cent; a dished or drawn one, which no blank makes exactly, several. Also the rounds the layout took and whether it settled.',
+  input: obj(
+    {
+      region: regionSchema('The sheet to flatten — one skin of it.'),
+      iterations: int(`Rounds of the as-rigid-as-possible refinement at most — ${FLATTEN_ITERATIONS} to start; it usually settles in a few.`, { minimum: 0, maximum: 1000 }),
+    },
+    ['region'],
+  ),
+  history: false,
+  run: async ({ region, iterations }) => {
+    requireScan()
+    requirePatternFree()
+    const vertices = await regionVertices(region)
+    inHand('pattern')
+    usePattern.getState().setMode('flatten')
+    const made = await session().makeFlatPattern({ mode: 'flatten', region: vertices, ...(iterations !== undefined ? { iterations } : {}) })
+    if (!made) throw new CommandError('failed', lastError('The flattening did not go through.'))
+    return { ...patternOut(made), status: useStore.getState().statusText }
+  },
+}
+
+const exportPattern: Command<{ format?: 'dxf' | 'svg' }> = {
+  name: 'export_pattern',
+  title: 'Export the flat pattern',
+  description:
+    'The flat pattern mesh.unroll or mesh.flatten made last, as a DXF (the default) or an SVG, in millimetres, the pattern’s low corner at the origin and y up in the DXF: its outline and its holes as closed polylines on the edges layer, the DXF’s thinned to within 0.01 mm. Returns the file’s bytes and the name the panel would save it under.',
+  input: obj({ format: enumOf(['dxf', 'svg'], 'dxf (the default) or svg.') }),
+  readOnly: true,
+  returnsFile: true,
+  run: async ({ format = 'dxf' }) => {
+    const made = usePattern.getState().made
+    if (!made) throw new CommandError('invalid_state', 'There is no flat pattern — mesh.unroll or mesh.flatten makes one.')
+    const built = buildPatternFile(made, format, 'mm')
+    return { file: { name: built.name, mimeType: built.mimeType, bytes: built.bytes }, status: built.status }
+  },
+}
+
 // ---- the copy -----------------------------------------------------------------------------
 
 const requireCopy = () => {
@@ -917,12 +1140,19 @@ export const meshCommands = [
   densify,
   offset,
   boolean,
+  mergeOpen,
+  mergePlace,
+  mergeCommand,
+  mergeClear,
   shell,
   wrapCommand,
   applyWrap,
   reduce,
   applyReduced,
   trim,
+  unrollCommand,
+  flattenCommand,
+  exportPattern,
   useEdited,
   discardEdited,
   exportPart,
@@ -935,6 +1165,7 @@ export function meshBusy(): string | null {
   if (s.status === 'running') return 'the mesh is being reduced'
   if (s.trimStatus === 'running') return 'a body is being trimmed to the scan'
   if (s.wrapStatus === 'running') return 'the mesh is being wrapped'
+  if (usePattern.getState().running) return 'a flat pattern is being made'
   return null
 }
 

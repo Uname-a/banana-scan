@@ -25,8 +25,12 @@ import { EditedCopyNote } from '../ui/EditedCopyNote'
 import { exportReducedMesh } from './exportReduced'
 import { exportTrimmedMesh } from './exportTrimmed'
 import { exportEditedMesh } from './exportEdited'
+import { buildPatternFile } from './flatPatterns'
+import { saveBuilt } from '../../../src/app/exports'
+import { PATTERN_MARK_COLOR, patternMarks, usePattern } from '../state/patternStore'
 import { useMeshWorkspace } from './useMeshWorkspace'
 import { createMeshToolsSession, installMeshToolsSession } from './meshToolsSession'
+import { meshUnitsFor } from '../../../src/state/unitsPromptStore'
 
 const MESH_VIEWS: { id: MeshView; icon: IconName; label: string; title: string }[] = [
   {
@@ -112,7 +116,7 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
   useEffect(() => tools.watch(), [tools])
   const { reduceField, reduceRgb, copyField, copyRgb } = tools
   const {
-    runReduce, applyReduction, discardReduction, removeIslands, deleteMarked, flipScan, cutScan, mirrorScan, fillScanHoles, smoothScan, densifyScan, offsetScan, shellScan, booleanScan, trimScan,
+    runReduce, applyReduction, discardReduction, removeIslands, deleteMarked, flipScan, cutScan, mirrorScan, fillScanHoles, smoothScan, densifyScan, offsetScan, shellScan, booleanScan, trimScan, openOtherScan, placeOtherScan, mergeOtherScan, clearOtherScan,
     wrap, cancelWrap, applyWrap, discardWrap, adoptEditedCopy, discardEditedCopy,
   } = useMeshWorkspace(tools)
   // The units on screen: the maps' figures and the status lines of the
@@ -199,6 +203,10 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
             ? 'trim'
             : null,
   )
+  // Unroll / flatten's marking — its own store says when it asks for one.
+  const patternMarking = usePattern((p) => patternMarks(p))
+  const toolNow = useMeshTools((s) => s.tool)
+  const markingNow = markingFor ?? (toolNow === 'pattern' && patternMarking ? 'pattern' : null)
   // Trim to scan's piece and how it is looked at: over it, the break stays
   // marked on the ghosted scan, the marking tools stood down.
   const made = useMeshTools((s) => s.trimMade)
@@ -207,7 +215,7 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
   const setTrimView = useMeshTools((s) => s.setTrimView)
   const onPiece = trimMade && trimView !== 'break'
   const gapLegend = onMesh && tool === 'trim' && made !== null && trimView === 'gap' && made.report.fit !== null ? made : null
-  const session = onMesh ? markingFor : null
+  const session = onMesh ? markingNow : null
   const lastSession = useRef(session)
   useEffect(() => {
     if (lastSession.current === session) return
@@ -270,6 +278,8 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
               ? SMOOTH_MARK_COLOR
               : session === 'offset'
                 ? OFFSET_MARK_COLOR
+                : session === 'pattern'
+                ? PATTERN_MARK_COLOR
                 : session === 'trim'
                   ? TRIM_MARK_COLOR
                   : session === 'flip'
@@ -332,11 +342,25 @@ export function useMeshPlugin(host: PluginHost): PluginRuntime {
         onApplyWrap={() => void applyWrap({ units })}
         onDiscardWrap={discardWrap}
         onBoolean={() => void booleanScan({ units })}
+        onOpenOther={(file) =>
+          void (async () => {
+            const read = await meshUnitsFor(file.name)
+            if (read && (await openOtherScan(file, read))) await placeOtherScan(undefined, units)
+          })()
+        }
+        onPlaceOther={() => void placeOtherScan(undefined, units)}
+        onMergeOther={() => void mergeOtherScan({ units })}
+        onCloseOther={() => void clearOtherScan()}
         onTrim={() => void trimScan(undefined, units)}
         onExportTrimmed={(format) => exportTrimmedMesh(sceneRef, format, units)}
         onExportEdited={exportEditedMesh}
         onUseEdited={() => void adoptEditedCopy()}
         onDiscardEdited={() => void discardEditedCopy()}
+        onMakePattern={() => void tools.makeFlatPattern(undefined, units)}
+        onExportPattern={(format) => {
+          const made = usePattern.getState().made
+          if (made) saveBuilt(buildPatternFile(made, format, units))
+        }}
       />
     ),
     overlay: (

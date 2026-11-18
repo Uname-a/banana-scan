@@ -10,6 +10,102 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Wrap a sketch onto a surface, and planes along a path** (Reverse
+  engineer, 2026-11-17). **Wrap** rolls a sketch's closed regions — an
+  outline, letters, a logo — onto a measured cylinder, cone or plane with
+  their lengths kept along the surface, the inverse of Mesh Tools' unroll:
+  round a cylinder the sketch's width is arc, on a cone it is laid on the
+  sector about the apex. The sketch lands where it is drawn, rolled on
+  from the line where a plane like its own touches the surface. It then
+  stands a depth out of the surface (an emboss, joined to the body) or
+  sinks into it (a deboss, cut), as a feature in the tree: its walls stand
+  square to the surface, its faces are the surface and its offset, exact.
+  **Planes on path** makes plane elements square to a curve — a sketch's
+  chain, a measured line, circle or axis, a traced tube's route, a run of
+  points — every so far or so many along it, their sheets carried round
+  the bends the same way up: for sections across a bent part and a
+  sweep's profile. The agent's commands are `reverse.feature.add { kind:
+  "wrap" }`, `reverse.sketch.wrap_read` (where it lands, changing nothing)
+  and `reverse.plane.along_path`; the model guide's 2f says how to use
+  them.
+
+- **A patch network laid out by itself** (Reverse engineer, 2026-11-17).
+  **Auto layout** in the Patch network's box, and `reverse.network.auto`
+  for an agent, turn a closed scan into a network of smooth B-spline
+  patches without drawing a curve: the scan's creases become crease
+  curves, and the regions between them are cut into cells along the part.
+  A side wall between two sharp rims is cut down the middles of its
+  rounds, a smoothly turning rim is given four corners, a face of more
+  than six corners is cut in two, and a part with no crease is laid out as
+  a box with its corners on its corner blends. The patches are fitted and
+  sewn as drawn ones: a solid where the network closes, tangent across
+  every curve that is not a crease, each patch's RMS and worst point
+  reported. On test parts with 0.01 mm of noise — a box with a domed top,
+  sharp or rounded, a can, a blended box — it comes out a solid of six
+  faces within 0.04 % of the scan's volume, the patches 0.010–0.021 mm RMS
+  and 0.09 mm at worst. Not reached yet: curvature continuity (the patches
+  are G1, not Class A), exact tangency where three patches meet at a
+  corner (about 5° on the blended box), open scans, faces bounded by
+  more than two loops, and real parts whose creases do not close into
+  loops — on the sample fridge bracket most regions are left out, its
+  creases crossing and ending where no node joins them. A crumb of a few triangles pinched off inside a
+  cell between two passes of a curve no longer refuses the cell.
+- **scan.qa and mesh.inspect run as jobs** (agent server, 2026-11-17).
+  Both read the whole scan. On a few million triangles, or on a busy
+  computer, they outlast the server's answer limit (40 s in Scan2CAD
+  Local), and as plain reads they were refused there: "did not answer
+  within 40 s". They are long reads now, run as jobs like
+  reverse.body.review: answered `{ queued, job }` at the limit,
+  `bananascan_wait` gives the answer, and both take `wait`.
+- **Unroll / flatten** (Mesh Tools, 2026-11-17). A flat pattern of a
+  surface of the scan, true to size, to cut it from sheet: drawn in the
+  panel and saved as a DXF or an SVG in millimetres, the outline and the
+  holes in it as closed polylines. **Unroll** lays a cylinder or a cone out
+  by the element fitted to it — the arc round the axis across, the height
+  along it up, a cone as its sector about the apex — each point taken at
+  the fitted surface so the scan's scatter does not stretch it, and an
+  offset for a sheet's neutral fibre; a whole tube is cut along a seam.
+  **Flatten** lays a marked sheet — a bent bracket, a formed panel — out
+  flat with the least distortion (a conformal layout refined as rigid as
+  possible) and says how far it had to stretch the surface, at most and on
+  average: a fraction of a per cent for a sheet bent from flat. The agent's
+  commands are `mesh.unroll`, `mesh.flatten` and `mesh.export_pattern`,
+  and the guide `flat-patterns` says how to use them.
+- **Curvature shading** (2026-11-17). Under the model in the Measure
+  panel: the scan coloured by how it bends — red convex, pale flat, blue
+  concave, sharp edges darker — read off a quadric fitted round every
+  vertex over a radius you set, so a scan's noise does not swamp it. A
+  scale in 1/mm and as a radius, the radius under the cursor, and the
+  shares of flat, convex and concave. `scan.curvature` sets it and reads
+  it in numbers, the curvatures at a place included.
+- **PTX scans open** (2026-11-17). A long-range laser scanner's PTX —
+  what Leica Cyclone, FARO SCENE and Trimble RealWorks export — opens as
+  the scan, every scan in the file taken through its own transform and
+  read in metres, whatever units are asked. Each scan is a grid of points
+  as the scanner swept them, so it is made a surface as it is read:
+  neighbouring points joined two triangles a square, facing the scanner,
+  and none made across a step from a near surface to one behind it, where
+  the gap is far wider than the sweep's step at that range. Points the
+  beam got nothing back for are left out, and the scanner's colours kept
+  when every point has them. Scans that overlap give overlapping sheets;
+  Wrap makes one surface of them. A PTX is never the reference.
+- **Merge scans** (Mesh Tools, 2026-11-17). Another scan of the part — its
+  underside, scanned on its own — opened beside the mesh, placed where the
+  two share surface, shown there in orange with how much of it lies on the
+  mesh, and merged into the edited copy as one edit, leaving out (if asked)
+  its triangles that only scan again what the mesh has. It is placed on the
+  overlap alone, so two scans that share only a band round the middle place
+  as well as two that share most: from the file's own frame, from a search
+  for the shape the two have in common (FPFH descriptors and RANSAC), or,
+  from an agent, from three picked pairs; and where it cannot tell, it says
+  so rather than placing it wrong. The agent's commands are
+  `mesh.merge_open`, `mesh.merge_place`, `mesh.merge` and
+  `mesh.merge_clear`. Picking the pairs in the panel is not there yet.
+- **A fit frames a part modelled past the scan** (2026-11-16). Fit, and
+  each view of a sheet of views (view.render with views), framed the scan
+  alone whenever one was open, so a body modelled past the scan's end — a part
+  made longer than it was scanned — was cut off at the scan's edge in the top
+  and front views. A fit now frames the bodies shown as well as the scan.
 - **Banana Scan** (2026-11-13). ScanRuler 0.11.2, forked and renamed, with a
   logo of its own: the ScanRuler name and the CNC Kitchen name and logo are
   CNC Kitchen's trademarks, which a fork may not use. Projects are saved as

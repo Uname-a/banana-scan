@@ -374,4 +374,4 @@ export function stepsOfJoin(faces: readonly FaceInfo[], edges: readonly EdgeInfo
 /** The steps that make a solid of their own and may join it to what they
  *  meet — after which the build tells the steps they left. A Combine's
  *  join is told as well (Builder.joinMakers). */
-export const JOINING: ReadonlySet<string> = new Set(['extrude', 'revolve', 'extract', 'loft', 'sweep'])
+export const JOINING: ReadonlySet<string> = new Set(['extrude', 'revolve', 'extract', 'loft', 'sweep', 'wrap'])

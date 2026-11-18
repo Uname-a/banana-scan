@@ -600,7 +600,7 @@ export const sketchAddIn: JsonSchema = {
 
 // ---- extents and profiles --------------------------------------------------------------
 
-const regionsIn = oneOf(
+export const regionsIn = oneOf(
   [
     enumOf(['all', 'largest'], 'Every closed region of the sketch, or the largest by area. Kept as given: an edit of the sketch takes the regions again as asked.'),
     arr(
@@ -864,6 +864,22 @@ export const FEATURE_IN: Record<string, JsonSchema> = {
     },
     ['kind', 'profile'],
     'A profile swept along a path — a bent bar, a handle, a rim that follows a curve; the section held square to the path. Give path, a sketch, or route, a centreline in 3D.',
+  ),
+  wrap: obj(
+    {
+      kind: kind('wrap'),
+      name: nameIn,
+      sketchId: { ...featureRef('sketch'), description: 'The sketch wrapped, by id or name: drawn on a plane along the surface — tangent to the cylinder or cone (a plane element, or a coordinate plane at the radius), or parallel to such a plane. It lands where it is drawn: rolled on from the line where a plane like its own touches the surface, on the side the drawing lies.' },
+      regions: { ...regionsIn, description: 'The sketch’s regions wrapped: "all" (the default — a logo, a line of letters), "largest", or keys or points inside them.' },
+      surface: oneOf([int('The element’s id.'), str('The element’s name, whole, case aside.', { minLength: 1 })], 'The measured cylinder, cone or plane of 3D Measure the sketch is wrapped onto, by id or name — as drawn, an assumed diameter held.'),
+      depth: num('How far the wrapped regions stand out of the surface (emboss) or sink into it (deboss), mm along its normal.', { exclusiveMinimum: 0 }),
+      flip: bool('The depth the other way: into the surface for a join, out of it for a cut — on a bore, where the material lies outside the surface.'),
+      op: enumOf(['new', 'join', 'cut'], 'join (the default): an emboss, joined to every solid it meets; cut: a deboss, out of every solid it meets; new: a body of its own.'),
+      target: targetIn,
+      exprs: exprsIn('depth'),
+    },
+    ['kind', 'sketchId', 'surface', 'depth'],
+    'A sketch wrapped onto a measured cylinder, cone or plane — its lengths kept along the surface, x round it and y along it, as an unroll lays it out the other way — and given a depth along the surface’s normal: lettering or a logo embossed on a bottle or debossed into a cone. The walls stand square to the surface; the faces are the surface and its offset. Refused where the sketch would lap itself round the axis (wider than half a turn either side of where it touches), reach past a cone’s apex, or lies on a plane square to the axis. reverse.sketch.wrap_read reads where it lands first, changing nothing.',
   ),
   thicken: obj(
     {
@@ -1225,6 +1241,7 @@ export const FEATURE_EXAMPLES: Record<string, Record<string, unknown>> = {
   shell: { kind: 'shell', body: 'Solid 1', faces: [2], thickness: 1.2 },
   hole: { kind: 'hole', body: 'Solid 1', axis: { kind: 'point', face: 5 }, insert: 'M3' },
   thicken: { kind: 'thicken', name: 'Flange', sheet: 'Flange skin', thickness: 1.8, side: 'in' },
+  wrap: { kind: 'wrap', name: 'Label', sketchId: 'Label text', regions: 'all', surface: 'Cylinder 1', depth: 0.6, op: 'join' },
   loft: {
     kind: 'loft',
     name: 'Wing',
@@ -1244,6 +1261,7 @@ export const EXAMPLE_NOTES: Record<string, string> = {
   fillet: 'Edge 4 of Solid 1, by its index in reverse.body.describe, rounded 0.5 mm, and the edges tangent to it with it.',
   chamfer: 'Edge 0 of Solid 1 bevelled 0.3 mm.',
   shell: 'Solid 1 hollowed to a 1.2 mm wall, open at its face 2.',
+  wrap: 'Every closed region of the sketch “Label text” — drawn on a plane tangent to the measured “Cylinder 1”, its v along the axis — wrapped round it with their lengths kept and stood 0.6 mm out of it, joined to the body they meet: raised lettering. op "cut" sinks them in instead.',
   thicken: 'The fitted surface “Flange skin” made a 1.8 mm wall against its normal — inward, where the skin was fitted to the part’s outside — as a body of its own. Trim the skin first — a boolean intersect with the outline prism, or a split keeping what lies on the scan — so the wall’s ends stand square to it. With an outer and an inner skin both fitted, split a block by tools [outer, inner] with keep "between" instead.',
   loft: 'A moulded wing lofted smooth through four stations: “Wing 1”, its outer skin fitted on the plane z = 0 and closed by a line across the ends of its walls, and the scan’s outer skin at z = 20, 40 and 60 (the rim below v = −13 left out) fitted like it — the same lines and arcs in the same order, tangent where it is, its base line copied — into “Wing station 2” to “Wing station 4”. With inner, every station moved in by the 2 mm wall, its base line kept, into “Wing inner 1” to “Wing inner 4”, lofted into “Wing inner”, a body of its own to cut from the wing.',
   hole: 'A hole for an M3 heat-set insert — Ø4.0, 6.7 deep — drilled into Solid 1’s flat face 5 at its centre, as on a standoff’s top. For a plain hole along a round face: axis { kind: "face", face }, radius, depth (null: through).',

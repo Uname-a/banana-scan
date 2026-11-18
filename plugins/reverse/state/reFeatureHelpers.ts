@@ -168,7 +168,7 @@ export function hideSection(id: number): void {
 export function sketchesUsedBy(f: { kind: string; sketchId?: number | null; sketches?: readonly number[]; profile?: number | null; path?: number | null }): number[] {
   if (f.kind === 'loft') return [...(f.sketches ?? [])]
   if (f.kind === 'sweep') return [f.profile, f.path].filter((id): id is number => id !== null && id !== undefined)
-  if (f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'sheet') return f.sketchId != null ? [f.sketchId] : []
+  if (f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'sheet' || f.kind === 'wrap') return f.sketchId != null ? [f.sketchId] : []
   return []
 }
 
@@ -247,6 +247,7 @@ export const KIND_LABELS: Record<Feature['kind'] | 'coil', string> = {
   split: 'Split',
   loft: 'Loft',
   sweep: 'Sweep',
+  wrap: 'Wrap',
   thicken: 'Thicken',
   pattern: 'Pattern',
   offsetBody: 'Offset',

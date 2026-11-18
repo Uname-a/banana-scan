@@ -38,6 +38,8 @@ import { describeEdge, describeFace, edgeDistance, faceDistance, matchEdge, matc
 import { livePicks, runStoredWhere, sharpBySurfaces, type StoredPick, whereWords } from './where'
 import { type Body, bodyBrief, type BodyCheck, type BodyStep, boxesMeet, type BuildResult, type BuildSteps, type BuiltBody, type Diagnosis, diagonalOf, type DrawnBody, type DrawnBuild, type EdgeBrief, type EdgeInfo, type FaceInfo, type FeatureResult, type FilletTries, type FilletTry, halton, type KeptBuild, type Look, meshBox, meshDeflection, type Overlap, pickEach, type PlacedSketch, type PrefixNode, type PreviewResult, type PreviewStep, type RoundTrip, type RoundTripFind, type SketchStep, type Snapshot, type SolidStep, SPLIT_SAMPLES, stepKeys, surfaceMeshDeflection, SURFACE_TRIANGLES, type OffScanReport, type SurfaceReport, type TrimReport } from './buildTypes'
 import { cylinderSolid, primitiveSolid } from './primitives'
+import { wrapSolid } from './buildWrap'
+import { profilesMiddle } from './wrap'
 import { extrudeUpTo, fuseAll, outlineOf, reachAlong, taperedPrism, taperLimitOf, taperRefusal, trimByPlanes } from './buildExtrude'
 import { NOTHING, noteRead, ReadMap, readsStand, ReadSet, replay, type StateName, type StepReads } from './buildReads'
 import { objectsOf, readPart, type PartExport, type Tokens, writePart } from './buildTransfer'
@@ -108,6 +110,20 @@ const SLIVER_MM = 0.01
 /** A face a shell made under this area, mm², is warned of as a sliver too
  *  — reverse.body.check's own `tinyArea` by default. */
 const TINY_FACE_MM2 = 0.01
+
+/** How near, mm, a face's centroid lies to one of a step's inputs, its
+ *  area alike to a millionth, for the two to be one face (see
+ *  stoodBefore) — the kernel's own tolerance at a face. */
+const SAME_FACE_MM = 1e-4
+
+/** The faces of what went into a step, to know again in what came out —
+ *  see Builder.stoodBefore. */
+interface StoodBefore {
+  /** Their hashes: a face that kept one is the face it was. */
+  hashes: ReadonlySet<number>
+  /** Whether a face of the result is one of them. */
+  has(face: { hash: number; area: number; centroid: Vec3 }): boolean
+}
 
 /** How long reverse.body.check { roundTrip: "find" } writes and reads
  *  back the stages of a body, ms, before it answers with as far as it got. */
@@ -2038,6 +2054,23 @@ export class Builder {
     return { ...step, profile, from, path }
   }
 
+  /** A wrap's profiles from its sketch as the build placed it — taken
+   *  again, by the regions it picked, where the sketch moved. */
+  private wrapPlaced(step: Extract<BuildStep, { kind: 'wrap' }>): Extract<BuildStep, { kind: 'wrap' }> {
+    const placed = this.placed.get(step.sketchId)
+    if (!placed?.changed) return step
+    const all = this.placedRegions(step.sketchId)
+    const regions = (step.regionPick ? regionsByPick(step.regionPick, all) : null) ?? matchRegions(step.regions, all)
+    if (regions.length === 0) throw new Error(all.length > 0 ? lostPickWords(step.regions.length, this.names.get(step.sketchId) ?? `Sketch ${step.sketchId}`, all) : `The picked profiles are no longer closed — the projected pieces moved under them.${openEndsWords(placed.sketch)}`)
+    const profiles = liftRegions(placed.frame, placed.sketch, regions)
+    return { ...step, profiles, normal: placed.frame.normal, middle: profilesMiddle(profiles) }
+  }
+
+  /** A wrap's solid: its profiles on the surface, between their offsets. */
+  private wrapOf(step: Extract<BuildStep, { kind: 'wrap' }>): Shape {
+    return wrapSolid(this.kernel, this.wrapPlaced(step))
+  }
+
   /** A sweep's solid, from its sketches as the build placed them. */
   private sweepOf(step: Extract<BuildStep, { kind: 'sweep' }>): Shape {
     const placed = this.sweepPlaced(step)
@@ -2091,6 +2124,8 @@ export class Builder {
               ? this.loftOf(step)
               : step.kind === 'sweep'
                 ? this.sweepOf(step)
+              : step.kind === 'wrap'
+                ? this.wrapOf(step)
               : step.kind === 'thicken'
                 ? this.thickenPreview(step)
               : step.kind === 'surface'
@@ -2104,7 +2139,7 @@ export class Builder {
       const mesh = k.mesh(shape, (typeof solid !== 'number' && 'fit' in solid && solid.fit ? surfaceMeshDeflection : meshDeflection)(diagonalOf(this.kernel, shape)))
       if (typeof solid !== 'number' && 'face' in solid) return { mesh, volume: 0, closed: false, surface: solid.report }
       if (typeof solid !== 'number') return { mesh, volume: solid.surface ? 0 : k.volume(shape), closed: solid.report.closed, trim: solid.report }
-      const onBody = step.kind !== 'extrude' && step.kind !== 'revolve' && step.kind !== 'extract' && step.kind !== 'sheet' && step.kind !== 'loft' && step.kind !== 'sweep' && step.kind !== 'thicken'
+      const onBody = step.kind !== 'extrude' && step.kind !== 'revolve' && step.kind !== 'extract' && step.kind !== 'sheet' && step.kind !== 'loft' && step.kind !== 'sweep' && step.kind !== 'wrap' && step.kind !== 'thicken'
       // A pattern of a sheet is a sheet: faces to count, no volume to read.
       if (onBody && k.isSurface(shape)) return { mesh, volume: 0, closed: false, sheetFaces: k.faceCount(shape) }
       const closed = k.isClosedSolid(shape)
@@ -2725,27 +2760,49 @@ export class Builder {
     return current
   }
 
-  /** The faces of a shape a step made (not in `own`, by hash) that are
+  /** The faces of what went into a step (`before`), to tell a face of its
+   *  result that stood before it from one it made: by hash where the
+   *  kernel kept the face, and where it built the face anew by the same
+   *  area at the same centroid. Unifying a solid's faces (see tracked)
+   *  builds every face of it anew once it merges any — occt-wasm 5.17 on —
+   *  so a face the step never came near can come out under a new hash.
+   *  The faces of `before` are read only when a face of a new hash is
+   *  asked of, and once. */
+  private stoodBefore(before: readonly Shape[]): StoodBefore {
+    const k = this.kernel
+    const hashes = new Set(before.flatMap((s) => k.faceHashes(s)))
+    let faces: RawFace[] | null = null
+    return {
+      hashes,
+      has: (f) => {
+        if (hashes.has(f.hash)) return true
+        faces ??= before.flatMap((s) => k.faces(s))
+        return faces.some((g) => Math.abs(g.area - f.area) <= 1e-6 * Math.max(g.area, f.area) && len(sub(g.centroid, f.centroid)) <= SAME_FACE_MM)
+      },
+    }
+  }
+
+  /** The faces of a shape a step made (not `stood` before it) that are
    *  slivers: narrower than SLIVER_MM, twice the area over the perimeter.
    *  Two bodies cut by one freeform sheet meet along it a hair apart, and
    *  a Combine of them leaves strips of their walls there, far thinner
    *  than anything the part has, which block a round on the edges beside
    *  them. A face that stood before the step stays out, however narrow. */
-  private sliversOf(shape: Shape, own: ReadonlySet<number>): number[] {
-    return this.kernel.narrowFaces(shape, SLIVER_MM, own).map((f) => f.hash)
+  private sliversOf(shape: Shape, stood: StoodBefore): { hash: number; area: number; width: number; centroid: Vec3 }[] {
+    return this.kernel.narrowFaces(shape, SLIVER_MM, stood.hashes).filter((f) => !stood.has(f))
   }
 
   /** A combine's or a join's result held to leaving no slivers
-   *  (sliversOf) among the faces it made — `own`, the faces of what went
-   *  in, stay out. On one it is played again fuzzy (`replay`), finer then
-   *  coarser, and the first try that closes, `stands` and leaves none is
-   *  taken, which the row says; when none does, the result stays and the
-   *  row names the slivers. Two pieces whose walls lie a hair apart — a
+   *  (sliversOf) among the faces it made — the faces of what went in
+   *  (`stood`) stay out. On one it is played again fuzzy (`replay`), finer
+   *  then coarser, and the first try that closes, `stands` and leaves none
+   *  is taken, which the row says; when none does, the result stays and
+   *  the row names the slivers. Two pieces whose walls lie a hair apart — a
    *  root built of overlapping pieces, two bodies cut by one sheet — meet
    *  that way. */
-  private withoutSlivers<T extends Tracked>(result: T, own: ReadonlySet<number>, replay: () => T, stands: (shape: Shape) => boolean, what: string): T {
+  private withoutSlivers<T extends Tracked>(result: T, stood: StoodBefore, replay: () => T, stands: (shape: Shape) => boolean, what: string): T {
     const k = this.kernel
-    const thin = k.narrowFaces(result.shape, SLIVER_MM, own)
+    const thin = this.sliversOf(result.shape, stood)
     if (thin.length === 0) return result
     const n = thin.length
     const s = n === 1 ? '' : 's'
@@ -2757,7 +2814,7 @@ export class Builder {
         if (isTrap(e)) throw e
         continue
       }
-      if (k.isClosedSolid(again.shape) && stands(again.shape) && this.sliversOf(again.shape, own).length === 0) {
+      if (k.isClosedSolid(again.shape) && stands(again.shape) && this.sliversOf(again.shape, stood).length === 0) {
         k.release(result.shape)
         // units-ok: build message, also the agent's answer
         this.stepWarnings.push(`The ${what} was played again fuzzy: the first result left ${n} sliver face${s}, under ${SLIVER_MM} mm wide.`)
@@ -2779,10 +2836,10 @@ export class Builder {
    *  change with any edit upstream. */
   private shellSlivers(shape: Shape, body: Body): void {
     const k = this.kernel
-    const own = new Set(k.faceHashes(body.shape))
-    const narrow = new Set(this.sliversOf(shape, own))
+    const stood = this.stoodBefore([body.shape])
+    const narrow = new Set(this.sliversOf(shape, stood).map((f) => f.hash))
     const faces = k.faces(shape)
-    const tiny = faces.map((f, index) => ({ f, index })).filter(({ f }) => !own.has(f.hash) && (narrow.has(f.hash) || f.area < TINY_FACE_MM2))
+    const tiny = faces.map((f, index) => ({ f, index })).filter(({ f }) => narrow.has(f.hash) || (f.area < TINY_FACE_MM2 && !stood.has(f)))
     if (tiny.length === 0) return
     const n = tiny.length
     const named = tiny
@@ -3798,9 +3855,9 @@ export class Builder {
         this.playThicken(step, fail, results)
         return
       }
-      if (step.kind === 'extrude' || step.kind === 'revolve' || step.kind === 'extract' || step.kind === 'loft' || step.kind === 'sweep') {
+      if (step.kind === 'extrude' || step.kind === 'revolve' || step.kind === 'extract' || step.kind === 'loft' || step.kind === 'sweep' || step.kind === 'wrap') {
         if ((step.kind === 'extrude' && !step.faceProfile) || step.kind === 'revolve') this.notePicksLost(step, sketchOf)
-        const solid = step.kind === 'extract' ? primitiveSolid(this.kernel, step.primitive) : step.kind === 'loft' ? this.loftOf(step) : step.kind === 'sweep' ? this.sweepOf(step) : this.solidOf(step, sketchOf(step.sketchId))
+        const solid = step.kind === 'extract' ? primitiveSolid(this.kernel, step.primitive) : step.kind === 'loft' ? this.loftOf(step) : step.kind === 'sweep' ? this.sweepOf(step) : step.kind === 'wrap' ? this.wrapOf(step) : this.solidOf(step, sketchOf(step.sketchId))
         if (!k.isClosedSolid(solid)) {
           k.release(solid)
           fail(step.id, 'The result is not a closed solid.')
@@ -3981,10 +4038,9 @@ export class Builder {
       // Any combine, of faces of any kind: three overlapping pieces of a
       // root leave them as well.
       if (step.kind === 'boolean' && !body.surface) {
-        const own = new Set([...intoBodies, ...tools].flatMap((b) => k.faceHashes(b.shape)))
         result = this.withoutSlivers(
           result,
-          own,
+          this.stoodBefore([...intoBodies, ...tools].map((b) => b.shape)),
           () => this.applyToBody(step),
           (shape) => {
             const ask = combineAsk(shape)
@@ -4091,7 +4147,7 @@ export class Builder {
    *  to every solid body it meets or cut out of them — or, for a feature
    *  saved with a target, joined to or cut from that body alone. */
   private place(
-    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'thicken' }>,
+    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'wrap' | 'thicken' }>,
     solid: Shape,
     fail: (id: number, message: string) => void,
     results: FeatureResult[],
@@ -4167,8 +4223,8 @@ export class Builder {
     let joined: Tracked
     try {
       joined = this.guarded(fuseNear, (result) => ({ kind: 'join', parts, result }), 'Joining', [{ name, shape: solid }, ...near.map(([, b]) => b)])
-      const ownFaces = new Set([...own.keys(), ...near.flatMap(([, b]) => k.faceHashes(b.shape))])
-      joined = this.withoutSlivers(joined, ownFaces, fuseNear, (shape) => volumeRefusal({ kind: 'join', parts, result: this.volumeOf(shape) }) === null, 'join')
+      const stood = this.stoodBefore([solid, ...near.map(([, b]) => b.shape)])
+      joined = this.withoutSlivers(joined, stood, fuseNear, (shape) => volumeRefusal({ kind: 'join', parts, result: this.volumeOf(shape) }) === null, 'join')
     } finally {
       k.release(solid)
     }
@@ -4300,7 +4356,7 @@ export class Builder {
 
   /** A join or a cut on the one body a feature saved with a target names. */
   private placeOnTarget(
-    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'thicken' }>,
+    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'wrap' | 'thicken' }>,
     targetId: number,
     solid: Shape,
     fail: (id: number, message: string) => void,
@@ -4331,7 +4387,7 @@ export class Builder {
     let combined: Tracked
     try {
       combined = this.guarded(combine, (result) => (step.op === 'join' ? { kind: 'join', parts, result } : { kind: 'cut', body: parts[0], result }), step.op === 'join' ? 'Joining' : 'The cut', [target, { name: step.name, shape: solid }])
-      if (step.op === 'join') combined = this.withoutSlivers(combined, new Set(before.keys()), combine, (shape) => volumeRefusal({ kind: 'join', parts, result: this.volumeOf(shape) }) === null, 'join')
+      if (step.op === 'join') combined = this.withoutSlivers(combined, this.stoodBefore([target.shape, solid]), combine, (shape) => volumeRefusal({ kind: 'join', parts, result: this.volumeOf(shape) }) === null, 'join')
       // A join on one body that meets none of it would stand beside it as a
       // body of its own — refused, as a cut that takes nothing is (31_pleuel
       // made a second body so, unseen).

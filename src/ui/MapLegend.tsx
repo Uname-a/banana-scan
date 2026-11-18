@@ -8,7 +8,7 @@
 // which figures belong under it.
 
 import { useEffect, useRef, useState } from 'react'
-import { colormapById, cssRgb, legendGradient, scaleCaps, type FieldScale } from '../core/field/colormap'
+import { colormapById, cssRgb, legendGradient, scaleCaps, type Colormap, type FieldScale } from '../core/field/colormap'
 import type { FieldHistogram } from '../core/field/stats'
 import { usePrefs } from '../state/prefsStore'
 import { useLength } from '../app/useUnits'
@@ -57,6 +57,7 @@ export function MapLegend({
   ends,
   marks,
   onLimit,
+  colormap,
 }: {
   /** Names this legend's test hooks — one map's legend per workspace. */
   id: string
@@ -87,10 +88,14 @@ export function MapLegend({
    *  a deviation map keeps its scale symmetric about zero. Omit on a scale
    *  the user does not set. */
   onLimit?: (end: 'high' | 'low', value: number) => void
+  /** A map painted in a ramp of its own rather than the settings' — the
+   *  curvature shading's diverging one. */
+  colormap?: Colormap
 }) {
   // Drawn in the same ramp as the map it stands beside — the one chosen in
-  // the settings.
-  const map = colormapById(usePrefs((s) => s.colormap))
+  // the settings, unless the map has its own.
+  const chosen = colormapById(usePrefs((s) => s.colormap))
+  const map = colormap ?? chosen
   const len = useLength()
   const length = kind === 'length'
   const head = length ? [len.word(), unit].filter(Boolean).join(' ') : (unit ?? '')

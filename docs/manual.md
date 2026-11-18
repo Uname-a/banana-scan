@@ -14,6 +14,7 @@ workspaces have references of their own, in
   - [Marking the surface by hand](#marking-the-surface-by-hand)
   - [The view bar](#the-view-bar)
   - [Which way the surface faces](#which-way-the-surface-faces)
+  - [Curvature shading](#curvature-shading)
   - [Looking inside: the section view](#looking-inside-the-section-view)
   - [How the part is shown](#how-the-part-is-shown)
   - [Settings](#settings)
@@ -78,7 +79,7 @@ current session, but history itself is not stored in project or recovery files.
 
 ### How to use it
 
-1. **Open** your scan (STL, PLY, OBJ, 3MF or STEP), or drag & drop it anywhere
+1. **Open** your scan (STL, PLY, OBJ, 3MF, PTX or STEP), or drag & drop it anywhere
    in the window. An STL carries no units, so opening one asks what it is
    in — millimetres, centimetres, metres or inches — and reads it in
    millimetres; **Don't ask again** makes the answer stand for every STL,
@@ -272,6 +273,44 @@ holds wherever the reference is shown solid — in the
 [split view](#both-parts-side-by-side) too, where the half beside the scan is
 flagged by the same switch. A reference has holes too — an STL that was never closed, a STEP tessellation that came apart
 — and one of those is worth seeing before it is used as the datum for a map.
+
+### Curvature shading
+
+Where are the fillets, which edges are sharp, which faces are flat and which
+are free-form? **Curvature shading**, under the model in the Measure panel,
+colours the scan by how it bends: red where it is convex — a round, a boss —
+blue where it is concave — a fillet's hollow, the inside of a bore — and a
+pale neutral where it is flat. Bends sharper than the scale run darker at
+either end, so a sharp edge shows as a dark line. The scale beside the view
+reads in 1/mm (1/in in inches) and says the same as the radius of the round
+that takes full colour; the band marked **flat** on it is what counts as flat.
+Hovering the scan reads the radius under the cursor. Either end of the scale
+can be retyped.
+
+At every vertex a quadric — a small smooth surface — is fitted to the scan
+within the **Radius** round it, and the curvature is that surface's. A scan's
+noise bends the surface more, triangle to triangle, than a fillet does, but it
+averages out of a surface fitted to dozens of points, so the reading holds. The
+radius sets the scale it is read at: a larger one is calmer and blurs anything
+smaller than itself — a round smaller than the radius reads as an edge spread
+over it — and a smaller one follows small rounds and shows more of the noise.
+Left as it is, it is eight edge lengths, more on a noisy scan. The first reading of a large scan takes
+a few seconds; changing the radius reads it again, and anything else on the
+panel is applied at once.
+
+**Show** picks the reading: **Sharpest bend** (the default) is the stronger of
+the two ways the surface bends, signed — a ball and a cylinder of radius R both
+read 1/R, so a round reads as its radius whatever its shape. **Mean** averages
+the two; **Gaussian** multiplies them (1/mm²): positive on a dome or a dish,
+negative on a saddle, zero on a cylinder and on a flat. **Full colour at R**
+sets the scale, **Flat beyond R** where flat ends — by itself, as gentle a bend
+as the scan's own bumps read at the radius, since gentler cannot be told from
+flat; under them the panel gives how much of the surface is flat, convex,
+concave and saddle. **Radius, range and flat by the scan** puts all three back.
+
+An agent reads the same with `scan.curvature`: the shares, the tightest
+rounds on the part, and the two principal curvatures with their directions at
+a place.
 
 ### Looking inside: the section view
 

@@ -14,6 +14,7 @@ import { parseSTL } from './parsers/stl'
 import { parsePLY } from './parsers/ply'
 import { parseOBJ } from './parsers/obj'
 import { parse3MF } from './parsers/threemf'
+import { parsePTX } from './parsers/ptx'
 import type { ObjCompanions } from './parsers/objTexture'
 import { parseSTEP, type StepInfo } from './parsers/step'
 import { extensionOf } from './formats'
@@ -46,6 +47,7 @@ import { trianglesWithin } from './geometry/region'
 import { floodByNormal } from './fit/regionGrow'
 import { planeRegionReport, segmentPlanes } from './fit/segment'
 import { meanCurvature } from './geometry/curvature'
+import { CurvatureFitter, defaultCurvatureRadius, meshSpacing, principalCurvatures, scanScatter } from './geometry/principalCurvature'
 import { scanSpot } from './geometry/nearest'
 import { boundsOf } from './geometry/bounds'
 import { closedVertices } from './geometry/closedShells'
@@ -172,7 +174,8 @@ function parseByName(name: string, buffer: ArrayBuffer, onProgress: (t: string) 
   if (ext === 'ply') return parsePLY(buffer, onProgress)
   if (ext === 'obj') return parseOBJ(buffer, onProgress, companions)
   if (ext === '3mf') return parse3MF(buffer, onProgress, companions)
-  throw new Error(`Unsupported file type ".${ext}" — use STL, PLY, OBJ, 3MF or STEP.`)
+  if (ext === 'ptx') return parsePTX(buffer, onProgress)
+  throw new Error(`Unsupported file type ".${ext}" — use STL, PLY, OBJ, 3MF, PTX or STEP.`)
 }
 
 /** The scan: a mesh, or a CAD part opened in a scan's place — cut finer
@@ -605,8 +608,8 @@ function handle(msg: Exclude<WorkerRequest, { type: 'align-abort' }>): void {
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(msg.positions, 3))
     geometry.setIndex(new THREE.BufferAttribute(msg.indices, 1))
-    const { roots, indirectBuffer } = MeshBVH.serialize(new MeshBVH(geometry, { indirect: true } as MeshBVHOptions), { cloneBuffers: false }) as unknown as SerializedTree
-    post({ type: 'bounds-tree-ok', requestId: msg.requestId, tree: { roots, indirectBuffer } }, [...roots, indirectBuffer.buffer as ArrayBuffer])
+    const { version, roots, indirectBuffer } = MeshBVH.serialize(new MeshBVH(geometry, { indirect: true } as MeshBVHOptions), { cloneBuffers: false }) as unknown as SerializedTree
+    post({ type: 'bounds-tree-ok', requestId: msg.requestId, tree: { version, roots, indirectBuffer } }, [...roots, indirectBuffer.buffer as ArrayBuffer])
     return
   }
 
@@ -729,6 +732,41 @@ function handle(msg: Exclude<WorkerRequest, { type: 'align-abort' }>): void {
     }
     const values = meanCurvature(graph)
     post({ type: 'curvature-ok', requestId: msg.requestId, values }, [values.buffer])
+    return
+  }
+
+  if (msg.type === 'principal-curvature' || msg.type === 'curvature-at') {
+    if (!graph) {
+      post({ type: 'error', requestId: msg.requestId, message: 'No model loaded.' })
+      return
+    }
+    try {
+      if (msg.type === 'curvature-at') {
+        checkVertices(Uint32Array.of(msg.vertex), graph.vertexCount)
+        // One fit: a grid over the scan costs a pass over it, which is
+        // nothing beside what the whole map costs.
+        const spacing = meshSpacing(graph.positions, graph.indices)
+        const radius = msg.radius && msg.radius > 0 ? msg.radius : defaultCurvatureRadius(spacing, scanScatter(graph, spacing))
+        const fit = new CurvatureFitter(graph, radius, spacing).fitAt(msg.vertex)
+        post({ type: 'curvature-at-ok', requestId: msg.requestId, fit, radius })
+        return
+      }
+      let lastPercent = -1
+      // The scan's own scatter, read by principalCurvatures, sets the
+      // default radius and the floor under which a surface reads as flat.
+      const { k1, k2, area, radius, spacing, noise, noiseFloor } = principalCurvatures(graph, {
+        radius: msg.radius,
+        progress: (f) => {
+          const percent = Math.round(f * 100)
+          if (percent === lastPercent) return
+          lastPercent = percent
+          progress(`Reading the curvature — ${percent}%…`)
+        },
+      })
+      post({ type: 'principal-curvature-ok', requestId: msg.requestId, k1, k2, area, radius, spacing, noise, noiseFloor }, [k1.buffer, k2.buffer, area.buffer])
+    } catch (e) {
+      post({ type: 'error', requestId: msg.requestId, message: errorText(e) })
+    }
     return
   }
 

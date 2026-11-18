@@ -40,7 +40,9 @@ import { useStore } from '../../../src/state/store'
 import { useShell } from '../../../src/state/shellStore'
 import { useMark } from '../../../src/state/markStore'
 import { historyAsync, historyBlocked, registerHistory } from '../../../src/state/historyStore'
-import { reduceSettingsOf, useMeshTools, type ScanEdit } from '../state/meshStore'
+import { reduceSettingsOf, useMeshTools, type OtherPlacement, type ScanEdit } from '../state/meshStore'
+import type { PointPair } from '../../../src/core/deviation/align'
+import type { MeshUnits } from '../../../src/core/meshUnits'
 import type { ImportQueue } from '../../../src/app/importQueue'
 import { runImport } from '../../../src/app/imports'
 import type { SourceFiles } from '../../../src/app/project'
@@ -57,6 +59,8 @@ import type { WrapReport } from '../core/wrap'
 import { boundLength } from '../../../src/app/useUnits'
 import type { DisplayUnits } from '../../../src/core/units'
 import { typedLen } from '../ui/meshFormat'
+import { makePattern, unrollable, type PatternJob } from './flatPatterns'
+import { patternMarks, usePattern, type PatternMade } from '../state/patternStore'
 
 const count = (n: number) => n.toLocaleString('en-US')
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -925,6 +929,113 @@ export function createMeshToolsSession({
     return landed
   }
 
+  // ---- Merge another scan -----------------------------------------------------------
+
+  /** The pose the scan stands in, as text: a placement made on it holds as
+   *  long as this does. */
+  const frameKey = (): string => {
+    const a = useStore.getState().appliedAlignment
+    return a ? JSON.stringify([Array.from(a.r), Array.from(a.t)]) : ''
+  }
+
+  /** Read another scan of the part, in `units`, to be placed on the mesh and
+   *  merged into it — held beside it until then. True when it was read. */
+  const openOtherScan = async (file: File, units: MeshUnits = 'mm'): Promise<boolean> => {
+    let opened = false
+    await runImport(imports, `Reading ${file.name}…`, async () => {
+      const client = clientRef.current!
+      const { id } = await client.prepareScan(file.name, await file.arrayBuffer(), creaseSetting(useStore.getState()), undefined, units)
+      let size: { vertices: number; triangles: number }
+      try {
+        size = await tools().openOther(id)
+      } catch (e) {
+        await client.discardImport([id])
+        throw e
+      }
+      meshSceneOf(sceneRef.current)?.setOtherScan(null)
+      useMeshTools.getState().setOther({ name: file.name, vertices: size.vertices, triangles: size.triangles, placed: null })
+      useStore.getState().setStatus(`${file.name} is open beside the mesh: ${count(size.triangles)} triangles. Place it on the mesh next.`)
+      opened = true
+    })
+    return opened
+  }
+
+  /** Place the other scan on the mesh: by itself, or from three or more
+   *  picked pairs (on it, `scan`; on the mesh, `nominal`), refined on the
+   *  surface the two share. Shown where it lies, in orange. */
+  const placeOtherScan = async (pairs?: PointPair[], units: DisplayUnits = 'mm'): Promise<OtherPlacement | null> => {
+    const other = useMeshTools.getState().other
+    if (!other) {
+      useStore.getState().setError('Open the other scan first.')
+      return null
+    }
+    const len = lengthsOf(units)
+    let placed = null as OtherPlacement | null
+    useMeshTools.getState().otherBegin(pairs?.length ? 'Placing it from the picked points…' : 'Looking for where it lies on the mesh…')
+    await runImport(imports, 'Placing the other scan on the mesh…', async () => {
+      try {
+        const r = await tools().placeOther(pairs)
+        const p: OtherPlacement = { transform: r.transform, source: r.source, overlap: r.overlap, rms: r.rms, gate: r.gate, ambiguous: r.ambiguous, frame: frameKey() }
+        const { positions, indices } = await tools().otherTriangles()
+        rigidApplyToPoints(r.transform, positions)
+        meshSceneOf(sceneRef.current)?.setOtherScan({ positions, indices })
+        useMeshTools.getState().setOther({ ...other, placed: p })
+        const how = r.source === 'frame' ? 'where its file put it' : r.source === 'points' ? 'from the picked points' : 'by the shape the two share'
+        useStore.getState().setStatus(
+          `${other.name} placed ${how}: ${Math.round(r.overlap * 100)} % of it lies on the mesh, ${len.fmt(r.rms, 3)} RMS there.${
+            r.ambiguous ? ' Another placement fits nearly as well — check it in orange, or pick three points on each.' : ''
+          }`,
+        )
+        placed = p
+      } catch (e) {
+        useMeshTools.getState().otherFail(message(e))
+        throw e
+      }
+    })
+    return placed
+  }
+
+  /** Merge the other scan, as placed, into the copy — less what only scans
+   *  the mesh again, when the panel says so — as one edit; then let it go. */
+  const mergeOtherScan = async (run?: EditRun): Promise<EditLanded | null> => {
+    const { other, mergeDrop } = useMeshTools.getState()
+    const len = lengthsOf(run?.units)
+    const p = other?.placed
+    if (!other || !p) {
+      useStore.getState().setError('Place the other scan on the mesh first.')
+      return null
+    }
+    if (p.frame !== frameKey()) {
+      useStore.getState().setError('The mesh has moved since the other scan was placed on it — place it again.')
+      return null
+    }
+    const dropWithin = mergeDrop ? p.gate : null
+    const landed = await workerEdit(
+      `Mesh Tools: merge ${other.name}`,
+      `Merging ${other.name}…`,
+      () => ({ type: 'merge', transform: p.transform, dropWithin }),
+      (r) => {
+        const m = r.kind === 'merge' ? r.report : { added: 0, doubled: 0, vertices: 0, verticesBefore: 0 }
+        return {
+          edit: { kind: 'merge', name: other.name, added: m.added, doubled: m.doubled, overlap: p.overlap, rms: p.rms },
+          status: `Merged ${other.name}: ${count(m.added)} triangles added${
+            m.doubled ? `, ${count(m.doubled)} left out where they scanned the mesh again (within ${len.fmt(p.gate, 3)})` : ''
+          }. Where the two meet, Fill holes or a Wrap makes one skin of them. Ctrl+Z takes it back.`,
+        }
+      },
+      run,
+    )
+    if (landed) await clearOtherScan()
+    return landed
+  }
+
+  /** Let the other scan go, and take it off the view. */
+  const clearOtherScan = async (): Promise<void> => {
+    meshSceneOf(sceneRef.current)?.setOtherScan(null)
+    useMeshTools.getState().setOther(null)
+    await tools().clearOther()
+  }
+
   // ---- Trim to scan ---------------------------------------------------------------
 
   /** The body as the worker is sent it: its triangles, and a key that
@@ -980,6 +1091,34 @@ export function createMeshToolsSession({
     }
   }
 
+  // ---- Unroll / flatten ----------------------------------------------------------------
+
+  /** A flat pattern of the mesh: `job`, or what the panel says — the
+   *  element chosen, or the only one there is, and the marking when it asks
+   *  for one. Beside the mesh, not an edit of it. The pattern, or null when
+   *  it failed — the error line says why. */
+  const makeFlatPattern = async (job?: PatternJob, units: DisplayUnits = 'mm'): Promise<PatternMade | null> => {
+    if (!job) {
+      const p = usePattern.getState()
+      const region = patternMarks(p) ? marked() : null
+      if (region && region.length === 0) {
+        useStore.getState().setError('Mark the surface to lay out on the part first — with a window, the brush or a lasso.')
+        return null
+      }
+      if (p.mode === 'flatten') job = { mode: 'flatten', region: region! }
+      else {
+        const options = unrollable(useStore.getState().elements)
+        const element = options.find((e) => e.id === p.element) ?? (options.length === 1 ? options[0] : undefined)
+        if (!element) {
+          useStore.getState().setError(options.length === 0 ? 'Fit a cylinder or a cone on the part in 3D Measure first.' : 'Pick the cylinder or cone to unroll by.')
+          return null
+        }
+        job = { mode: 'unroll', element, region, offset: p.offset }
+      }
+    }
+    return makePattern(tools(), job, units)
+  }
+
   // ---- Keeping in step ---------------------------------------------------------------
 
   /**
@@ -1003,6 +1142,7 @@ export function createMeshToolsSession({
           wrapped.current = null
           cancelWrap()
           useMeshTools.getState().clear()
+          usePattern.getState().clear()
           // The worker and the viewport let a copy of the last scan go with it.
           editedCopy.current = null
           if (scan) useMeshTools.getState().suggestForPart(2 * scan.modelSize, meanEdgeLength(scan.positions, scan.indices))
@@ -1024,6 +1164,8 @@ export function createMeshToolsSession({
           if (useMeshTools.getState().wrapMade) useMeshTools.getState().dropWrap()
           // The scene let a piece cut to it go with it.
           if (useMeshTools.getState().trimMade) useMeshTools.getState().dropTrim()
+          // A pattern was of the scan that went.
+          if (usePattern.getState().made) usePattern.getState().clear()
         },
         remeasure: async () => {
           // A reduction that cannot be made again goes: the mesh it described
@@ -1091,8 +1233,13 @@ export function createMeshToolsSession({
     shellScan,
     meshOfSolid,
     booleanScan,
+    openOtherScan,
+    placeOtherScan,
+    mergeOtherScan,
+    clearOtherScan,
     trimBodyOf,
     trimScan,
+    makeFlatPattern,
     watch,
   }
 }

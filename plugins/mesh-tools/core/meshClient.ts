@@ -12,6 +12,8 @@ import type { LoadedScan, MeshWorkerClient } from '../../../src/core/workerClien
 import { MESH_TOOLS, type MeshRegion, type MeshToolsOps, type ScanEditRequest, type TrimBody } from './protocol'
 import type { ReduceSettings } from './reduce'
 import type { TrimSettings } from './trimToScan'
+import type { UnrollSurface } from './unroll'
+import type { PointPair } from '../../../src/core/deviation/align'
 
 class MeshToolsClient {
   /** Bumped whenever the edited copy is put in place or taken away. A copy
@@ -88,6 +90,27 @@ class MeshToolsClient {
     return this.call('edit', { edit })
   }
 
+  /** A staged load held as the other scan, to be placed on the mesh and
+   *  merged into it. */
+  openOther(staged: number) {
+    return this.call('other-open', { staged })
+  }
+
+  /** The other scan placed on the mesh: automatically, or from picked pairs
+   *  (on it, `scan`; on the mesh, `nominal`). */
+  placeOther(pairs?: PointPair[]) {
+    return this.call('other-place', pairs?.length ? { pairs } : {})
+  }
+
+  /** The other scan's triangles, in its own frame. */
+  otherTriangles() {
+    return this.call('other-triangles', {})
+  }
+
+  clearOther() {
+    return this.call('other-clear', {})
+  }
+
   /** The edited copy's signed distance from the scan in use at each of its
    *  vertices, NaN where an edit made the surface. */
   editedDeviation(fromScan: Int32Array) {
@@ -125,6 +148,18 @@ class MeshToolsClient {
    *  `crease` says — the setting changed under it. Null with no copy. */
   recreaseEdited(crease: CreaseSetting) {
     return this.call('recrease-edited', { crease })
+  }
+
+  /** The region on a cylinder or cone laid out flat — `vertices`, or with
+   *  null the surface within `band` of it — `offset` outside it. Nothing
+   *  changes. */
+  unroll(surface: UnrollSurface, vertices: Uint32Array | null, band: number, offset: number) {
+    return this.call('unroll', { surface, vertices, band, offset })
+  }
+
+  /** The region flattened with the least distortion. Nothing changes. */
+  flatten(vertices: Uint32Array, iterations?: number) {
+    return this.call('flatten', iterations !== undefined ? { vertices, iterations } : { vertices })
   }
 
   /** Throw the edited copy away: the workspace works on the scan again. */

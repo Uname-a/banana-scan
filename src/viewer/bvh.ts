@@ -46,9 +46,16 @@ const INDIRECT = { indirect: true } as MeshBVHOptions
 /** A tree sent from the worker, laid over the geometry it was built for,
  *  whose index it reads as it stands. */
 function treeFrom(data: SerializedTree, geometry: THREE.BufferGeometry, index: THREE.BufferAttribute): MeshBVH {
-  // three-mesh-bvh's own type knows nothing of the indirect order; the
-  // index it asks for is the geometry's, and is not laid back (setIndex).
-  const serialized = { roots: data.roots, indirectBuffer: data.indirectBuffer, index: index.array }
+  // The index it asks for is the geometry's, and is not laid back
+  // (setIndex). The version is not in three-mesh-bvh's own type, but
+  // deserialize reads it: without it the nodes are taken for the older
+  // layout and rewritten.
+  const serialized = {
+    version: data.version,
+    roots: data.roots,
+    indirectBuffer: data.indirectBuffer,
+    index: index.array as Uint32Array | Uint16Array,
+  }
   return MeshBVH.deserialize(serialized, geometry, { setIndex: false })
 }
 

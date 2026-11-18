@@ -15,6 +15,7 @@ import { MarkTools } from '../../../src/ui/MarkTools'
 import { RefPicker } from '../../../src/ui/RefPicker'
 import { NameField } from '../../../src/ui/RefSelect'
 import { COINCIDENCE_MM, type Relation, relationsFor, relationWords, TILT_TOLERANCE_DEG } from '../core/autoConstrain'
+import { findRegions } from '../core/regions'
 import { type AxisRef, type ChamferMode, constrainRefs, type SketchFeature, type SplitKeep, type SurfaceShape, type ThickenSide, type TrimTool } from '../core/features'
 import { INSERT_SIZES, insertHole, insertSize } from '../core/inserts'
 import { snapFitKind } from '../core/snapFace'
@@ -54,7 +55,7 @@ export function FeatureEditor() {
   const describeEdge = describeEdgeIn(len.units)
   const set = (patch: Partial<FeatureDraft>) => re.getState().setFeatureDraft(patch)
   const ready = featureDraftReady(d)
-  const title: Record<FeatureDraftKind, string> = { network: 'Patch network', import: 'Import STEP', moveBody: 'Move body', offsetBody: 'Offset body', draft: 'Draft', moveFace: 'Move face', deleteFace: 'Delete face', shell: 'Shell', fillet: 'Fillet', chamfer: 'Chamfer', hole: 'Hole', thread: 'Thread', extract: 'Extract', cutPlane: 'Cut by plane', mirror: 'Mirror', boolean: 'Combine bodies', sheet: 'Sheet', split: 'Split', loft: 'Loft', sweep: 'Sweep', thicken: 'Thicken', pattern: 'Pattern', surface: 'Fit surface', trim: 'Trim' }
+  const title: Record<FeatureDraftKind, string> = { network: 'Patch network', import: 'Import STEP', moveBody: 'Move body', offsetBody: 'Offset body', draft: 'Draft', moveFace: 'Move face', deleteFace: 'Delete face', shell: 'Shell', fillet: 'Fillet', chamfer: 'Chamfer', hole: 'Hole', thread: 'Thread', extract: 'Extract', cutPlane: 'Cut by plane', mirror: 'Mirror', boolean: 'Combine bodies', sheet: 'Sheet', split: 'Split', loft: 'Loft', sweep: 'Sweep', wrap: 'Wrap onto surface', thicken: 'Thicken', pattern: 'Pattern', surface: 'Fit surface', trim: 'Trim' }
   const sketches = features.filter((f): f is SketchFeature => f.kind === 'sketch')
   const testKind = d.kind === 'cutPlane' ? 'cut-plane' : d.kind === 'moveFace' ? 'move-face' : d.kind === 'deleteFace' ? 'delete-face' : d.kind === 'offsetBody' ? 'offset-body' : d.kind === 'moveBody' ? 'move-body' : d.kind
   const bodySelect = (value: number | null, onChange: (id: number | null) => void, label = 'Body', testId = `${testKind}-body`) => (
@@ -834,6 +835,69 @@ export function FeatureEditor() {
           </label>
           <OpFields op={d.op} canCut={bodies.some((b) => !b.surface)} testPrefix="thicken" onOp={(op) => set({ op })} />
           <p className="hint">A freeform thin shell's wall from its one skin — the sheet stays a body of its own, put out of view. A face that bends tighter than the thickness towards the side it grows to is named, and the thickness it takes.</p>
+        </>
+      )
+      break
+    }
+    case 'wrap': {
+      const closed = sketches.filter((s) => findRegions(s.sketch).length > 0)
+      const surfaces = elements.filter((e) => e.fit && (e.fit.kind === 'cylinder' || e.fit.kind === 'cone' || e.fit.kind === 'plane'))
+      const sketch = closed.find((s) => s.id === d.sketchId)
+      const regions = sketch ? findRegions(sketch.sketch) : []
+      const pickOf = (given: 'all' | 'largest', of: typeof regions) => {
+        const keys = given === 'all' || of.length === 0 ? of.map((r) => r.key) : [of.reduce((a, b) => (b.area > a.area ? b : a)).key]
+        return { regions: keys, regionPick: { given, keys } }
+      }
+      const given = d.regionPick && (d.regionPick.given === 'all' || d.regionPick.given === 'largest') ? d.regionPick.given : 'picked'
+      const out = (d.op !== 'cut') !== d.flip
+      fields = (
+        <>
+          <label className="field">
+            <span>Sketch</span>
+            <select
+              data-test="wrap-sketch"
+              value={d.sketchId ?? ''}
+              onChange={(e) => {
+                const next = closed.find((s) => s.id === Number(e.target.value))
+                set(next ? { sketchId: next.id, ...pickOf(given === 'largest' ? 'largest' : 'all', findRegions(next.sketch)) } : { sketchId: null, regions: [] })
+              }}
+            >
+              <option value="">{closed.length === 0 ? 'Draw a closed sketch first' : 'Select…'}</option>
+              {closed.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {sketch && regions.length > 1 && (
+            <label className="field">
+              <span>Regions</span>
+              <select data-test="wrap-regions" value={given} onChange={(e) => e.target.value !== 'picked' && set(pickOf(e.target.value as 'all' | 'largest', regions))}>
+                <option value="all">All {regions.length}</option>
+                <option value="largest">The largest</option>
+                {given === 'picked' && <option value="picked">{d.regions.length} picked</option>}
+              </select>
+            </label>
+          )}
+          <label className="field">
+            <span>Onto</span>
+            <select data-test="wrap-surface" value={d.surface ?? ''} onChange={(e) => set({ surface: e.target.value === '' ? null : Number(e.target.value) })}>
+              <option value="">{surfaces.length === 0 ? 'Measure a cylinder, cone or plane first' : 'Select…'}</option>
+              {surfaces.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Num label="Depth" testId="wrap-depth" slot="depth" value={d.depth} nominal="length" onCommit={(v) => set({ depth: Math.abs(v) })} hint="How far the wrapped regions stand out of the surface, or sink into it, along its normal" />
+          <label className="checkrow">
+            <input type="checkbox" data-test="wrap-flip" checked={d.flip} onChange={(e) => set({ flip: e.target.checked })} />
+            <span>The other way — {out ? 'out of' : 'into'} the surface now; for a bore, flip it</span>
+          </label>
+          <OpFields op={d.op} canCut={bodies.some((b) => !b.surface)} testPrefix="wrap" onOp={(op) => set({ op })} />
+          <p className="hint">Draw the sketch on a plane along the surface — tangent to the cylinder or cone, or parallel to one. It is rolled on from where that plane touches it, its lengths kept along the surface: Join embosses, Cut debosses. The inverse of Unroll in Mesh Tools.</p>
         </>
       )
       break

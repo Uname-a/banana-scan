@@ -11,6 +11,7 @@ import type { BodyOp, BooleanOp, ChamferMode, RegionPick, EdgeRef, ExtrudeUntil,
 import type { LoopPiece, Profile } from './kernel'
 import type { ShadowSource } from './shadowPieces'
 import type { SweepRoute } from './sweepRoute'
+import type { WrapGeometry } from './wrap'
 import type { ThreadStandard } from './thread'
 import type { StoredPick } from './where'
 
@@ -135,6 +136,10 @@ export type BuildStep =
    *  the end of the path it starts at is the one nearest it. `route`: what
    *  the path was made from where no sketch gave it. */
   | { kind: 'sweep'; id: number; name: string; profile: Profile; path: LoopPiece[]; from: Vec3; sketches: number[]; route?: SweepRoute; op: BodyOp; target?: number }
+  /** A sketch's profiles wrapped onto a cylinder, cone or plane and given
+   *  a depth along its normal — see WrapFeature and core/buildWrap.ts.
+   *  `sketches`: the one sketch, as a loft's. */
+  | ({ kind: 'wrap'; id: number; name: string; sketchId: number; regions: string[]; regionsByPlace?: string[]; regionPick?: RegionPick['given']; sketches: number[]; op: BodyOp; target?: number } & WrapGeometry)
   /** A sheet body made a solid — see ThickenFeature. */
   | { kind: 'thicken'; id: number; name: string; sheet: number; thickness: number; side: ThickenSide; op: BodyOp; target?: number }
   | { kind: 'pattern'; id: number; name: string; body: number; mode: 'circular' | 'linear'; origin: Vec3; dir: Vec3; count: number; step: number; grid?: { dir: Vec3; count: number; step: number } }

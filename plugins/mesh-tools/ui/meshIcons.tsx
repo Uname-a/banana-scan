@@ -53,11 +53,29 @@ const ICONS = {
       <path className="i-a" d="M3.5 12c0-5.5 3.5-8.5 9-8.5 5 0 8 3 8 7.5 0 5.5-3 9.5-8.5 9.5S3.5 17.5 3.5 12Z" />
     </>
   ),
+  // The top of a part scanned, and its underside scanned on its own, the
+  // two lapping over each other in a band round the middle.
+  mergeScans: (
+    <>
+      <path className="i-g" d="M3.5 13.5V12a8.5 8.5 0 0 1 17 0v1.5" />
+      <path className="i-a" d="M3.5 10.5V12a8.5 8.5 0 0 0 17 0v-1.5" />
+      <path className="i-ds" d="M2 12h20" />
+    </>
+  ),
   // A part cut open: a wall the same thickness all round a sealed hollow.
   shellSolid: (
     <>
       <path className="i-f" fillRule="evenodd" d="M3.5 4.5h17v15h-17ZM7.5 8.5v7h9v-7Z" />
       <path className="i-th" d="M3.5 12h4m9 0h4" />
+    </>
+  ),
+  // A curved sheet, and beside it the same sheet laid out flat with a hole
+  // in it: a flat pattern.
+  unrollFlat: (
+    <>
+      <path className="i-g" d="M2.5 11c2-5 5-7 8-7v7c-3 0-5 1.5-6.5 4Z" />
+      <path className="i-f" fillRule="evenodd" d="M12.5 9.5h9v11h-9ZM15.5 13v4h3v-4Z" />
+      <path className="i-a" d="m8 17 2.5 2.5m0 0v-2.3m0 2.3H8.2" />
     </>
   ),
 } satisfies Record<string, ReactNode>

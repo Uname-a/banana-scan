@@ -28,6 +28,7 @@ import type { FitGuide } from './fit/guide'
 import type { PlaneRegionReport, Segmentation, SegmentOptions } from './fit/segment'
 import type { RayGrid } from './geometry/scanQa'
 import type { SerializedTree, WorkerRequest, WorkerResponse } from './workerProtocol'
+import type { CurvatureFit } from './geometry/principalCurvature'
 
 export interface LoadedMesh {
   positions: Float32Array
@@ -657,6 +658,23 @@ export class MeshWorkerClient {
     const requestId = this.nextId++
     const res = await this.request<Extract<WorkerResponse, { type: 'curvature-ok' }>>({ type: 'curvature', requestId })
     return res.values
+  }
+
+  /** The scan's principal curvatures at every vertex, 1/mm, convex
+   *  positive, read over a ball of `radius` mm (null: a few edge lengths),
+   *  with each vertex's share of the area. See geometry/principalCurvature. */
+  async principalCurvature(radius: number | null): Promise<Omit<Extract<WorkerResponse, { type: 'principal-curvature-ok' }>, 'type' | 'requestId'>> {
+    const requestId = this.nextId++
+    const { k1, k2, area, radius: r, spacing, noise, noiseFloor } = await this.request<Extract<WorkerResponse, { type: 'principal-curvature-ok' }>>({ type: 'principal-curvature', requestId, radius })
+    return { k1, k2, area, radius: r, spacing, noise, noiseFloor }
+  }
+
+  /** The same fit at one vertex, with the directions it bends in; null
+   *  where there are too few points round it. */
+  async curvatureAt(vertex: number, radius: number | null): Promise<{ fit: CurvatureFit | null; radius: number }> {
+    const requestId = this.nextId++
+    const { fit, radius: r } = await this.request<Extract<WorkerResponse, { type: 'curvature-at-ok' }>>({ type: 'curvature-at', requestId, vertex, radius })
+    return { fit, radius: r }
   }
 
   async centroid(vertices?: Uint32Array | null): Promise<MeshCentroid> {

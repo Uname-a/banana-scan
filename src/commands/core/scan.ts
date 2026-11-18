@@ -28,6 +28,7 @@ import { usePrefs } from '../../state/prefsStore'
 import { elementRefSchema, findElement, planeRef, type ElementRef } from '../refs'
 import { setMarked } from '../marked'
 import { scale } from './scanScale'
+import { curvature } from './curvature'
 
 export const unitsSchema = enumOf(
   MESH_UNITS.map((u) => u.id),
@@ -55,7 +56,7 @@ const open: Command<{ bytes: Uint8Array; name: string; units?: MeshUnits; discar
   name: 'open',
   title: 'Open a scan',
   description:
-    'Open a mesh as the scan to measure — STL, PLY, OBJ or 3MF, or a STEP part cut into triangles — in place of the one there is; everything measured on the old one goes with it, so it refuses while the session holds measurements unless discard is true (the refusal names what is held). A reference part opened from a file stays, its alignment and maps gone (referenceKept); one made from the session’s own work goes (referenceDropped). Returns the scan: name, units, vertex and triangle counts, bounding box, centre and diagonal (size), mm. Not undoable: a new scan starts a new history.',
+    'Open a mesh as the scan to measure — STL, PLY, OBJ or 3MF, a STEP part cut into triangles, or a laser scanner’s PTX (in metres whatever units say; each scan’s grid joined into a surface) — in place of the one there is; everything measured on the old one goes with it, so it refuses while the session holds measurements unless discard is true (the refusal names what is held). A reference part opened from a file stays, its alignment and maps gone (referenceKept); one made from the session’s own work goes (referenceDropped). Returns the scan: name, units, vertex and triangle counts, bounding box, centre and diagonal (size), mm. Not undoable: a new scan starts a new history.',
   input: obj(
     {
       bytes: bytes('The file’s contents.'),
@@ -1080,6 +1081,9 @@ const qa: Command<{ axis?: 'x' | 'y' | 'z' | Vec3 }> = {
     'One call before modelling, to know what the scan will and will not give. Returns rims (the open edges of its holes: count, total length, the longest few with rim number, centre, size and circle where one fits — element.fit { kind: "circle", rim } makes it an element), noise (the median scatter of small plane fits, mm; 0 on a CAD tessellation), tessellation where the mesh is an STL exported from CAD (cad, its facets exactly flat; sparse where its vertices lie only on edges and rims, too far apart to fit on — densifyTo, the edge length to subdivide it to first, noise.measured the bends between facets that a fit would read), thickness through the part along axis (p5, p50, p95, the main faces’ tiltDeg and faces { topDeg, bottomDeg }), sheet where most of the area has a second skin facing back within reach mm (gauge { p5, p50, p95 }, twoSkins: that share), apart on such a part with flat walls (regions standing over reach mm off every main wall — tabs bent in, ribs, bosses: center, box, area mm², largest first) and notes, what looks wrong, plainly. Traps: a scanned skin with no rims, or only pinholes, is a wrap bridging the holes it did not see through; on a sheet, thickness reads the box across the part — the gauge is sheet.gauge. Changes nothing.',
   input: obj({ axis: oneOf([enumOf(['x', 'y', 'z'], 'A world axis.'), vec3('A direction, any length.')], 'The thickness axis.') }),
   readOnly: true,
+  // Over the whole scan: on a few million triangles it outlasts the server's
+  // answer limit, and a read held past that is refused, not queued.
+  long: true,
   run: async ({ axis }) => {
     requireScan()
     const client = commandHost().session.clientRef.current
@@ -1282,4 +1286,4 @@ const qa: Command<{ axis?: 'x' | 'y' | 'z' | Vec3 }> = {
   },
 }
 
-export const scanCommands = [open, nearest, query, fitSurface, draft, heightmap, outline, pattern, qa, scale]
+export const scanCommands = [open, nearest, query, fitSurface, draft, heightmap, outline, pattern, qa, scale, curvature]

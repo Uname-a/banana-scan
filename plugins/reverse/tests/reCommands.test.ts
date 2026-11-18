@@ -398,6 +398,7 @@ describe('the commands hold to the panel’s rules', () => {
       'reverse.feature.suppress',
       'reverse.feature.update',
       'reverse.import.step',
+      'reverse.network.auto',
       'reverse.network.create',
       'reverse.network.edit',
       'reverse.network.read',
@@ -414,6 +415,7 @@ describe('the commands hold to the panel’s rules', () => {
       'reverse.plan.set',
       'reverse.plan.tick',
       'reverse.plan.update',
+      'reverse.plane.along_path',
       'reverse.plane.describe',
       'reverse.scan.tube_trace',
       'reverse.section.fit',
@@ -421,6 +423,7 @@ describe('the commands hold to the panel’s rules', () => {
       'reverse.section.stack',
       'reverse.sketch.candidates',
       'reverse.sketch.edit',
+      'reverse.sketch.wrap_read',
       'reverse.thread.read',
     ])
     // An export runs as a job in an agent's server, its call answered at the limit.

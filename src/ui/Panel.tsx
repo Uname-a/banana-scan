@@ -32,6 +32,7 @@ import { InfoDot } from './InfoDot'
 import { ModelSlot } from './ModelSlot'
 import { SectionEditor } from './SectionEditor'
 import { CombControls } from './CombControls'
+import { CurvatureControls } from './CurvatureControls'
 import { ExportMeshButton } from './ExportMeshButton'
 import type { MeshFormat } from '../core/exportMesh'
 import { useUnits } from '../app/useUnits'
@@ -224,6 +225,9 @@ export function Panel({
           busy={busy}
           onOpenScan={onOpenScan}
         />
+        {/* A way of looking at the scan itself, before anything is measured
+            on it. */}
+        {fileName && <CurvatureControls />}
       </div>
 
       <AlignmentSection

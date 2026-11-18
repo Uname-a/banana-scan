@@ -61,6 +61,8 @@ export const FEATURE_ICONS: Record<Feature['kind'], KeyIconName> = {
   loft: 'loft',
   // A section carried along a path: a loft's picture is the nearest.
   sweep: 'loft',
+  // A profile stood out of a surface: an extrude's picture is the nearest.
+  wrap: 'extrude',
   // A sheet made a wall: the wall of a shell is the nearest picture.
   thicken: 'shell',
   pattern: 'pattern',
@@ -136,6 +138,11 @@ export function bodyFeatureReading(f: Exclude<Feature, { kind: 'sketch' | 'extru
         return { text: `${f.op === 'new' ? 'New body' : f.op === 'join' ? 'Join' : 'Cut'} · 3D route, ${bends} bend${bends === 1 ? '' : 's'}`, title: `${names(f.profile)}'s largest region swept along a route of ${f.route.points.length} points in 3D, bends of radius ${len(f.route.bendRadius)}${f.route.radii?.some((r) => r !== null) ? ' or their own' : ''}` }
       }
       return { text: `${f.op === 'new' ? 'New body' : f.op === 'join' ? 'Join' : 'Cut'} · along ${names(f.path!)}`, title: `${names(f.profile)}'s largest region swept along ${names(f.path!)}` }
+    case 'wrap': {
+      const on = ctx.elements.find((e) => e.id === f.surface)?.name ?? `element ${f.surface}`
+      const out = (f.op !== 'cut') !== Boolean(f.flip)
+      return { text: `${f.op === 'new' ? 'New body' : f.op === 'join' ? 'Emboss' : 'Deboss'} · ${len(f.depth)} on ${on}`, title: `${f.regions.length} region${f.regions.length === 1 ? '' : 's'} of ${names(f.sketchId)} wrapped onto ${on}, lengths kept along it, ${len(f.depth)} ${out ? 'out of' : 'into'} the surface${f.op === 'new' ? ', a body of its own' : f.op === 'join' ? ', joined to what it meets' : ', cut from what it meets'}` }
+    }
     case 'thicken':
       return { text: `${f.op === 'new' ? 'New body' : f.op === 'join' ? 'Join' : 'Cut'} · ${len(f.thickness)} ${f.side}`, title: `${names(f.sheet)} made a solid ${len(f.thickness)} thick, ${f.side === 'out' ? 'along its normal' : f.side === 'in' ? 'against its normal' : 'half each way'}${f.op === 'new' ? ', a body of its own' : f.op === 'join' ? ', joined to what it meets' : ', cut from what it meets'}` }
     case 'draft':
