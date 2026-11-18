@@ -10,8 +10,9 @@
 // 27 did), the fold is left inside one patch, which misses it by 0.56 mm.
 //
 // And on the app's sample bracket, a real scan: every loose crease end is
-// carried to another curve — where 56 creases were let go before — though
-// the bracket does not lay out whole yet (see the plugin README).
+// carried to another curve — where 56 creases were let go before — and the
+// network builds, each patch's deviation read; though the bracket does not
+// lay out whole yet (see the plugin README and below).
 
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
@@ -87,7 +88,26 @@ describe('a crease that ends in the middle of a face', () => {
 })
 
 describe('the sample bracket', () => {
-  it('has every loose crease end carried on to another curve', () => {
+  // Measured 18 Nov 2026 (288,582 triangles). Before (PR 32): 6 cells of
+  // 1,575 triangles, and the build failed on a patch 0.48 mm RMS at
+  // (-11.7, -43.2, -205.0) — a cell the graph's faces read wrong. The faces
+  // were read by the curves' tangents at the nodes, and where closing drew a
+  // knot of short creases into one node (10 curves at one) they cross
+  // within the snap's guard: 37 curves were walked both ways round a face
+  // with two regions either side of them, 22 regions had no face. Read by
+  // where each curve is 8 edges out, and the crossings snapped to the end,
+  // 101 curves the same region lies both sides of are found — bridges to
+  // islands of crease and loops round nothing — and let go, and the cells
+  // the build would refuse left out: 9 cells handed over in 12 s; the build
+  // makes 8 of them, 10 patches, 0.031 mm RMS at the median, 0.19 at worst
+  // (the clip's top, 1.4 mm at its worst point). Given second cuts instead
+  // (bridges: 'cut'): 11 cells, 17 patches, a patch 0.48 mm RMS, 57 s.
+  //
+  // It covers about 1.5 % of the bracket's triangles, where it was 0.5 %:
+  // the bracket's edges are rounds, which Suggest creases takes for no
+  // crease, and 92 % of it is one region whose only curves are islands of
+  // crease. Laying it out whole needs curves down the rounds' middles.
+  it('has every loose crease end carried on, its bridges let go, and builds, each patch read', async () => {
     const buf = readFileSync(new URL('../../../public/samples/fridgeBracket_01-reduced.3mf', import.meta.url))
     const m = parse3MF(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength))
     const l = autoLayout(new ScanPaths(m.positions, m.indices!))
@@ -97,6 +117,14 @@ describe('the sample bracket', () => {
     expect(c.extended.length).toBeGreaterThanOrEqual(25)
     expect(c.stuck.length).toBeLessThanOrEqual(2)
     expect(l.creasesDropped).toBeLessThanOrEqual(2)
-    expect(l.made.length).toBeGreaterThanOrEqual(5)
-  }, 180_000)
+    expect(l.bridging!.found).toBeGreaterThanOrEqual(50)
+    expect(l.made.length).toBeGreaterThanOrEqual(8)
+    const { report } = await built({ positions: m.positions, indices: m.indices! }, l)
+    const made = report.cells.filter((x) => !('refused' in x))
+    expect(made.length).toBeGreaterThanOrEqual(7)
+    expect(report.patches.length).toBeGreaterThanOrEqual(9)
+    const rms = report.patches.map((p) => p.rms).sort((a, b) => a - b)
+    expect(rms[Math.floor(rms.length / 2)]).toBeLessThan(0.05)
+    expect(rms[rms.length - 1]).toBeLessThan(0.25)
+  }, 300_000)
 })

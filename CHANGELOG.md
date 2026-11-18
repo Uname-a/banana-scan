@@ -10,6 +10,26 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Auto layout lets bridges go, and the sample bracket builds** (Reverse
+  engineer, 2026-11-18). A patch network's faces are now read by where
+  each curve is 8 mean edges from its node, not by its tangent there:
+  where closing drew a knot of short creases into one node, the curves
+  crossed inside the snap's guard and the faces disagreed with the scan
+  (on the bracket, 37 curves walked both ways round a face with a
+  different region either side). Crossings are snapped to the end, and
+  again after each round of cuts. Before the regions are read, a second
+  curve along one trace goes, and so does every curve the same region lies
+  both sides of — a bridge from one tangle of curves to another, a loop
+  round nothing (`bridges: 'cut'` gives each bridge a second cut instead;
+  measured on the bracket it did worse, and is not the default). A cell
+  the build would refuse, read as the build reads it, is left out and said
+  why; and a patch whose surface the kernel cannot follow is left out of
+  the body, its cell refused, rather than failing the network. The
+  bracket, which failed to build, now builds: 9 cells, 8 made, 10
+  patches, 0.031 mm RMS at the median and 0.19 at worst. Not reached: it
+  still covers only about 1.5 % of the bracket — its edges are rounds, and
+  92 % of it is one region whose only curves are islands of crease.
+
 - **Auto layout closes the crease graph, and patches can meet G2**
   (Reverse engineer, 2026-11-17). Before Auto layout reads the regions,
   creases that end in the open are carried on along the scan's lines of

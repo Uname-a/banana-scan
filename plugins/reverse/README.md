@@ -977,16 +977,30 @@ of the blended box are held about 5° apart there (6° with G2), not
 tangent; and cuts between a ring's loops are straight sections between
 their ends.
 
+Before the regions are read, the curves that separate nothing go: a
+second curve along one trace, and every curve the same region lies both
+sides of as the flood reads it — a bridge from one tangle of curves to
+another, a loop round nothing (`bridges: "cut"` in `autoLayout` gives a
+bridge a second cut beside it instead, and lets a knot under 8 mm of
+curve go with its bridge). The graph's faces are read by where each curve
+is 8 mean edges out from its node, so a knot of short creases drawn into
+one node reads as the scan does. A cell the build would refuse — split
+from its centre and mapped as the build does it — is left out and said
+why, and the build leaves out a patch whose surface the kernel cannot
+follow, its cell refused, instead of failing the whole network.
+
 Not there yet: a loft through curves on the mesh (Loft lofts between
 sketches today), Auto layout on an open scan, and a whole real mechanical
 part. On the sample fridge bracket (288,582 triangles) closing carries
 every loose crease end on to another curve (31 of them; 56 creases were
-let go before), but the part still does not lay out: its two largest
-regions are bounded by loops that meet themselves (16 and 6 of them,
-which no cut from one loop to another separates), a knot of short creases
-round its clip leaves some 20 regions no loop closes round, and 6 come out
-cells. Join its creases by hand (`network.edit`) and fill what they
-close.
+let go before), 101 curves that separate nothing are let go, and the
+network builds: 9 cells, 8 made, 10 patches, 0.031 mm RMS at the median,
+0.19 mm at worst (it failed on a patch 0.48 mm RMS before). But they cover
+about 1.5 % of it: the bracket's edges are rounds, which Suggest creases
+takes for no crease, and 92 % of it is one region whose only curves are
+islands of crease. Laying it out whole needs curves down the rounds'
+middles; until then join its creases by hand (`network.edit`) and fill
+what they close.
 
 ## Agents: modelling through the commands
 
