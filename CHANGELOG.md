@@ -29,6 +29,27 @@ the same number as `appVersion`. How a release is cut is in
   and `reverse.plane.along_path`; the model guide's 2f says how to use
   them.
 
+- **A patch network laid out by itself** (Reverse engineer, 2026-11-17).
+  **Auto layout** in the Patch network's box, and `reverse.network.auto`
+  for an agent, turn a closed scan into a network of smooth B-spline
+  patches without drawing a curve: the scan's creases become crease
+  curves, and the regions between them are cut into cells along the part.
+  A side wall between two sharp rims is cut down the middles of its
+  rounds, a smoothly turning rim is given four corners, a face of more
+  than six corners is cut in two, and a part with no crease is laid out as
+  a box with its corners on its corner blends. The patches are fitted and
+  sewn as drawn ones: a solid where the network closes, tangent across
+  every curve that is not a crease, each patch's RMS and worst point
+  reported. On test parts with 0.01 mm of noise — a box with a domed top,
+  sharp or rounded, a can, a blended box — it comes out a solid of six
+  faces within 0.04 % of the scan's volume, the patches 0.010–0.021 mm RMS
+  and 0.09 mm at worst. Not reached yet: curvature continuity (the patches
+  are G1, not Class A), exact tangency where three patches meet at a
+  corner (about 5° on the blended box), open scans, faces bounded by
+  more than two loops, and real parts whose creases do not close into
+  loops — on the sample fridge bracket most regions are left out, its
+  creases crossing and ending where no node joins them. A crumb of a few triangles pinched off inside a
+  cell between two passes of a curve no longer refuses the cell.
 - **scan.qa and mesh.inspect run as jobs** (agent server, 2026-11-17).
   Both read the whole scan. On a few million triangles, or on a busy
   computer, they outlast the server's answer limit (40 s in Scan2CAD

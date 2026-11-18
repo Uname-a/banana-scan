@@ -54,6 +54,7 @@ import type { SceneManager } from '../../../src/viewer/SceneManager'
 import type { SceneLayer, SceneLayerHost } from '../../../src/viewer/sceneLayers'
 import { type NetworkReport, PATCH_GRID } from '../core/networkBody'
 import { type CurveTrace, fitProvisional, sampleCurve, SPANS_MAX, SPANS_MIN, traceCurve } from '../core/networkCurve'
+import { type AutoLayout, autoLayout } from '../core/networkAuto'
 import { suggestCreases } from '../core/networkCreases'
 import { seedInside } from '../core/networkSeed'
 import {
@@ -81,6 +82,7 @@ import {
   setSuggested,
   toggleCrease,
   unplaceCorner,
+  withLayout,
 } from '../state/reNetworkDraft'
 import type { FeatureDraft } from '../state/reStore'
 import type { EdgeInfo } from '../core/build'
@@ -323,6 +325,18 @@ export class NetworkLayer {
     const offered = found.curves.map((c) => ({ from: at.get(c.from)!, to: at.get(c.to)!, via: c.via, points: c.points, length: c.length, angle: c.angle }))
     this.edit((x) => setSuggested(x, offered))
     return offered.length
+  }
+
+  /** The network laid out by itself (Auto layout, networkAuto.ts) over
+   *  the viewport's copy of the scan, in place of what is drawn — one step
+   *  of the box's undo. Null where there is no scan. On the main thread,
+   *  as Suggest creases is. */
+  autoLayout(): AutoLayout | null {
+    const paths = this.ensurePaths()
+    if (!paths || !this.draft) return null
+    const layout = autoLayout(paths)
+    if (layout.cells.length > 0) this.edit((x) => withLayout(x, layout))
+    return layout
   }
 
   /** What is under the cursor now — for the keys. */

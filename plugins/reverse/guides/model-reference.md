@@ -216,6 +216,9 @@ Also: `misfit` is what a patch misses the scan by beyond the scan’s noise (pas
 **`reverse_network_suggest_creases`** `{ box?: { min, max }, strongDeg? (25), weakDeg? (12), limit? (40) }` — the scan's sharp ridges and folds traced as crease curves: `candidates: [{ curve: { points, crease: true }, length, angle }]`, longest first (`count`, `more`). Each `curve` goes into `reverse_network_create { curves }` or `reverse_network_edit { add }` as it is; candidates sharing an end share its point. A fillet that rounds a fold over is not offered. Read-only; runs as a job on a big scan.
 Example: `{ box: { min: [-60, -40, 0], max: [60, 40, 30] } }`
 
+**`reverse_network_auto`** `{ name?, creases? (true), strongDeg? (25), weakDeg? (12), fit?, detail?, wait? }` — a Patch network laid out by itself over the whole scan and built, one undo step: the creases as crease curves (one ending inside a face let go), each region between them read — a disk of three to six corners a cell, a smoothly turning loop given four corners, a disk of more than six cut between two, a ring between two loops cut across from one's corners to the other's, a closed scan with no crease laid out as a box round its principal axes — and left out where it cannot be (an open scan's rim, three or more loops). Answers as create, plus `closed`, `layout: { creases, creasesDropped?, cuts, cells, patches, regions: [{ kind: disk | ring | closed | loops | open, at, action: cell | corners | cut | box | left, cuts?, why? }], left?: [{ at, why }], ms }`, `deviation: { rms, worstRms, worstMax, worstPatch }` (mm) and `continuity: { tangent, corners?, creases, curvature }` — `tangent` the worst angle across a tangent curve, `corners` the worst where patches meet with no crease (near tangent only), `curvature` not held (G1, no G2). Nothing filled: refused, nothing changed.
+Example: `{ name: "Housing skin" }`
+
 ### Reverse engineer: bodies
 
 **`reverse_body_describe`** `{ body?, edges?, before?, where?, limit?, fingerprints?, sort?: "largest" | "smallest" }` — faces (index, kind, area, centroid, normal or axis, radius, length, side boss/bore, `madeBy`) and edges (index, kind, length, mid, ends, faces either side). `where` filters, `exclude` (a where) leaves out — `exclude: { madeBy: "Thread 1" }` drops a thread's many faces; `limit` caps faces and edges (always, on a patterned body); `before` gives the body as it stood before a feature, a failed one too. A face a pattern copied is `madeBy` the original's feature and carries `copy: { pattern, instance }`.
@@ -447,6 +450,7 @@ Answer sizes measured on a real project — the vacuum adapter, 50 features, one
 | `reverse_network_read` full, 2 × 2 (9 nodes, 12 curves) | 2,975 | about 750 bytes a patch: a 30-patch network ~22 kB, estimated — read `brief` |
 | `reverse_network_read` `detail: "brief"`, 2 × 2 | 490 | about 60 bytes a patch |
 | `reverse_network_suggest_creases` | ~250 a candidate | one fold: 280; `limit` caps it |
+| `reverse_network_auto` brief, six patches | 1,792 | measured on the command test's can (2026-11-17); grows as create's, about 150 bytes a patch, and about 80 a region |
 
 ## Errors
 

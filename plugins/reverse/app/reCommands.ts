@@ -29,7 +29,7 @@ import { filletTry } from './reFilletTry'
 import { threadRead } from './reThreadCommand'
 import { parameterAdd, parameterList, parameterRemove, parameterRename, parameterSet } from './reParameterCommands'
 import { noteAdd, noteList, noteResolve, notesNudge } from './reNoteCommands'
-import { networkCreate, networkEdit, networkRead, networkSuggestCreases } from './reNetworkCommands'
+import { networkAuto, networkCreate, networkEdit, networkRead, networkSuggestCreases } from './reNetworkCommands'
 import { planReplace, planSet, planTick, planUpdate, withPlanGate } from './rePlan'
 
 /** What the kernel's builds have done so far, by the client that asked. */
@@ -152,6 +152,7 @@ export const reverseCommands: Command<never>[] = ([
   { ...networkEdit, name: 'network.edit', names: { space: FEATURE_NAMES, at: ['name'] } },
   { ...networkRead, name: 'network.read' },
   { ...networkSuggestCreases, name: 'network.suggest_creases' },
+  { ...networkAuto, name: 'network.auto', names: { space: FEATURE_NAMES, at: ['name'] } },
   { ...planSet, name: 'plan.set' },
   { ...planUpdate, name: 'plan.update' },
   { ...planTick, name: 'plan.tick' },

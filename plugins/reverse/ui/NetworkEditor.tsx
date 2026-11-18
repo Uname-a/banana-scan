@@ -80,6 +80,25 @@ export function NetworkFields({ d }: { d: NetworkDraftOpen }) {
       }
     }, 30)
   }
+  const [laying, setLaying] = useState(false)
+  const [laid, setLaid] = useState<string | null>(null)
+  const layOut = () => {
+    if (d.curves.length > 0 && !window.confirm('Auto layout puts its own network in place of the curves drawn. Undo brings them back. Go on?')) return
+    setLaying(true)
+    setTimeout(() => {
+      try {
+        const l = networkLayerIf(sceneOf())?.autoLayout()
+        if (!l) setLaid(null)
+        else if (l.cells.length === 0) setLaid(`Auto layout made no cell: ${l.left[0]?.why ?? 'no region of the scan came out one'}.`)
+        else {
+          const parts = [`${l.creases} crease${l.creases === 1 ? '' : 's'}`, `${l.cuts} curve${l.cuts === 1 ? '' : 's'} across`, `${l.made.length} cell${l.made.length === 1 ? '' : 's'}`, `${l.patches} patch${l.patches === 1 ? '' : 'es'}`]
+          setLaid(`Laid out: ${parts.join(', ')}${l.left.length > 0 ? ` — ${l.left.length} region${l.left.length === 1 ? '' : 's'} left out: ${l.left[0].why}` : ''}.`)
+        }
+      } finally {
+        setLaying(false)
+      }
+    }, 30)
+  }
   const stripField = (label: string, curve: number | undefined, testId: string) => {
     const strip = stripOf(report, curve)
     if (!strip) return null
@@ -143,6 +162,14 @@ export function NetworkFields({ d }: { d: NetworkDraftOpen }) {
               dashed: click one to take it as a crease curve, or Accept all. Two taken that meet share a
               node there.
             </p>
+            <p>
+              <b>Auto layout</b> lays the whole network out by itself: the scan's creases as crease curves, and
+              the regions between them cut into cells by curves that follow the part — a side wall between two
+              rims down the middles of its rounds, a part with no crease as a box round it. The patches meet
+              tangent across those curves, not curvature-continuous. A region it cannot lay out (an open edge
+              of the scan, three loops round one face) is left out and said why. It takes the place of what is
+              drawn; Undo brings that back.
+            </p>
           </InfoDot>
         </span>
         <span className="toolrow" data-test="network-tool">
@@ -160,6 +187,9 @@ export function NetworkFields({ d }: { d: NetworkDraftOpen }) {
         <button data-test="network-suggest" disabled={finding} title="Find the scan's sharp edges and folds, to take as crease curves" onClick={suggest}>
           {finding ? 'Finding creases…' : 'Suggest creases'}
         </button>
+        <button data-test="network-auto" disabled={laying} title="Lay the network out by itself: the scan's creases, and the regions between them cut into cells along the part" onClick={layOut}>
+          {laying ? 'Laying out…' : 'Auto layout'}
+        </button>
         <button data-test="network-undo" disabled={d.history.length === 0} title="Undo the last edit of the network (Ctrl+Z)" onClick={() => edit(undoNetwork)}>
           Undo
         </button>
@@ -176,6 +206,14 @@ export function NetworkFields({ d }: { d: NetworkDraftOpen }) {
             </button>
           )}{' '}
           <button className="chip" data-test="network-suggest-dismiss" title="Put the suggestions away" onClick={() => edit((x) => setSuggested(x, null))}>
+            Dismiss
+          </button>
+        </p>
+      )}
+      {laid && (
+        <p className="hint" data-test="network-laid">
+          {laid}{' '}
+          <button className="chip" title="Put this away" onClick={() => setLaid(null)}>
             Dismiss
           </button>
         </p>

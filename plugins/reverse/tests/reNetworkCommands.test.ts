@@ -97,7 +97,7 @@ const grid = () => [...V.map((v) => ({ points: U.map((u) => sheet(u, v)) })), ..
 describe('patch network commands', () => {
   it('lists each command within what an agent’s client takes', () => {
     const network = listCommands().filter((c) => c.name.startsWith('reverse.network.'))
-    expect(network.map((c) => c.name).sort()).toEqual(['reverse.network.create', 'reverse.network.edit', 'reverse.network.read', 'reverse.network.suggest_creases'])
+    expect(network.map((c) => c.name).sort()).toEqual(['reverse.network.auto', 'reverse.network.create', 'reverse.network.edit', 'reverse.network.read', 'reverse.network.suggest_creases'])
     for (const c of network) {
       const w = schemaWeight(c.input)
       expect(w.bytes, c.name).toBeLessThanOrEqual(SCHEMA_BUDGET.bytes)
