@@ -22,6 +22,7 @@ import type { NetworkCurve, NetworkFeature } from '../core/features'
 import { traceNetwork } from '../core/network'
 import type { NetworkReport } from '../core/networkBody'
 import { readCells } from '../core/networkCells'
+import { type AutoLayout, autoLayout } from '../core/networkAuto'
 import { suggestCreases } from '../core/networkCreases'
 import { type CurveTrace, SPANS_MAX, SPANS_MIN, traceCurve } from '../core/networkCurve'
 import { addCurve, addSeeds, cloneData, emptyNetworkDraft, insertGrip, moveGrip, moveNode, networkDraftOf, networkReady, removeCurve, removeGrip, removeNode, removeSeed, setNetworkFit, setStripSpans, splitCurve, toggleCrease } from '../state/reNetworkDraft'
@@ -802,5 +803,96 @@ export const networkSuggestCreases: Command<{ box?: { min: Vec3; max: Vec3 }; st
       .map((c) => ({ curve: { points: [at.get(c.from)!, ...c.via, at.get(c.to)!].map(at4), crease: true }, length: round3(c.length), angle: Math.round(c.angle * 10) / 10 }))
       .sort((a, b) => b.length - a.length)
     return { count: candidates.length, candidates: candidates.slice(0, limit), ...(candidates.length > limit ? { more: candidates.length - limit } : {}) }
+  },
+}
+
+// ---- laid out by itself ------------------------------------------------------------
+
+interface AutoIn {
+  name?: string
+  creases?: boolean
+  strongDeg?: number
+  weakDeg?: number
+  fit?: { smoothness?: number; robust?: boolean; tolerance?: number }
+  detail?: 'none' | 'brief'
+}
+
+/** What the layout made, for the answer. */
+function layoutOut(l: AutoLayout): Json {
+  return {
+    creases: l.creases,
+    ...(l.creasesDropped > 0 ? { creasesDropped: l.creasesDropped } : {}),
+    cuts: l.cuts,
+    cells: l.made.length,
+    patches: l.patches,
+    regions: l.regions.map((r) => ({ kind: r.kind, at: r.at, action: r.action, ...(r.cuts ? { cuts: r.cuts } : {}), ...(r.why ? { why: r.why } : {}) })),
+    ...(l.left.length > 0 ? { left: l.left } : {}),
+    ms: Math.round(l.ms),
+  }
+}
+
+/** The deviation in short, from the build's report: the patches' worst
+ *  RMS and worst point, and which. */
+function deviationOut(report: NetworkReport | undefined): Json | null {
+  if (!report || report.patches.length === 0) return null
+  let rms = 0
+  let max = 0
+  let worst = 0
+  report.patches.forEach((p, i) => {
+    rms = Math.max(rms, p.rms)
+    if (p.max > max) [max, worst] = [p.max, i]
+  })
+  const points = report.patches.reduce((s, p) => s + p.points, 0)
+  const mean = Math.sqrt(report.patches.reduce((s, p) => s + p.rms * p.rms * p.points, 0) / Math.max(1, points))
+  return { rms: r4(mean), worstRms: r4(rms), worstMax: r4(max), worstPatch: worst }
+}
+
+/** How the patches meet: tangent across the curves not creases (the
+ *  angle), near tangent at the corners of three, five or six patches with
+ *  no crease (the worst), and what is not held. */
+function continuityOut(f: NetworkFeature | undefined, report: NetworkReport | undefined): Json | null {
+  if (!f || !report || report.patches.length === 0) return null
+  const creaseAt = new Set(f.curves.filter((c) => c.crease).flatMap((c) => [c.from, c.to]))
+  const smooth = report.corners.filter((c) => !creaseAt.has(c.node))
+  return {
+    tangent: r4(report.worstAngle),
+    ...(smooth.length > 0 ? { corners: r4(Math.max(...smooth.map((c) => c.angle))) } : {}),
+    creases: report.curves.filter((c) => c.crease).length,
+    curvature: 'not held: the patches meet tangent (G1) across each curve not a crease; their curvature may step there (G2 is not fitted)',
+  }
+}
+
+export const networkAuto: Command<AutoIn> = {
+  name: 'auto',
+  title: 'Lay out a patch network by itself',
+  description:
+    'Make a Patch network laid out by itself over the whole scan, one undo step: the scan’s creases (reverse.network.suggest_creases) as crease curves, and the regions they leave cut into cells of three to six sides by tangent curves that follow the part — a smooth loop (a rim with rounded corners, a circle) given four corners spread round it, a ring between two loops (a side wall between sharp rims) cut across from one loop’s corners to the other’s, down the middles of its rounds; a cell of more than six corners cut in two; a closed scan with no crease laid out as a box round its principal axes, its corners and curves on its corner and edge blends. A region of three loops or more, or one the scan’s own rim bounds (an open scan), is left out and said why. The patches are fitted together and sewn as reverse.network.create’s: tangent (G1) across every curve not a crease, near tangent where three, five or six meet; their curvature is not held across a curve (no G2). Answers as reverse.network.create, and layout (creases, cuts, cells, patches, each region as found with what was done, left), deviation (the patches’ RMS over all, worst RMS, worst point and its patch, mm) and continuity (tangent: worst angle across a tangent curve, deg; corners: worst where patches meet with no crease; creases). A closed network is a solid. reverse.network.read reads it whole, reverse.network.edit changes it.',
+  input: obj({
+    name: str('The feature’s name; “Patch network n” when left out. Unique across sketches and features.', { minLength: 1 }),
+    creases: bool('Take the scan’s creases as crease curves (true, the default); false lays the scan out as if it had none.'),
+    strongDeg: num('The fold a crease is started on, degrees (25).', { exclusiveMinimum: 0, maximum: 180 }),
+    weakDeg: num('The fold a crease is followed on along, degrees (12); under strongDeg.', { exclusiveMinimum: 0, maximum: 180 }),
+    fit: fitIn,
+    detail: detailIn,
+  }),
+  label: ({ name }) => `lay out patch network${typeof name === 'string' ? ` “${name}”` : ''}`,
+  run: async (input) => {
+    const { name, creases, strongDeg, weakDeg, fit, detail = 'brief' } = input
+    if (strongDeg !== undefined && weakDeg !== undefined && weakDeg > strongDeg) invalid(`weakDeg (${weakDeg}) is over strongDeg (${strongDeg}) — a crease is followed on at a fold no larger than the one it starts on.`)
+    requireFreeName(name)
+    const s = await ready()
+    const layout = autoLayout(scanPaths(s), { ...(creases !== undefined ? { creases } : {}), ...(strongDeg !== undefined ? { strongDeg } : {}), ...(weakDeg !== undefined ? { weakDeg } : {}) })
+    if (layout.cells.length === 0) {
+      const why = layout.left.slice(0, 4).map((l) => `at (${l.at.join(', ')}) ${l.why}`)
+      invalid(`No region of the scan came out a cell, so there is no network to make${why.length > 0 ? ` — ${why.join('; ')}` : ''}. Nothing was changed.`)
+    }
+    let d: NetworkDraft = { ...emptyNetworkDraft(), nodes: layout.nodes, curves: layout.curves, cells: layout.cells, nextId: layout.nextId }
+    if (fit) d = setNetworkFit(d, fit)
+    const before = bodyRows(s)
+    const id = await commit(s, d, { ...(name !== undefined ? { name } : {}) })
+    const f = re().features.find((x) => x.id === id) as NetworkFeature | undefined
+    const report = reportOf(id)
+    const answer = changedAnswer(s, id, {}, detail, before)
+    return { ...answer, ...(report ? { closed: report.closed } : {}), layout: layoutOut(layout), deviation: deviationOut(report), continuity: continuityOut(f, report) }
   },
 }

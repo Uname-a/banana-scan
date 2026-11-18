@@ -660,3 +660,94 @@ function insidePoint(scan: ScanPaths, triangles: readonly number[]): Vec3 {
   }
   return mid(best)
 }
+
+/** A region of the scan the curves cut it into, whatever its shape: its
+ *  triangles, the graph's faces round it — one for a disk, two for a ring
+ *  between two loops, none for a closed piece no curve touches — and how
+ *  many of its edges are the scan's own rim. For laying a network out
+ *  (networkAuto.ts), where a region is not a cell yet. */
+export interface ScanRegion {
+  triangles: Uint32Array
+  /** The faces of the graph bounding it, by index, each its votes. */
+  faces: number[]
+  rimEdges: number
+  /** The edges of the scan round it a curve crosses or runs along: none
+   *  on a piece no curve touches. */
+  curveEdges: number
+}
+
+/** The whole scan cut into regions by the curves: every triangle flooded,
+ *  no box, each graph face given to the region whose boundary votes for it
+ *  most. `label` gives each triangle's region. */
+export function scanRegions(scan: ScanPaths, nodes: readonly GraphNode[], curves: readonly GraphCurve[]): { faces: GraphFace[]; regions: ScanRegion[]; label: Int32Array } {
+  const faces = curves.length > 0 ? graphFaces(scan, nodes, curves) : []
+  const inc = incidence(scan)
+  const marks = markEdges(scan, curves)
+  const idx = scan.indices
+  const pos = scan.positions
+  const vertexCount = pos.length / 3
+  const edgeKey = (a: number, b: number) => (a < b ? a * vertexCount + b : b * vertexCount + a)
+  const keyOf = (h: HalfEdge) => `${h.curve}${h.forward ? '+' : '-'}`
+  const faceOf = new Map<string, number>()
+  faces.forEach((f, i) => f.edges.forEach((h) => faceOf.set(keyOf(h), i)))
+  const label = new Int32Array(scan.triangleCount).fill(-1)
+  const found: { triangles: number[]; votes: Map<number, number>; rimEdges: number; curveEdges: number }[] = []
+  const nb: number[] = []
+  for (let start = 0; start < scan.triangleCount; start++) {
+    if (label[start] >= 0) continue
+    const id = found.length
+    const piece = { triangles: [] as number[], votes: new Map<number, number>(), rimEdges: 0, curveEdges: 0 }
+    found.push(piece)
+    const queue = [start]
+    label[start] = id
+    while (queue.length > 0) {
+      const t = queue.pop()!
+      piece.triangles.push(t)
+      for (let e = 0; e < 3; e++) {
+        const a = idx[t * 3 + e]
+        const b = idx[t * 3 + ((e + 1) % 3)]
+        const w = idx[t * 3 + ((e + 2) % 3)]
+        const marked = marks.byEdge.get(edgeKey(a, b))
+        if (marked) {
+          piece.curveEdges++
+          for (const m of marked) {
+            const d: Vec3 = [marks.dir[m * 3], marks.dir[m * 3 + 1], marks.dir[m * 3 + 2]]
+            if (Number.isNaN(d[0])) continue
+            const n = scan.triangleNormal(t)
+            const left: Vec3 = [n[1] * d[2] - n[2] * d[1], n[2] * d[0] - n[0] * d[2], n[0] * d[1] - n[1] * d[0]]
+            const side = (pos[w * 3] - marks.at[m * 3]) * left[0] + (pos[w * 3 + 1] - marks.at[m * 3 + 1]) * left[1] + (pos[w * 3 + 2] - marks.at[m * 3 + 2]) * left[2]
+            const f = faceOf.get(keyOf({ curve: marks.curve[m], forward: side > 0 }))
+            if (f !== undefined) piece.votes.set(f, (piece.votes.get(f) ?? 0) + 1)
+          }
+          continue
+        }
+        across(scan, inc, t, a, b, nb)
+        if (nb.length === 0) {
+          piece.rimEdges++
+          continue
+        }
+        for (const u of nb) {
+          if (label[u] >= 0) continue
+          label[u] = id
+          queue.push(u)
+        }
+      }
+    }
+  }
+  // Each face to the region that votes for it most.
+  const owner = new Map<number, { region: number; votes: number }>()
+  found.forEach((p, r) => {
+    for (const [f, v] of p.votes) {
+      const had = owner.get(f)
+      if (!had || v > had.votes) owner.set(f, { region: r, votes: v })
+    }
+  })
+  const regions: ScanRegion[] = found.map((p) => ({ triangles: Uint32Array.from(p.triangles), faces: [], rimEdges: p.rimEdges, curveEdges: p.curveEdges }))
+  for (const [f, o] of [...owner].sort((a, b) => a[0] - b[0])) regions[o.region].faces.push(f)
+  return { faces, regions, label }
+}
+
+/** A point well inside a region (see insidePoint), for its seed. */
+export function regionSeed(scan: ScanPaths, triangles: ArrayLike<number>): Vec3 {
+  return insidePoint(scan, Array.from(triangles))
+}

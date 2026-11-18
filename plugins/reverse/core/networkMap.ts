@@ -20,13 +20,19 @@
 // twelve rounds to bring to a third of that.
 //
 // A scan hole wholly inside the cell is closed for the map by a fan from
-// the hole's middle; the fan's vertex carries no data. Any triangle that
+// the hole's middle; the fan's vertex carries no data — and so is a crumb
+// of a few triangles pinched off inside it between two passes of a
+// curve's trace. Any triangle that
 // comes out flipped — a cell whose boundary is not a disk's, a crumb of the
 // scan folded on itself — refuses the cell, by where it is.
 
 import { biconjugateGradientStabilized, Triplets } from '../../../src/core/fit/sparse'
 import type { ScanPaths } from '../../../src/core/geometry/scanPath'
 import type { Vec3 } from '../../../src/core/types'
+
+/** The most vertices round a crumb pinched off inside a cell that is
+ *  closed as a hole; a larger inner boundary makes the cell a ring. */
+const CRUMB_LOOP = 12
 
 /** The solver's tolerance. The map is where each point starts from — the
  *  fit takes it onto the Coons surface of the patch's sides and on from
@@ -132,8 +138,22 @@ export function cellMesh(scan: ScanPaths, triangles: ArrayLike<number>, holes: r
     }
   }
   if (loops.length === 0) return 'it has no boundary — the scan closes round it'
+  loops.sort((x, y) => y.length - x.length)
+  // A crumb of the scan pinched off inside the cell — between two passes
+  // of one curve's trace, a few triangles across — is closed by a fan as a
+  // hole is: its points carry no data, and the cell is a disk round it.
+  for (let i = loops.length - 1; i >= 1; i--) {
+    const crumb = loops[i]
+    if (crumb.length > CRUMB_LOOP) continue
+    const c: Vec3 = [0, 0, 0]
+    for (const l of crumb) for (let k = 0; k < 3; k++) c[k] += positions[l * 3 + k] / crumb.length
+    const middle = scanVertex.length
+    scanVertex.push(-1)
+    positions.push(...c)
+    for (let j = 0; j < crumb.length; j++) tri.push(crumb[(j + 1) % crumb.length], crumb[j], middle)
+    loops.splice(i, 1)
+  }
   if (loops.length > 1) {
-    loops.sort((x, y) => y.length - x.length)
     const v = loops[1][0]
     return `it is a ring, not a disk — another boundary inside it at (${[positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]].map((x) => x.toFixed(1)).join(', ')})`
   }

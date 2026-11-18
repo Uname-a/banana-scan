@@ -928,8 +928,43 @@ each patch's map from one edit to the next: a patch closed on the scooter
 cover is fitted on screen a quarter of a second after the click, and an
 edit of the thirty patches is read again in under a second.
 
+**Auto layout** lays the network out by itself over the whole scan
+(`core/networkAuto.ts`), in place of what is drawn, one step of the box's
+undo. The scan's creases become crease curves — Suggest creases', a crease
+that ends in the middle of a face let go — and the scan is flooded between
+them into regions, each read for what it is. A disk with three to six
+corners is a cell as it is; one whose loop turns smoothly all the way round
+(a rim with rounded corners, a circle) is given four corners spread round
+it; one with more than six is cut across between two corners. A ring
+between two loops — the side wall of a box between sharp rims — is cut
+across from one loop's corners to the other's, before the disks beside it
+are read, so that the cuts' ends are their corners too: on a box with
+rounded upright edges the cuts run down the middles of the rounds, and the
+top, the bottom and the four sides meet corner to corner. A closed scan with
+no crease (a blended box) is laid out as a box round its principal axes, a
+corner on each corner blend and a curve along each edge blend. A node only
+two smooth curves of a kind run through, and no cell's corner, is made a
+grip. A region of three loops or more, or one the scan's own rim bounds (an
+open scan: no curve is drawn along a rim yet), is left out and said why.
+The patches are fitted and sewn as drawn ones are: tangent across every
+curve not a crease, near tangent where three, five or six meet. On closed
+test parts with 0.01 mm of noise — a box with a domed top, sharp or with
+4 mm rounds upright, a can, a blended box — it comes out a solid of six
+faces within 0.04 % of the scan's volume, every patch 0.010–0.021 mm RMS
+and 0.09 mm at its worst point, tangent within 0.002° across its curves.
+Not reached: the patches are G1, not G2 — their curvature steps across a
+tangent curve, so it is not a Class A surface; three tangent patches
+meeting at a corner of the blended box are held about 5° apart there, not
+tangent; and the cuts are straight sections between their ends, not traced
+along the scan's lines of curvature.
+
 Not there yet: a loft through curves on the mesh (Loft lofts between
-sketches today), and the patch network laid out by itself.
+sketches today), and Auto layout on an open scan, on a face more than
+two loops of curves bound (a plate with two bosses on it) — and on a real
+mechanical part whose creases do not close: on the sample fridge bracket
+(288,582 triangles) the creases cross and end where no node joins them,
+and of its regions 30 are left out for that and 5 come out cells. Join
+its creases by hand (`network.edit`) and fill what they close.
 
 ## Agents: modelling through the commands
 
@@ -965,6 +1000,7 @@ models in the workspace with the commands under `reverse.` — tools
 | `reverse.export.stl` | the bodies as one binary STL to a chord, for printing — or a 3MF (`format`), a body an object |
 | `reverse.network.create / edit / read` | a Patch network from curves given as points on the scan — joined where one lands on another, its regions filled (`fill: "all"`); edited in one undo step (curves and points added, moved and taken out, creases, a strip's spans, the side on a body); read as the box reads it: cells with their sides or why refused, patches with σ, worst and net, curves with their gap and angle |
 | `reverse.network.suggest_creases` | the scan's sharp edges and folds as crease curves, ready to add, with their length and angle |
+| `reverse.network.auto` | a Patch network laid out by itself over the whole scan, as Auto layout lays it out: the creases, the regions cut into cells, filled and built — with the layout (creases, cuts, cells, each region and what was done), the deviation in short and how the patches meet (tangent, corners; curvature not held) |
 | `reverse.import.step` | a STEP file brought in as bodies, as Import STEP brings one: a body for every solid, named after its part; a `moveBody` feature puts them in place |
 | `reverse.note.list / add / resolve` | the notes pinned on the part (below): each with its pin, and what it is on found again on the bodies as they stand — a face or an edge by its index in `body.describe` and the feature that made it, or the scan with the body face nearest; `add` pins the agent's own question — on faces or edges picked as `body.describe` gives them, or at a point; `resolve` marks a note handled with a line on what was done, or closes the agent's question once answered |
 
