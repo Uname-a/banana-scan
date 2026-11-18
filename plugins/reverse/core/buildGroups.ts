@@ -47,13 +47,14 @@ function touches(step: BuildStep, sketchOf: (id: number) => Sketch | undefined):
     case 'extract':
     case 'loft':
     case 'sweep':
+    case 'wrap':
     case 'thicken':
       if (step.kind === 'thicken') reads.push(step.sheet)
       if (step.kind === 'extrude' || step.kind === 'revolve') {
         sketches.push(step.sketchId)
         if (step.onFace) reads.push(step.onFace.body)
       }
-      if (step.kind === 'loft' || step.kind === 'sweep') sketches.push(...step.sketches)
+      if (step.kind === 'loft' || step.kind === 'sweep' || step.kind === 'wrap') sketches.push(...step.sketches)
       if (step.kind === 'extrude') {
         if (step.faceProfile) reads.push(step.faceProfile.body)
         const until = step.until

@@ -497,6 +497,7 @@ function sketchesRead(step: BuildStep): number[] {
       return [step.sketchId]
     case 'loft':
     case 'sweep':
+    case 'wrap':
       return step.sketches
     default:
       return []

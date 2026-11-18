@@ -23,6 +23,7 @@ import { volumeCompare } from './reVolumeCompare'
 import { bodyProbe, bodySection } from './reProbeCommands'
 import { review } from './reReview'
 import { planeDescribe, sectionFit, sectionOutline, sectionStack, sketchCandidates, tubeTrace } from './reSectionCommands'
+import { planesAlongPath, wrapRead } from './reWrapCommands'
 import { filletRead } from './reFilletRead'
 import { filletTry } from './reFilletTry'
 import { threadRead } from './reThreadCommand'
@@ -114,6 +115,7 @@ export const reverseCommands: Command<never>[] = ([
   { ...rollback, name: 'feature.rollback' },
   { ...sketchEdit, name: 'sketch.edit' },
   { ...sketchCandidates, name: 'sketch.candidates' },
+  { ...wrapRead, name: 'sketch.wrap_read' },
   build,
   buildStop,
   { ...describe, name: 'body.describe' },
@@ -132,6 +134,7 @@ export const reverseCommands: Command<never>[] = ([
   { ...stl, name: 'export.stl' },
   importStep,
   { ...planeDescribe, name: 'plane.describe' },
+  { ...planesAlongPath, name: 'plane.along_path' },
   { ...sectionFit, name: 'section.fit' },
   { ...sectionStack, name: 'section.stack' },
   { ...sectionOutline, name: 'section.outline' },

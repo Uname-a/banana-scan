@@ -38,6 +38,8 @@ import { describeEdge, describeFace, edgeDistance, faceDistance, matchEdge, matc
 import { livePicks, runStoredWhere, sharpBySurfaces, type StoredPick, whereWords } from './where'
 import { type Body, bodyBrief, type BodyCheck, type BodyStep, boxesMeet, type BuildResult, type BuildSteps, type BuiltBody, type Diagnosis, diagonalOf, type DrawnBody, type DrawnBuild, type EdgeBrief, type EdgeInfo, type FaceInfo, type FeatureResult, type FilletTries, type FilletTry, halton, type KeptBuild, type Look, meshBox, meshDeflection, type Overlap, pickEach, type PlacedSketch, type PrefixNode, type PreviewResult, type PreviewStep, type RoundTrip, type RoundTripFind, type SketchStep, type Snapshot, type SolidStep, SPLIT_SAMPLES, stepKeys, surfaceMeshDeflection, SURFACE_TRIANGLES, type OffScanReport, type SurfaceReport, type TrimReport } from './buildTypes'
 import { cylinderSolid, primitiveSolid } from './primitives'
+import { wrapSolid } from './buildWrap'
+import { profilesMiddle } from './wrap'
 import { extrudeUpTo, fuseAll, outlineOf, reachAlong, taperedPrism, taperLimitOf, taperRefusal, trimByPlanes } from './buildExtrude'
 import { NOTHING, noteRead, ReadMap, readsStand, ReadSet, replay, type StateName, type StepReads } from './buildReads'
 import { objectsOf, readPart, type PartExport, type Tokens, writePart } from './buildTransfer'
@@ -2052,6 +2054,23 @@ export class Builder {
     return { ...step, profile, from, path }
   }
 
+  /** A wrap's profiles from its sketch as the build placed it — taken
+   *  again, by the regions it picked, where the sketch moved. */
+  private wrapPlaced(step: Extract<BuildStep, { kind: 'wrap' }>): Extract<BuildStep, { kind: 'wrap' }> {
+    const placed = this.placed.get(step.sketchId)
+    if (!placed?.changed) return step
+    const all = this.placedRegions(step.sketchId)
+    const regions = (step.regionPick ? regionsByPick(step.regionPick, all) : null) ?? matchRegions(step.regions, all)
+    if (regions.length === 0) throw new Error(all.length > 0 ? lostPickWords(step.regions.length, this.names.get(step.sketchId) ?? `Sketch ${step.sketchId}`, all) : `The picked profiles are no longer closed — the projected pieces moved under them.${openEndsWords(placed.sketch)}`)
+    const profiles = liftRegions(placed.frame, placed.sketch, regions)
+    return { ...step, profiles, normal: placed.frame.normal, middle: profilesMiddle(profiles) }
+  }
+
+  /** A wrap's solid: its profiles on the surface, between their offsets. */
+  private wrapOf(step: Extract<BuildStep, { kind: 'wrap' }>): Shape {
+    return wrapSolid(this.kernel, this.wrapPlaced(step))
+  }
+
   /** A sweep's solid, from its sketches as the build placed them. */
   private sweepOf(step: Extract<BuildStep, { kind: 'sweep' }>): Shape {
     const placed = this.sweepPlaced(step)
@@ -2105,6 +2124,8 @@ export class Builder {
               ? this.loftOf(step)
               : step.kind === 'sweep'
                 ? this.sweepOf(step)
+              : step.kind === 'wrap'
+                ? this.wrapOf(step)
               : step.kind === 'thicken'
                 ? this.thickenPreview(step)
               : step.kind === 'surface'
@@ -2118,7 +2139,7 @@ export class Builder {
       const mesh = k.mesh(shape, (typeof solid !== 'number' && 'fit' in solid && solid.fit ? surfaceMeshDeflection : meshDeflection)(diagonalOf(this.kernel, shape)))
       if (typeof solid !== 'number' && 'face' in solid) return { mesh, volume: 0, closed: false, surface: solid.report }
       if (typeof solid !== 'number') return { mesh, volume: solid.surface ? 0 : k.volume(shape), closed: solid.report.closed, trim: solid.report }
-      const onBody = step.kind !== 'extrude' && step.kind !== 'revolve' && step.kind !== 'extract' && step.kind !== 'sheet' && step.kind !== 'loft' && step.kind !== 'sweep' && step.kind !== 'thicken'
+      const onBody = step.kind !== 'extrude' && step.kind !== 'revolve' && step.kind !== 'extract' && step.kind !== 'sheet' && step.kind !== 'loft' && step.kind !== 'sweep' && step.kind !== 'wrap' && step.kind !== 'thicken'
       // A pattern of a sheet is a sheet: faces to count, no volume to read.
       if (onBody && k.isSurface(shape)) return { mesh, volume: 0, closed: false, sheetFaces: k.faceCount(shape) }
       const closed = k.isClosedSolid(shape)
@@ -3834,9 +3855,9 @@ export class Builder {
         this.playThicken(step, fail, results)
         return
       }
-      if (step.kind === 'extrude' || step.kind === 'revolve' || step.kind === 'extract' || step.kind === 'loft' || step.kind === 'sweep') {
+      if (step.kind === 'extrude' || step.kind === 'revolve' || step.kind === 'extract' || step.kind === 'loft' || step.kind === 'sweep' || step.kind === 'wrap') {
         if ((step.kind === 'extrude' && !step.faceProfile) || step.kind === 'revolve') this.notePicksLost(step, sketchOf)
-        const solid = step.kind === 'extract' ? primitiveSolid(this.kernel, step.primitive) : step.kind === 'loft' ? this.loftOf(step) : step.kind === 'sweep' ? this.sweepOf(step) : this.solidOf(step, sketchOf(step.sketchId))
+        const solid = step.kind === 'extract' ? primitiveSolid(this.kernel, step.primitive) : step.kind === 'loft' ? this.loftOf(step) : step.kind === 'sweep' ? this.sweepOf(step) : step.kind === 'wrap' ? this.wrapOf(step) : this.solidOf(step, sketchOf(step.sketchId))
         if (!k.isClosedSolid(solid)) {
           k.release(solid)
           fail(step.id, 'The result is not a closed solid.')
@@ -4126,7 +4147,7 @@ export class Builder {
    *  to every solid body it meets or cut out of them — or, for a feature
    *  saved with a target, joined to or cut from that body alone. */
   private place(
-    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'thicken' }>,
+    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'wrap' | 'thicken' }>,
     solid: Shape,
     fail: (id: number, message: string) => void,
     results: FeatureResult[],
@@ -4335,7 +4356,7 @@ export class Builder {
 
   /** A join or a cut on the one body a feature saved with a target names. */
   private placeOnTarget(
-    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'thicken' }>,
+    step: SolidStep | Extract<BuildStep, { kind: 'extract' | 'loft' | 'sweep' | 'wrap' | 'thicken' }>,
     targetId: number,
     solid: Shape,
     fail: (id: number, message: string) => void,

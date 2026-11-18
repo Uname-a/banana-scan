@@ -864,6 +864,43 @@ export interface SweepFeature extends FeatureFlags {
   exprs?: Record<string, string>
 }
 
+/** A sketch's regions wrapped onto a measured cylinder, cone or plane,
+ *  their lengths kept along the surface, and given a depth along its
+ *  normal — an emboss (join, or a new body) standing out of the surface,
+ *  a deboss (cut) sunk into it: lettering round a bottle, a logo on a
+ *  cone. Where the sketch lands is where it is drawn: rolled onto the
+ *  surface from the line where a plane like the sketch's touches it, on
+ *  the side the drawing lies (core/wrap.ts). The inverse of an unroll. */
+export interface WrapFeature extends FeatureFlags {
+  id: number
+  kind: 'wrap'
+  name: string
+  sketchId: number
+  /** The sketch's regions wrapped, by their keys — as an extrude picks. */
+  regions: string[]
+  regionPick?: RegionPick
+  /** The cylinder, cone or plane element wrapped onto. */
+  surface: number
+  /** Millimetres along the surface's normal. */
+  depth: number
+  /** Which way the depth goes: out of the surface for an emboss and in for
+   *  a deboss by default — on a bore, where the material lies outside,
+   *  flipped. */
+  flip?: boolean
+  op: BodyOp
+  target?: number
+  exprs?: Record<string, string>
+  visible: boolean
+}
+
+/** The offsets of the surface a wrap lies between, mm along its outward
+ *  normal: out for a join or a new body, in for a cut, the other way
+ *  flipped. */
+export function wrapOffsets(f: Pick<WrapFeature, 'depth' | 'op' | 'flip'>): { from: number; to: number } {
+  const outward = (f.op !== 'cut') !== Boolean(f.flip)
+  return outward ? { from: 0, to: f.depth } : { from: -f.depth, to: 0 }
+}
+
 export interface PatternFeature extends FeatureFlags {
   id: number
   kind: 'pattern'
@@ -1078,7 +1115,7 @@ export interface TrimFeature extends FeatureFlags {
 export type TrimPrimitive = { kind: 'plane'; origin: Vec3; normal: Vec3; basisU: Vec3; basisV: Vec3 } | Exclude<Primitive, { kind: 'slab' | 'prism' }>
 
 export type BodyFeature = ShellFeature | FilletFeature | ChamferFeature | HoleFeature | ThreadFeature | CutPlaneFeature | MirrorFeature | BooleanFeature | SplitFeature | PatternFeature | DraftFeature | MoveFaceFeature | DeleteFaceFeature | OffsetBodyFeature
-export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | ExtractFeature | SheetFeature | LoftFeature | SweepFeature | ThickenFeature | SurfaceFeature | NetworkFeature | TrimFeature | ImportFeature | MoveBodyFeature | BodyFeature
+export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | ExtractFeature | SheetFeature | LoftFeature | SweepFeature | WrapFeature | ThickenFeature | SurfaceFeature | NetworkFeature | TrimFeature | ImportFeature | MoveBodyFeature | BodyFeature
 
 /** The solid an extracted element or shadow becomes, resolved to plain
  *  geometry. */
@@ -1176,6 +1213,8 @@ export function referencesOf(f: Feature): number[] {
       return f.target === undefined ? [...f.sketches] : [...f.sketches, f.target]
     case 'sweep':
       return [f.profile, ...(f.path === undefined ? [] : [f.path]), ...(f.target === undefined ? [] : [f.target])]
+    case 'wrap':
+      return f.target === undefined ? [f.sketchId] : [f.sketchId, f.target]
     case 'thicken':
       return f.target === undefined ? [f.sheet] : [f.sheet, f.target]
     case 'import':

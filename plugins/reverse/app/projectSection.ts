@@ -103,6 +103,10 @@ export function validateFeatureJson(e: Record<string, unknown>): void {
     object(e.frame, 'sketch.frame')
   }
   if (e.kind === 'surface') indices(e.region, 'surface.region')
+  if (e.kind === 'wrap') {
+    fields(e, 'sketchId surface depth', 'number', 'wrap')
+    array(e.regions, 'wrap.regions')
+  }
   // The queries a feature's picks were given by, each with what it found,
   // and how an extrude's or a revolve's regions were asked for.
   for (const key of ['edgesWhere', 'facesWhere'])

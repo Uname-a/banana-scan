@@ -299,7 +299,7 @@ async function addOnSolids(asked: Json, of: NonNullable<ReturnType<typeof solids
 }
 
 /** The kinds whose op is join unless another is given. */
-const JOIN_BY_DEFAULT = ['extrude', 'revolve', 'loft', 'sweep']
+const JOIN_BY_DEFAULT = ['extrude', 'revolve', 'loft', 'sweep', 'wrap']
 
 /** A volume as an answer says it, mm³. */
 const mm3 = (v: number) => Math.round(v * 10) / 10
@@ -451,7 +451,7 @@ function unusedName(base: string): string {
 }
 
 /** The kinds that make a solid and may join or cut one body alone. */
-const TARGETED = ['extrude', 'revolve', 'loft', 'sweep', 'thicken']
+const TARGETED = ['extrude', 'revolve', 'loft', 'sweep', 'wrap', 'thicken']
 
 /** The body a feature's `target` names, by id — refused for a sheet,
  *  which has no inside to join or cut. */

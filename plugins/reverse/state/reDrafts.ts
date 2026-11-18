@@ -74,6 +74,8 @@ export function featureDraftReady(d: FeatureDraft): boolean {
       return d.body !== null && d.tools.length > (d.keep === 'between' ? 1 : 0) && !d.tools.includes(d.body) && d.tolerance > 0 && d.overlap > 0 && d.overlap <= 1
     case 'thicken':
       return d.sheet !== null && d.thickness > 0
+    case 'wrap':
+      return d.sketchId !== null && d.regions.length > 0 && d.surface !== null && d.depth > 0
     case 'loft':
       return d.sketches.length >= 2
     case 'sweep':
@@ -240,6 +242,8 @@ export function featureOfDraft(d: FeatureDraft, id: number, name: string): Featu
       return { id, kind: 'sweep', name, profile: d.profile!, ...(d.route ? { route: d.route } : { path: d.path! }), op: d.op, visible: true }
     case 'thicken':
       return { id, kind: 'thicken', name, sheet: d.sheet!, thickness: d.thickness, side: d.side, op: d.op, visible: true }
+    case 'wrap':
+      return { id, kind: 'wrap', name, sketchId: d.sketchId!, regions: [...d.regions], ...(d.regionPick ? { regionPick: d.regionPick } : {}), surface: d.surface!, depth: d.depth, ...(d.flip ? { flip: true } : {}), op: d.op, ...(d.exprs ? { exprs: d.exprs } : {}), visible: true }
     case 'pattern':
       return { id, kind: 'pattern', name, body: d.body!, mode: d.mode, axis: d.axis!, count: d.count, step: d.step, ...(d.mode === 'linear' && d.axis2 && d.count2 >= 2 ? { axis2: d.axis2, count2: d.count2, step2: d.step2 } : {}), visible: true }
     case 'surface':
@@ -370,6 +374,8 @@ export function keyParameterOf(f: Feature): { value: number; unit: KeyUnit } | n
     case 'shell':
     case 'thicken':
       return { value: f.thickness, unit: LENGTH_UNIT }
+    case 'wrap':
+      return { value: f.depth, unit: LENGTH_UNIT }
     // A fillet whose edges all vary has no one radius to read.
     case 'fillet':
       return f.edges.length > 0 ? { value: f.radius, unit: LENGTH_UNIT } : null
@@ -408,6 +414,8 @@ export function withKeyParameter(f: Feature, value: number): Feature {
     case 'shell':
     case 'thicken':
       return positive > 0 ? { ...f, thickness: positive } : f
+    case 'wrap':
+      return positive > 0 ? { ...f, depth: positive } : f
     case 'fillet':
       return positive > 0 && f.edges.length > 0 ? { ...f, radius: positive } : f
     case 'chamfer':

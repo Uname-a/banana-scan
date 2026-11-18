@@ -13,7 +13,7 @@ import type { BodyFolder } from '../core/bodyFolders'
 import type { Diagnosis, EdgeInfo, FaceInfo, SurfaceReport, TrimReport } from '../core/build'
 import type { NetworkReport } from '../core/networkBody'
 import type { DimPick } from '../core/draw'
-import type { AxisRef, BodyOp, BooleanOp, ChamferMode, ExtrudeExtent, FaceProfile, Feature, HoleAxis, MirrorPlane, NetworkFeature, PlaneRef, RegionBox, SplitKeep, StepFileRef, SurfaceFitParams, SurfaceShape, ThickenSide, TrimTool } from '../core/features'
+import type { AxisRef, BodyOp, BooleanOp, ChamferMode, ExtrudeExtent, FaceProfile, Feature, HoleAxis, MirrorPlane, NetworkFeature, PlaneRef, RegionBox, RegionPick, SplitKeep, StepFileRef, SurfaceFitParams, SurfaceShape, ThickenSide, TrimTool } from '../core/features'
 import type { ExprMap, Parameter } from '../core/parameters'
 import type { Region } from '../core/regions'
 import type { PlacedSegment } from '../core/segment'
@@ -410,6 +410,10 @@ export type FeatureDraft = { exprs?: ExprMap } & (
   | { kind: 'split'; featureId?: number; name?: string; body: number | null; tools: number[]; keep: SplitKeep; tolerance: number; overlap: number; within?: number }
   | { kind: 'loft'; featureId?: number; name?: string; sketches: number[]; ruled: boolean; op: BodyOp }
   | { kind: 'sweep'; featureId?: number; name?: string; profile: number | null; path: number | null; route?: SweepRoute; exprs?: Record<string, string>; op: BodyOp }
+  /** A sketch wrapped onto a measured surface (WrapFeature): the sketch
+   *  and its regions, the cylinder, cone or plane element, the depth, and
+   *  whether it goes the other way (a bore's). */
+  | { kind: 'wrap'; featureId?: number; name?: string; sketchId: number | null; regions: string[]; regionPick?: RegionPick; surface: number | null; depth: number; flip: boolean; exprs?: Record<string, string>; op: BodyOp }
   /** A sheet made a solid (ThickenFeature): the sheet, the thickness and
    *  the side it grows to, and what the solid does with the bodies. */
   | { kind: 'thicken'; featureId?: number; name?: string; sheet: number | null; thickness: number; side: ThickenSide; op: BodyOp }

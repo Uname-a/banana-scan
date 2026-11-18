@@ -5,6 +5,8 @@
 // with its expressions read through the parameters.
 
 import { invalid } from '../../../src/commands/core/common'
+import { findElement } from '../../../src/commands/refs'
+import { WRAP_KINDS } from '../core/wrap'
 import { findSection } from '../../../src/commands/core/section'
 import type { SectionFrame } from '../../../src/core/section/frame'
 import type { Vec3 } from '../../../src/core/types'
@@ -273,6 +275,28 @@ function boxFields(s: ReverseSession, kind: FeatureDraftKind, input: Json, box: 
       if (has('route')) Object.assign(out, { route: input.route, path: null })
       if (has('op')) out.op = input.op
       break
+    case 'wrap': {
+      if (has('sketchId')) out.sketchId = sketchNamed(input.sketchId as Ref).id
+      const sketchId = (out.sketchId as number | undefined) ?? (box.kind === 'wrap' ? box.sketchId : null)
+      // A new wrap takes every region unless told; a new sketch takes its
+      // regions again as asked, or all of them.
+      if (has('regions') || has('sketchId')) {
+        if (sketchId === null) invalid('Name the sketch to wrap (sketchId).')
+        const sketch = sketchNamed(sketchId!)
+        const pick = has('regions') ? input.regions : 'all'
+        const keys = regionKeys(s, sketch, pick)
+        out.regions = keys
+        out.regionPick = regionPickOf(pick, keys)
+      }
+      if (has('surface')) {
+        const e = findElement(input.surface as Ref)
+        if (!e.fit || !(WRAP_KINDS as readonly string[]).includes(e.fit.kind)) invalid(`surface: ${e.name} is a ${e.kind} — a sketch wraps onto a cylinder, a cone or a plane.`)
+        out.surface = e.id
+      }
+      for (const k of ['depth', 'flip', 'op']) if (has(k)) out[k] = input[k]
+      if (has('target') && input.target !== null && !has('op')) out.op = 'join'
+      break
+    }
     case 'thicken':
       if (has('sheet')) {
         const sheet = bodyNamed(input.sheet as Ref)
@@ -406,6 +430,7 @@ function notReady(d: FeatureDraft): string {
   if (d.kind === 'fillet' && (d.variable ?? []).some((v) => !(v.radius[0] > 0 && v.radius[1] > 0))) return 'An edge at a varying radius needs both its radii above zero.'
   if (d.kind === 'pattern' && !(d.count >= 2)) return 'A pattern needs a count of two or more.'
   if (d.kind === 'thicken') return d.sheet === null ? 'Name the sheet to thicken (sheet).' : 'The thicken needs a thickness above zero.'
+  if (d.kind === 'wrap') return d.sketchId === null ? 'Name the sketch to wrap (sketchId).' : d.surface === null ? 'Name the cylinder, cone or plane it wraps onto (surface).' : d.regions.length === 0 ? 'The sketch has no closed region to wrap.' : 'The wrap needs a depth above zero.'
   if (d.kind === 'split' && d.keep === 'between' && d.tools.length < 2) return 'Keeping what lies between the sheets takes two sheets or more (tools).'
   if (d.kind === 'network') return d.curves.length === 0 ? 'A patch network needs curves (curves, between nodes) — reverse.network.create makes one from points on the scan.' : 'A patch network needs a region filled (cells: a seed inside it) — reverse.network.create and edit fill them (fill: "all").'
   return `The ${d.kind} is missing something it needs — see the feature’s fields.`

@@ -294,6 +294,8 @@ export function slotsOf<T extends Slotted>(x: T, kind: string | undefined = x.ki
     case 'extract':
     case 'thicken':
       return [field('thickness', 'Thickness', 'length', positive)]
+    case 'wrap':
+      return [field('depth', 'Depth', 'length', positive)]
     case 'draft':
       return [field('angleDeg', 'Angle', 'angle')]
     case 'moveFace':

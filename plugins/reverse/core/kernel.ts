@@ -625,6 +625,24 @@ export class ReKernel {
     })
   }
 
+  /** The ruled surface between two loops of as many pieces, piece to piece
+   *  and point to point by their parameters — a shell, not a solid: a
+   *  wrapped outline's wall, straight out along the surface's normal where
+   *  the loops are the outline at two offsets (core/wrap.ts). */
+  ruledWall(a: readonly LoopPiece[], b: readonly LoopPiece[]): Shape {
+    return run('Making the wall', () => {
+      if (a.length !== b.length) throw new KernelError('the wall’s loops have different pieces.')
+      const wires = [this.wire(a), this.wire(b)]
+      try {
+        const shell = this.occt.loft(wires, false, true)
+        if (this.occt.isNull(shell)) throw new KernelError('the wall could not be made.')
+        return shell as Shape
+      } finally {
+        for (const w of wires) this.occt.release(w)
+      }
+    })
+  }
+
   /** Where a smooth loft's skin crosses itself, cut across at one v at a
    *  time — of its own faces only and inside them when it stands on a
    *  body a later step trimmed — or null (loftFold.ts). */
