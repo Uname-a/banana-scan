@@ -12,10 +12,11 @@
 // surfaces themselves, exact, and the walls square to them.
 
 import type { Vec3 } from '../../../src/core/types'
-import { dot, normalize, sub } from '../../../src/core/vec'
+import { addScaled, dot, normalize, scale, sub } from '../../../src/core/vec'
 import type { ReKernel, Shape } from './kernel'
 import { cylinderSolid, primitiveSolid } from './primitives'
-import { liftLoop, placeFlat, wrapDepthProblem, wrapOfGeometry, type Development, type WrapGeometry, type WrappedProfile, type WrapSurface } from './wrap'
+import type { LoopPiece } from './kernelTypes'
+import { interpolateCubic, liftLoop, placeFlat, wrapDepthProblem, wrapOfGeometry, type Development, type WrapGeometry, type WrappedProfile, type WrapSurface } from './wrap'
 
 /**
  * The solid of a wrap step: the profiles between the offsets `from` and
@@ -30,7 +31,74 @@ export function wrapSolid(k: ReKernel, g: WrapGeometry): Shape {
   const lo = Math.min(g.from, g.to)
   const hi = Math.max(g.from, g.to)
   if (g.surface.kind === 'plane') return planeWrap(k, dev, wrapped, lo, hi)
+  if (g.surface.kind === 'region') throw new Error('A region of the scan is wrapped onto through its fitted sheet (regionWrapSolid).')
   return curvedWrap(k, dev, wrapped, g.surface, lo, hi)
+}
+
+/**
+ * The solid of a wrap onto a region of the scan: the sheet fitted through
+ * the region (`sheet`, one face, the caller's) thickened between the
+ * offsets, cut by walls through the wrapped outline straight out along the
+ * sheet's normal, and the pieces inside the profiles kept. The outline is
+ * found on the scan through the region's layout (`dev`) and taken onto the
+ * sheet: the sheet's faces are the solid's.
+ */
+export function regionWrapSolid(k: ReKernel, g: Pick<WrapGeometry, 'from' | 'to'>, dev: Development, wrapped: readonly WrappedProfile[], sheet: Shape): Shape {
+  const lo = Math.min(g.from, g.to)
+  const hi = Math.max(g.from, g.to)
+  if (!(hi - lo > 1e-6)) throw new Error('The wrap needs a depth above zero.')
+  if (lo < -1e-9 && hi > 1e-9) throw new Error('A wrap onto a region lies on one side of it.')
+  // Which way the sheet's normal points against the scan's outside.
+  const [touch] = k.sheetPoints(sheet, [dev.touch.point])
+  const sign = dot(touch.normal, dev.touch.normal) < 0 ? -1 : 1
+  const outward = hi > 1e-9
+  const way = outward === sign > 0 ? 'out' : 'in'
+  const reach = Math.max(0.5, (hi - lo) * 0.5)
+  const onSheet = (flat: readonly (readonly [number, number])[]) =>
+    k.sheetPoints(
+      sheet,
+      flat.map((f) => placeFlat(dev, [f[0], f[1]], 0)),
+    ).map((x) => ({ point: x.point, normal: scale(x.normal, sign) }))
+  const lift = (loop: WrappedProfile['outer'], w: number, taken: Map<WrappedProfile['outer']['pieces'][number], { point: Vec3; normal: Vec3 }[]>): LoopPiece[] =>
+    loop.pieces.map((piece) => {
+      let at = taken.get(piece)
+      if (!at) {
+        at = onSheet(piece.flat)
+        taken.set(piece, at)
+      }
+      const { poles, knots, mults } = interpolateCubic(
+        at.map((x) => addScaled(x.point, x.normal, w)),
+        piece.params,
+      )
+      return { kind: 'spline', poles, knots, mults }
+    })
+  const slab = k.thickenTracked(sheet, hi - lo, way).shape
+  const walls: Shape[] = []
+  let pieces: Shape[] = []
+  try {
+    const taken = new Map()
+    for (const p of wrapped) for (const loop of [p.outer, ...p.holes]) walls.push(k.ruledWall(lift(loop, lo - reach, taken), lift(loop, hi + reach, taken)))
+    pieces = k.split(slab, walls)
+    const kept = new Set<number>()
+    for (const p of wrapped) {
+      const [mid] = onSheet([p.inside])
+      const probe = addScaled(mid.point, mid.normal, (lo + hi) / 2)
+      const i = pieces.findIndex((piece) => k.containsPoint(piece, probe))
+      if (i < 0) throw new Error('The wrap’s walls did not cut the sheet’s slab round a profile — the profile may reach past where the sheet was fitted.')
+      kept.add(i)
+    }
+    const keep = [...kept].map((i) => pieces[i])
+    if (keep.length === 1) {
+      const only = keep[0]
+      pieces = pieces.filter((x) => x !== only)
+      return only
+    }
+    return k.fuseAll(keep)
+  } finally {
+    k.release(slab)
+    for (const w of walls) k.release(w)
+    for (const p of pieces) k.release(p)
+  }
 }
 
 function planeWrap(k: ReKernel, dev: Development, wrapped: readonly WrappedProfile[], lo: number, hi: number): Shape {

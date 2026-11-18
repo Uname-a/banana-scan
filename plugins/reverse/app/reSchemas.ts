@@ -871,15 +871,31 @@ export const FEATURE_IN: Record<string, JsonSchema> = {
       name: nameIn,
       sketchId: { ...featureRef('sketch'), description: 'The sketch wrapped, by id or name: drawn on a plane along the surface — tangent to the cylinder or cone (a plane element, or a coordinate plane at the radius), or parallel to such a plane. It lands where it is drawn: rolled on from the line where a plane like its own touches the surface, on the side the drawing lies.' },
       regions: { ...regionsIn, description: 'The sketch’s regions wrapped: "all" (the default — a logo, a line of letters), "largest", or keys or points inside them.' },
-      surface: oneOf([int('The element’s id.'), str('The element’s name, whole, case aside.', { minLength: 1 })], 'The measured cylinder, cone or plane of 3D Measure the sketch is wrapped onto, by id or name — as drawn, an assumed diameter held.'),
+      surface: oneOf([int('The element’s id.'), str('The element’s name, whole, case aside.', { minLength: 1 })], 'The measured cylinder, cone or plane of 3D Measure the sketch is wrapped onto, by id or name — as drawn, an assumed diameter held. Or region.'),
+      region: oneOf(
+        [
+          arr(int('', { minimum: 0 }), 'The scan’s vertices, by number.', { minItems: SURFACE_MIN_REGION }),
+          obj({ marked: bool('true: the points scan.query { mark: true }, element.fit { mark: true } or scan.segment { mark } left marked.') }, ['marked']),
+          obj(
+            {
+              box: boxIn,
+              normal: obj({ dir: vec3('Any length.'), withinDeg: num('30 by default.', { exclusiveMinimum: 0, maximum: 180 }) }, ['dir'], 'Only the vertices facing this way.'),
+              exclude: arr(boxIn, 'Boxes whose vertices are left out.'),
+            },
+            ['box'],
+          ),
+        ],
+        'In place of surface: a free-form region of the scan the sketch is wrapped onto — its numbers, { marked: true }, or { box, normal?, exclude? }, every vertex in it taken (none thinned out). The region is laid out flat (as mesh.flatten does), the sketch placed in that layout where it is drawn and carried back onto the scan, and stood on a smooth sheet fitted through the region. Mark more than the sketch covers, one skin of the part, bending gently: a sheet that bends without stretching lays out exactly; a dome does not, and is refused past maxStretchPct.',
+      ),
+      maxStretchPct: num('With region: how far laying the region out may stretch a length under the sketch before the wrap is refused, per cent — 2 by default. Past 0.5 % it builds with a warning.', { exclusiveMinimum: 0 }),
       depth: num('How far the wrapped regions stand out of the surface (emboss) or sink into it (deboss), mm along its normal.', { exclusiveMinimum: 0 }),
       flip: bool('The depth the other way: into the surface for a join, out of it for a cut — on a bore, where the material lies outside the surface.'),
       op: enumOf(['new', 'join', 'cut'], 'join (the default): an emboss, joined to every solid it meets; cut: a deboss, out of every solid it meets; new: a body of its own.'),
       target: targetIn,
       exprs: exprsIn('depth'),
     },
-    ['kind', 'sketchId', 'surface', 'depth'],
-    'A sketch wrapped onto a measured cylinder, cone or plane — its lengths kept along the surface, x round it and y along it, as an unroll lays it out the other way — and given a depth along the surface’s normal: lettering or a logo embossed on a bottle or debossed into a cone. The walls stand square to the surface; the faces are the surface and its offset. Refused where the sketch would lap itself round the axis (wider than half a turn either side of where it touches), reach past a cone’s apex, or lies on a plane square to the axis. reverse.sketch.wrap_read reads where it lands first, changing nothing.',
+    ['kind', 'sketchId', 'depth'],
+    'A sketch wrapped onto a measured cylinder, cone or plane — or onto a free-form region of the scan (region) — its lengths kept along the surface, x round it and y along it, as an unroll lays it out the other way — and given a depth along the surface’s normal: lettering or a logo embossed on a bottle or debossed into a cone. The walls stand square to the surface; the faces are the surface and its offset. Refused where the sketch would lap itself round the axis (wider than half a turn either side of where it touches), reach past a cone’s apex, or lies on a plane square to the axis. reverse.sketch.wrap_read reads where it lands first, changing nothing.',
   ),
   thicken: obj(
     {

@@ -413,7 +413,7 @@ export type FeatureDraft = { exprs?: ExprMap } & (
   /** A sketch wrapped onto a measured surface (WrapFeature): the sketch
    *  and its regions, the cylinder, cone or plane element, the depth, and
    *  whether it goes the other way (a bore's). */
-  | { kind: 'wrap'; featureId?: number; name?: string; sketchId: number | null; regions: string[]; regionPick?: RegionPick; surface: number | null; depth: number; flip: boolean; exprs?: Record<string, string>; op: BodyOp }
+  | { kind: 'wrap'; featureId?: number; name?: string; sketchId: number | null; regions: string[]; regionPick?: RegionPick; surface: number | null; region?: Uint32Array | null; floodDeg?: number; paint?: boolean; maxStretchPct?: number; depth: number; flip: boolean; exprs?: Record<string, string>; op: BodyOp }
   /** A sheet made a solid (ThickenFeature): the sheet, the thickness and
    *  the side it grows to, and what the solid does with the bodies. */
   | { kind: 'thicken'; featureId?: number; name?: string; sheet: number | null; thickness: number; side: ThickenSide; op: BodyOp }

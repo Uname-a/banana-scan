@@ -10,6 +10,22 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Wrap onto a free-form region of the scan** (Reverse engineer,
+  2026-11-18). Wrap, which rolled a sketch onto a measured cylinder, cone
+  or plane, now takes a region of the scan instead — a contoured grip, a
+  gently domed cover, any face no element fits. The region is laid out flat
+  by the same flattening as Mesh Tools' flatten; the sketch is placed in
+  that layout where it is drawn and carried back onto the scan; and the
+  emboss or deboss stands on a smooth sheet fitted through the region, its
+  walls along the sheet's normal. How far the layout stretches the scan
+  under the sketch is read and said: a sheet bent without stretching keeps
+  the sketch's lengths to hundredths of a per cent; past 0.5 % the wrap
+  warns, past 2 % (or the limit given) it is refused with where and by how
+  much. In the panel, the Wrap box's Onto takes "A region of the scan…",
+  gathered by clicks or the marking tools as Fit surface's is; the agent
+  gives `region` to `reverse.feature.add { kind: "wrap" }` and to
+  `reverse.sketch.wrap_read`, which answers the stretch.
+
 - **Wrap a sketch onto a surface, and planes along a path** (Reverse
   engineer, 2026-11-17). **Wrap** rolls a sketch's closed regions — an
   outline, letters, a logo — onto a measured cylinder, cone or plane with
