@@ -38,15 +38,29 @@
 //   rays toward the box's edges do. On a blended box those are the middles
 //   of its corner and edge blends.
 //
+// Before the regions are read for what they are, the curves that separate
+// nothing go (unbridge): of two curves along one trace — closing can draw
+// two between a pair of nodes — the second; then each curve the same
+// region lies both sides of, as the flood reads it, not the graph's faces:
+// a loop round nothing, or a bridge from one tangle of curves to another,
+// walked once each way round the face it is in. A bridge is let go, its
+// island a loop of its own in the region. Asked to (`bridges: 'cut'`), a
+// bridge to a knot — an island under KNOT_MM of curve — goes with the knot,
+// and any other is taken for a first cut and given a second beside it, a
+// quarter of the way round its island, to the rest; on the sample bracket
+// that made fewer cells and patches, a worse worst patch, in five times
+// the time, so letting go is the default.
+//
 // Each round places what the last read asked for and reads the scan
-// again; a region whose cut runs out of it, a region of three loops or
+// again — a crossing its cuts made with a curve snapped into a node first; a region whose cut runs out of it, a region of three loops or
 // more, or one bounded by the scan's own rim (an open scan: no curve is
 // drawn along a rim yet) is left out and said why. Last, a node only two
 // smooth curves of a kind run through, and no cell's corner — a crease
 // cut in four where nothing meets it — is made a grip of one curve. The
 // cells are checked as the build reads and maps them, and those of three,
 // five or six sides are split from their centres into four-sided patches
-// by the network itself (networkSplit.ts).
+// by the network itself (networkSplit.ts): a cell whose split the build
+// would refuse is left out, said why.
 //
 // Measured (reNetworkAuto.test.ts), 0.01 mm of noise on 0.3–0.7 mm edges:
 // a 40 × 30 × 20 box with a domed top, its edges sharp, comes out as its
@@ -63,12 +77,12 @@ import type { ScanPaths } from '../../../src/core/geometry/scanPath'
 import { symmetricEigen3 } from '../../../src/core/fit/linalg'
 import type { Vec3 } from '../../../src/core/types'
 import type { NetworkCell, NetworkCurve, NetworkNode } from './features'
-import { traceNetwork, type TracedNetwork } from './network'
-import { CORNER_DEG, faceSides, type GraphFace, readCells, regionSeed, type ScanRegion, scanRegions, SIDES_MAX, SIDES_MIN } from './networkCells'
+import { readNetwork, traceNetwork, type TracedNetwork } from './network'
+import { CORNER_DEG, curveSides, faceSides, type GraphFace, type HalfEdge, readCells, regionSeed, type ScanRegion, scanRegions, SIDES_MAX, SIDES_MIN } from './networkCells'
 import { suggestCreases } from './networkCreases'
 import { type CurveTrace, endTangent, traceCurve } from './networkCurve'
 import { cellMesh } from './networkMap'
-import { Bends, type Closing, closeCreases, type ClosingWork, gripsOf, march, marchStep, TraceGrid } from './networkClose'
+import { Bends, type Closing, closeCreases, type ClosingWork, gripsOf, march, marchStep, snapCrossings, TraceGrid } from './networkClose'
 
 /** How a layout is made. */
 export interface AutoOptions {
@@ -84,6 +98,10 @@ export interface AutoOptions {
   /** A crease is taken whose mean angle is this or more, deg
    *  (MIN_CREASE_DEG by default). */
   minDeg?: number
+  /** A curve with one region on both sides — a bridge from one tangle of
+   *  curves to another — let go ('drop', the default), given a second cut
+   *  beside it ('cut'), or left as it is ('keep'). See unbridge. */
+  bridges?: 'cut' | 'drop' | 'keep'
 }
 
 /** What a region of the scan was, as the creases left it, and what was
@@ -128,12 +146,19 @@ export interface AutoLayout {
   creasesChips: number
   /** Curves let go to untangle regions no loop closed round. */
   untangled: number
+  /** What the bridge passes did; null when they were not run. */
+  bridging: Bridging | null
+  /** Crossings the layout's own cuts made with curves, snapped into nodes. */
+  crossings: number
   /** The tangent curves cut across regions, and the box's curves. */
   cuts: number
   regions: AutoRegion[]
   made: AutoCell[]
   /** The regions at the end that are no cell, and why. */
   left: { at: Vec3; why: string }[]
+  /** Cells left out because the build, reading them as it does — split
+   *  from their centres, mapped — would refuse them. */
+  buildRefused: number
   /** The patches the cells make: a four-sided cell one, the others one a
    *  side. */
   patches: number
@@ -161,6 +186,15 @@ const CHIP_MM = 4
 const CHIP_EDGES = 20
 /** A node is taken for a point of a loop within this many mean edges. */
 const NODE_EDGES = 3
+/** The most passes of reading the cells as the build does. */
+const BUILD_PASSES = 4
+/** The most passes over the bridges. */
+const BRIDGE_PASSES = 8
+/** A bridge's island with less curve than this, mm, is a knot. */
+const KNOT_MM = 8
+/** Two curves between the same nodes whose traces are within this many
+ *  mean edges of each other are one curve twice. */
+const DUPLICATE_EDGES = 2
 
 type Read = {
   traced: TracedNetwork
@@ -180,6 +214,9 @@ class Work implements ClosingWork {
   chosen = new Set<number>()
   /** The curve each piece of a split curve was split from. */
   origin = new Map<number, number>()
+  /** The piece each second piece was split off: a split of a split
+   *  points to the piece, not to the first curve. */
+  parent = new Map<number, number>()
   cuts = 0
   private traces = new Map<number, { key: string; trace: CurveTrace }>()
 
@@ -224,6 +261,13 @@ class Work implements ClosingWork {
     return best
   }
 
+  /** Whether a curve is one of `ids`, or a piece split off one of them
+   *  since the id `since` was given out. */
+  from(id: number, ids: ReadonlySet<number>, since: number): boolean {
+    for (let x: number | undefined = id; x !== undefined; x = x >= since ? this.parent.get(x) : undefined) if (ids.has(x)) return true
+    return false
+  }
+
   /** The curve a piece was split from, or itself. */
   originOf(id: number): number {
     return this.origin.get(id) ?? id
@@ -252,6 +296,7 @@ class Work implements ClosingWork {
     const first: NetworkCurve = { ...c, to: id, via: c.via.slice(0, before) }
     const second: NetworkCurve = { ...c, id: this.nextId++, from: id, via: c.via.slice(before) }
     this.origin.set(second.id, family)
+    this.parent.set(second.id, c.id)
     const was = c.id
     this.curves = this.curves.flatMap((x) => (x.id === was ? [first, second] : [x]))
     this.traces.delete(was)
@@ -336,6 +381,7 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
 
   const regions: AutoRegion[] = []
   let rounds = 0
+  const snapped = { crossings: 0 }
   let read = w.read()
   // Untangled: a region curves touch but no loop of them closes round —
   // traces that cross where the snapping found no crossing, or run
@@ -379,6 +425,18 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
     const used = new Set(w.curves.flatMap((c) => [c.from, c.to]))
     w.nodes = w.nodes.filter((n) => used.has(n.id))
     read = w.read()
+  }
+  // Bridges: a curve with one region on both sides closes nothing (see
+  // unbridge).
+  let bridging: Bridging | null = null
+  if ((opts.bridges ?? 'drop') !== 'keep' && w.curves.length > 0) {
+    bridging = { duplicates: 0, found: 0, cut: 0, dropped: 0, knots: 0, knotCurves: 0, passes: 0 }
+    for (let pass = 0; pass < BRIDGE_PASSES; pass++) {
+      if (!unbridge(w, read, bends, opts.bridges === 'cut' ? 'cut' : 'drop', bridging)) break
+      bridging.passes++
+      snapCrossings(w, snapped)
+      read = w.read()
+    }
   }
   // A region is known by its first triangle and its size: one the creases
   // left is reported once, as found, with what was done with it.
@@ -450,6 +508,9 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
       } else entry('loops', 'left', { why: did.why })
     }
     if (!changed) break
+    // A cut across a region can cross a curve inside it — a crease of an
+    // island, one a bridge leads to: the crossing made a node.
+    snapCrossings(w, snapped)
     read = w.read()
   }
   // A node only two curves of a kind run through, smoothly, and no cell's
@@ -497,15 +558,40 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
     out.push({ seed: round4(seeds[i]), ...(given[i] ? { corners: given[i] } : {}) })
     made.push({ seed: round4(seeds[i]), sides: c.sides.length })
   })
+  const nodes = w.nodes.map((n) => ({ ...n, at: round6(n.at) }))
+  const curves = w.curves.map((c) => ({ ...c, via: c.via.map(round6) }))
+  // The cells read as the build reads them — those of three, five or six
+  // sides split from their centres, the pieces read again and mapped — and
+  // one it would refuse left out; the rest read again, a split's spokes
+  // having run into its neighbours' sides. The build's own scan, its
+  // triangles in another order, can still read a cell on the edge of a rule
+  // the other way; it says why of any it refuses.
+  let checked = 0
+  for (let pass = 0; pass < BUILD_PASSES && out.length > 0; pass++) {
+    const reading = readNetwork(scan, { nodes, curves, cells: out, spans: {}, fit: { smoothness: 0.001 } }, undefined, { fit: false })
+    const refused = new Map<number, string>()
+    reading.outcomes.forEach((o, i) => {
+      if ('refused' in o) refused.set(i, o.refused)
+    })
+    if (refused.size === 0) break
+    for (const [i, why] of refused) left.push({ at: out[i].seed, why: `as the build reads it — ${why}` })
+    checked += refused.size
+    const keep = (_: unknown, i: number) => !refused.has(i)
+    out.splice(0, out.length, ...out.filter(keep))
+    made.splice(0, made.length, ...made.filter(keep))
+  }
   return {
-    nodes: w.nodes.map((n) => ({ ...n, at: round6(n.at) })),
-    curves: w.curves.map((c) => ({ ...c, via: c.via.map(round6) })),
+    nodes,
+    curves,
     cells: out,
+    buildRefused: checked,
     nextId: w.nextId,
     creases,
     creasesDropped,
     closing,
     untangled,
+    bridging,
+    crossings: snapped.crossings,
     creasesWeak,
     creasesChips,
     cuts: w.cuts,
@@ -944,51 +1030,7 @@ function multiLoop(w: Work, read: Read, region: ScanRegion, bends: Bends): numbe
       continue
     }
     const a = w.splitAt(place.curve, place.at)
-    const pa = w.at(a)
-    // The outer loop's point nearest the start: where the cut heads.
-    let goal: Vec3 | null = null
-    let gd = Infinity
-    for (const q of outerPts) {
-      const d = dist(q, pa)
-      if (d < gd) [gd, goal] = [d, q]
-    }
-    if (!goal) {
-      failed.push('no other loop')
-      continue
-    }
-    const target = goal as Vec3
-    const m = march(w.scan, bends, pa, [target[0] - pa[0], target[1] - pa[1], target[2] - pa[2]], 3 * gd + 4 * marchStep(w.scan), (p) => grid.nearest(p, 1.5 * marchStep(w.scan), () => true), target)
-    let to = -1
-    let via: Vec3[] = []
-    if (m.hit) {
-      const flat = m.points.flatMap((p) => [p[0], p[1], p[2]])
-      if (insideShare(w, read, region, flat) >= CUT_INSIDE) {
-        to = w.splitAt(m.hit.curve, m.hit.at)
-        via = gripsOf(m.points, w.at(to))
-      } else failed.push('the march left it')
-    } else failed.push(m.why ?? 'the march met nothing')
-    if (to < 0) {
-      const outerCurve = w.curves.filter((c) => outerIds.has(c.id)).sort((x, y) => w.nearestOn(x, target)!.d - w.nearestOn(y, target)!.d)[0]
-      if (!outerCurve) {
-        failed.push('no curve of the other loop')
-        continue
-      }
-      to = w.splitAt(outerCurve.id, target)
-      const straight = traceCurve(w.scan, [pa, w.at(to)])
-      const share = insideShare(w, read, region, straight.points)
-      if (share < CUT_INSIDE) {
-        failed.push(`a straight cut ${Math.round(share * 100)} % inside it`)
-        continue
-      }
-    }
-    if (to === a || w.curves.some((c) => (c.from === a && c.to === to) || (c.from === to && c.to === a))) {
-      failed.push(to === a ? 'the loops touch there' : 'a curve already joins them there')
-      continue
-    }
-    w.curve(a, to, via, false)
-    w.cuts++
-    w.chosen.add(a)
-    w.chosen.add(to)
+    if (!marchCut(w, read, region, bends, a, grid, outerPts, () => w.curves.filter((c) => outerIds.has(c.id)), failed, 'the loops touch there')) continue
     made++
     side |= share > 0 ? 1 : 2
   }
@@ -1000,4 +1042,315 @@ function multiLoop(w: Work, read: Read, region: ScanRegion, bends: Bends): numbe
   }
   if (made < 2) return { why: `${loops.length} loops of curves round it, and ${made === 0 ? 'no cut' : 'only one cut'} from one to another stays inside it (${failed.join('; ')})` }
   return made
+}
+
+/** A cut from node a to the nearest of `goals`, the points of the curves
+ *  in `grid`: marched along the scan's principal lines (networkClose.ts)
+ *  to the first of them it meets, or where the march does not meet one
+ *  inside the region, a straight section to the nearest of `fallback`'s
+ *  curves. Made — a tangent curve, both ends chosen corners — if it keeps
+ *  to the region and joins two nodes no curve joins; else why not, in
+ *  `failed`. */
+function marchCut(w: Work, read: Read, region: ScanRegion, bends: Bends, a: number, grid: TraceGrid, goals: readonly Vec3[], fallback: () => NetworkCurve[], failed: string[], touching: string, isTarget?: (curve: number) => boolean): boolean {
+  const pa = w.at(a)
+  // The nearest goal: where the cut heads.
+  let goal: Vec3 | null = null
+  let gd = Infinity
+  for (const q of goals) {
+    const d = dist(q, pa)
+    if (d < gd) [gd, goal] = [d, q]
+  }
+  if (!goal) {
+    failed.push('no other loop')
+    return false
+  }
+  const target = goal as Vec3
+  const step = marchStep(w.scan)
+  // With `isTarget`, the grid holds every curve: the march stops at the
+  // first it meets past its start, and one not a target ends the try — a
+  // cut across another curve would cross it.
+  const away = (at: Vec3) => !isTarget || dist(at, pa) > 2 * step
+  const m = march(w.scan, bends, pa, [target[0] - pa[0], target[1] - pa[1], target[2] - pa[2]], 3 * gd + 4 * step, (p) => grid.nearest(p, 1.5 * step, (_, at) => away(at)), target)
+  let to = -1
+  let via: Vec3[] = []
+  if (m.hit && isTarget && !isTarget(m.hit.curve)) {
+    failed.push('the march met another curve first')
+    return false
+  }
+  if (m.hit) {
+    const flat = m.points.flatMap((p) => [p[0], p[1], p[2]])
+    if (insideShare(w, read, region, flat) >= CUT_INSIDE) {
+      to = w.splitAt(m.hit.curve, m.hit.at)
+      via = gripsOf(m.points, w.at(to))
+    } else failed.push('the march left it')
+  } else failed.push(m.why ?? 'the march met nothing')
+  if (to < 0) {
+    const nearest = fallback().sort((x, y) => w.nearestOn(x, target)!.d - w.nearestOn(y, target)!.d)[0]
+    if (!nearest) {
+      failed.push('no curve of the other loop')
+      return false
+    }
+    to = w.splitAt(nearest.id, target)
+    const straight = traceCurve(w.scan, [pa, w.at(to)])
+    const share = insideShare(w, read, region, straight.points)
+    if (share < CUT_INSIDE) {
+      failed.push(`a straight cut ${Math.round(share * 100)} % inside it`)
+      return false
+    }
+    if (isTarget) {
+      const end = w.at(to)
+      const p = straight.points
+      for (let i = 0; i + 2 < p.length; i += 3) {
+        const q: Vec3 = [p[i], p[i + 1], p[i + 2]]
+        if (dist(q, pa) <= 2 * step || dist(q, end) <= 2 * step) continue
+        const hit = grid.nearest(q, step, () => true)
+        if (hit && !isTarget(hit.curve)) {
+          failed.push('a straight cut crosses another curve')
+          return false
+        }
+      }
+    }
+  }
+  if (to === a || w.curves.some((c) => (c.from === a && c.to === to) || (c.from === to && c.to === a))) {
+    failed.push(to === a ? touching : 'a curve already joins them there')
+    return false
+  }
+  w.curve(a, to, via, false)
+  w.cuts++
+  w.chosen.add(a)
+  w.chosen.add(to)
+  return true
+}
+
+/** What the bridge passes did (see unbridge). */
+export interface Bridging {
+  /** Curves let go as a second trace of another: the same two nodes, the
+   *  traces within DUPLICATE_EDGES mean edges of each other. */
+  duplicates: number
+  /** Curves found with one region on both sides. */
+  found: number
+  /** Bridges given a second cut. */
+  cut: number
+  /** Let go — with `bridges: 'drop'`, every one; else a loop round
+   *  nothing, a curve whose faces do not run round it both ways, or a
+   *  bridge no second cut stays inside the region beside. */
+  dropped: number
+  /** Knots let go: a bridge with the small tangle of creases it hangs. */
+  knots: number
+  /** Curves let go with the knots. */
+  knotCurves: number
+  passes: number
+}
+
+/** A half-edge's key. */
+const halfKey = (h: HalfEdge) => `${h.curve}${h.forward ? '+' : '-'}`
+
+/** The farthest any point of trace a is from trace b, either way. */
+function traceApart(a: ArrayLike<number>, b: ArrayLike<number>): number {
+  const one = (p: ArrayLike<number>, q: ArrayLike<number>) => {
+    let worst = 0
+    for (let i = 0; i < p.length; i += 3) {
+      let d = Infinity
+      for (let j = 0; j < q.length && d > worst; j += 3) d = Math.min(d, Math.hypot(p[i] - q[j], p[i + 1] - q[j + 1], p[i + 2] - q[j + 2]))
+      worst = Math.max(worst, d)
+    }
+    return worst
+  }
+  return Math.max(one(a, b), one(b, a))
+}
+
+/** One pass over the curves that separate nothing (see autoLayout): a
+ *  second trace of a curve let go; then of the curves the same region lies
+ *  both sides of, as the scan's labels read them, a loop let go, a knot let
+ *  go with its bridge, and each other bridge whose island no other this
+ *  pass reaches given its second cut — or, with `mode` 'drop', let go.
+ *  Whether anything changed. */
+function unbridge(w: Work, read: Read, bends: Bends, mode: 'cut' | 'drop', tally: Bridging): boolean {
+  const byId = new Map(read.traced.curves.map((c) => [c.id, c]))
+  const lenOf = (id: number) => byId.get(id)?.trace.length ?? 0
+  const crease = new Set(w.curves.filter((c) => c.crease).map((c) => c.id))
+  const gone = new Set<number>()
+  const since = w.nextId
+  // Duplicates: closing can leave two curves along one trace — a march
+  // that met a crease at its node, two near ends joined both ways. Of the
+  // pair, a crease kept before a tangent curve, the first before the
+  // second.
+  const tol = DUPLICATE_EDGES * w.scan.edge
+  const pairs = new Map<string, number[]>()
+  for (const c of read.traced.curves) {
+    const k = c.from < c.to ? `${c.from}:${c.to}` : `${c.to}:${c.from}`
+    const list = pairs.get(k) ?? []
+    list.push(c.id)
+    pairs.set(k, list)
+  }
+  for (const list of pairs.values()) {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const [x, y] = [list[i], list[j]]
+        if (gone.has(x) || gone.has(y)) continue
+        if (Math.abs(lenOf(x) - lenOf(y)) > 2 * tol) continue
+        if (traceApart(byId.get(x)!.trace.points, byId.get(y)!.trace.points) > tol) continue
+        gone.add(crease.has(x) && !crease.has(y) ? y : x)
+        tally.duplicates++
+      }
+    }
+  }
+  // The curves the same region lies both sides of.
+  const sides = curveSides(w.scan, read.traced.curves, read.label, read.regions)
+  const found = read.traced.curves.filter((c) => {
+    const s = sides.get(c.id)
+    return !gone.has(c.id) && s !== undefined && s.left >= 0 && s.left === s.right && s.votes >= 2
+  })
+  tally.found += found.length
+  const isBridge = new Set(found.map((c) => c.id))
+  const faceOf = new Map<string, number>()
+  read.faces.forEach((f, i) => f.edges.forEach((h) => faceOf.set(halfKey(h), i)))
+  // The curves at each node, for the islands.
+  const at = new Map<number, number[]>()
+  for (const c of read.traced.curves) {
+    if (gone.has(c.id)) continue
+    for (const n of [c.from, c.to]) {
+      const list = at.get(n) ?? []
+      list.push(c.id)
+      at.set(n, list)
+    }
+  }
+  /** The curves reached from a node without crossing one curve, their
+   *  length, and whether the other node was reached. */
+  const reach = (from: number, without: number, other: number): { curves: Set<number>; length: number; joined: boolean } => {
+    const curves = new Set<number>()
+    const seen = new Set([from])
+    const queue = [from]
+    let joined = false
+    while (queue.length > 0) {
+      const n = queue.pop()!
+      if (n === other) joined = true
+      for (const id of at.get(n) ?? []) {
+        if (id === without || curves.has(id)) continue
+        curves.add(id)
+        const c = byId.get(id)!
+        for (const m of [c.from, c.to]) if (!seen.has(m)) (seen.add(m), queue.push(m))
+      }
+    }
+    return { curves, length: [...curves].reduce((s, id) => s + lenOf(id), 0), joined }
+  }
+  // Each: its island — the smaller side, by its curves' length — and the
+  // node it hangs from; the smallest first.
+  const plans = found.map((c) => {
+    if (c.from === c.to) return { c, island: null, hang: c.from, size: 0 }
+    const one = reach(c.from, c.id, c.to)
+    if (one.joined) return { c, island: null, hang: c.from, size: 0 }
+    const two = reach(c.to, c.id, c.from)
+    return one.length <= two.length ? { c, island: one, hang: c.from, size: one.length } : { c, island: two, hang: c.to, size: two.length }
+  })
+  plans.sort((a, b) => a.size - b.size)
+  const step = marchStep(w.scan)
+  // The curves an island or bridge this pass has taken in, and the cuts
+  // made, which a later march may end on.
+  const used = new Set<number>()
+  const made = new Set<number>()
+  let changed = gone.size > 0
+  const letGo = (id: number) => {
+    gone.add(id)
+    tally.dropped++
+    changed = true
+  }
+  for (const p of plans) {
+    const id = p.c.id
+    if (gone.has(id) || used.has(id) || (p.island && [...p.island.curves].some((x) => used.has(x) || gone.has(x)))) continue
+    used.add(id)
+    for (const x of p.island?.curves ?? []) used.add(x)
+    // A loop round nothing, a curve whose two ends join without it (round
+    // a handle of the part), or — `mode` 'drop' — every bridge: let go,
+    // its island a loop of its own in the region.
+    if (!p.island || mode === 'drop') {
+      letGo(id)
+      continue
+    }
+    // A knot: the island and all that hangs from it, under KNOT_MM of
+    // curve — a tangle of short creases round a scan's blemish, too small
+    // for a patch — let go with its bridge.
+    if (p.island.length < KNOT_MM) {
+      gone.add(id)
+      for (const x of p.island.curves) gone.add(x)
+      tally.knots++
+      tally.knotCurves += p.island.curves.size
+      changed = true
+      continue
+    }
+    // The second cut, along the face the bridge is run both ways round:
+    // from the island's side of the walk — its own curves, not a bridge — a
+    // quarter of the way round from where it hangs, else three quarters or
+    // half; to the nearest point of the walk's other side.
+    const f = faceOf.get(`${id}+`)
+    const region = read.regions[sides.get(id)!.left]
+    if (f === undefined || f !== faceOf.get(`${id}-`) || !region) {
+      letGo(id)
+      continue
+    }
+    const face = read.faces[f]
+    const m = face.edges.length
+    const i1 = face.edges.findIndex((h) => h.curve === id)
+    const i2 = face.edges.map((h) => h.curve).lastIndexOf(id)
+    const inner: number[] = []
+    for (let k = i1 + 1; k < i2; k++) inner.push(k)
+    const outer: number[] = []
+    for (let k = (i2 + 1) % m; k !== i1; k = (k + 1) % m) outer.push(k)
+    const [own, rest] = face.nodes[i1] === p.hang ? [inner, outer] : face.nodes[i2] === p.hang ? [outer, inner] : [null, null]
+    if (!own || !rest) {
+      letGo(id)
+      continue
+    }
+    const loop = own.map((k) => face.edges[k]).filter((h) => !isBridge.has(h.curve) && !gone.has(h.curve))
+    const loopLength = loop.reduce((s, h) => s + lenOf(h.curve), 0)
+    const targets = new Set(rest.map((k) => face.edges[k].curve).filter((x) => x !== id && !gone.has(x)))
+    const isTarget = (x: number) => w.from(x, targets, since) || w.from(x, made, since)
+    const grid = new TraceGrid(1.5 * step)
+    const goals: Vec3[] = []
+    for (const x of w.curves) {
+      const pts = w.traceOf(x).points
+      grid.add(x.id, pts)
+      if (!isTarget(x.id)) continue
+      for (let i = 0; i < pts.length; i += 3) goals.push([pts[i], pts[i + 1], pts[i + 2]])
+    }
+    const failed: string[] = []
+    let done = false
+    for (const share of loopLength > 0 ? [1 / 4, 3 / 4, 1 / 2] : []) {
+      const place = pointAlong(read, loop, share * loopLength)
+      if (!place) continue
+      const a = w.splitAt(place.curve, place.at)
+      const fallback = () => w.curves.filter((x) => w.from(x.id, targets, since))
+      if (marchCut(w, read, region, bends, a, grid, goals, fallback, failed, 'the island touches the rest there', isTarget)) {
+        made.add(w.curves[w.curves.length - 1].id)
+        done = true
+        break
+      }
+    }
+    if (done) {
+      tally.cut++
+      changed = true
+    } else {
+      letGo(id)
+    }
+  }
+  if (gone.size === 0) return changed
+  w.curves = w.curves.filter((c) => !w.from(c.id, gone, since))
+  for (;;) {
+    const count = new Map<number, number>()
+    for (const c of w.curves) for (const n of [c.from, c.to]) count.set(n, (count.get(n) ?? 0) + (c.from === c.to ? 2 : 1))
+    const loose = w.curves.filter((c) => count.get(c.from) === 1 || count.get(c.to) === 1)
+    if (loose.length === 0) break
+    const drop = new Set(loose.map((c) => c.id))
+    w.curves = w.curves.filter((c) => !drop.has(c.id))
+  }
+  const usedNodes = new Set(w.curves.flatMap((c) => [c.from, c.to]))
+  w.nodes = w.nodes.filter((n) => usedNodes.has(n.id))
+  for (const n of [...w.chosen]) if (!usedNodes.has(n)) w.chosen.delete(n)
+  return true
+}
+
+/** The point an arc length along a run of half-edges, and the curve it is
+ *  on. */
+function pointAlong(read: Read, edges: readonly HalfEdge[], s: number): { at: Vec3; curve: number } | null {
+  return pointRound(read, { edges: edges.slice(), nodes: [] }, s)
 }

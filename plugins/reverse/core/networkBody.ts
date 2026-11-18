@@ -5,7 +5,9 @@
 // a grid of points, within a micron of them (kernel.ts surfaceThrough). So
 // each patch is sampled on a grid a few times finer than its net and that
 // grid goes to the kernel, with Fit Surface's retries at denser grids and
-// its check on the area. A shared curve's samples are the curve's own,
+// its check on the area; a patch whose surface the check refuses at every
+// grid is left out — its cell refused, and why — and the rest made without
+// it, the network open there. A shared curve's samples are the curve's own,
 // taken once and handed to both patches either side of it — the same points
 // on both grids — so the two faces' edges lie within the kernel's micron of
 // each other along it, and sew. The faces are sewn without being unified:
@@ -191,8 +193,14 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
   const began = performance.now()
   const sideSamplesOf = sideSampler(fit)
   const faces: Shape[] = []
+  // The patch each face was made of, each made patch's face, and the
+  // patches the kernel's surface would not follow — each left out, its
+  // cell refused and said why, the rest sewn without it.
+  const patchOf: number[] = []
+  const faceIndex = new Map<number, number>()
+  const failed = new Map<number, string>()
   try {
-    for (const patch of fit.patches) {
+    for (const [p, patch] of fit.patches.entries()) {
       let made: Shape | null = null
       let off = 0
       for (const perSpan of [GRID_PER_SPAN, ...GRID_RETRIES]) {
@@ -205,23 +213,31 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
         }
         k.release(face)
       }
-      if (!made) throw new Error(`The kernel's surface through the patch at ${where(patch.seed)} does not follow it: ${off > 100 ? `${Math.round(off)} times` : `${Math.round((off - 1) * 100)} % more than`} its area at every grid it was given. Give its strips fewer spans.`)
+      if (!made) {
+        failed.set(p, `The kernel's surface through the patch at ${where(patch.seed)} does not follow it: ${off > 100 ? `${Math.round(off)} times` : `${Math.round((off - 1) * 100)} % more than`} its area at every grid it was given. Give its strips fewer spans.`)
+        continue
+      }
+      faceIndex.set(p, faces.length)
+      patchOf.push(p)
       faces.push(made)
     }
+    if (faces.length === 0) throw new Error([...failed.values()][0])
+    const faceOfPatch = (p: number) => faces[faceIndex.get(p)!]
+    const sharedMade = fit.shared.filter((s) => faceIndex.has(s.patches[0]) && faceIndex.has(s.patches[1]))
     // The gaps along the shared curves, as the kernel's faces lie: a point
     // of the curve between two grid samples, its distance from each face.
-    const shared = fit.shared.map((s) => {
+    const shared = sharedMade.map((s) => {
       const f = fit.curves.get(s.curve)!
       let gap = 0
       const q: Vec3 = [0, 0, 0]
       for (let i = 0; i < GAP_SAMPLES; i++) {
         curvePoint(f.poles, f.spans, (i + 0.5) / GAP_SAMPLES, q)
-        gap = Math.max(gap, k.distanceToPoint(faces[s.patches[0]], q) + k.distanceToPoint(faces[s.patches[1]], q))
+        gap = Math.max(gap, k.distanceToPoint(faceOfPatch(s.patches[0]), q) + k.distanceToPoint(faceOfPatch(s.patches[1]), q))
       }
       return { curve: s.curve, gap: Math.max(gap, s.gap), angle: s.angle, crease: s.crease, ...(s.curvature ? { curvature: s.curvature } : {}) }
     })
     const worstGap = shared.reduce((m, s) => Math.max(m, s.gap), 0)
-    const closed = networkCloses(fit)
+    const closed = networkCloses(fit) && failed.size === 0
     const tolerance = Math.max(SEW_TOLERANCE, 2 * worstGap)
     let shape = faces.length === 1 ? k.copy(faces[0]) : k.sewPatches(faces, tolerance, closed)
     if (closed && !k.isClosedSolid(shape)) {
@@ -229,21 +245,28 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
       shape = k.sewPatches(faces, tolerance, false)
     }
     const solid = closed && k.isClosedSolid(shape)
-    // The edges left open: the outer boundary's, and any along a shared
-    // curve, which did not sew.
+    // The edges left open: the outer boundary's, a left-out patch's rim, and
+    // any along a shared curve, which did not sew — each edge taken for the
+    // side's curve it lies nearest.
     const open = k.edges(shape, meshDeflection(diagonalOf(k, shape))).filter((e) => e.faceHashes.length < 2)
+    const rim = new Set<number>()
+    for (const p of failed.keys()) for (const side of fit.patches[p].sides) for (const h of side.edges) rim.add(h.curve)
+    const sharedIds = new Set(sharedMade.map((s) => s.curve))
+    const candidates = [...new Set(fit.patches.flatMap((p) => p.sides.flatMap((side) => side.edges.map((h) => h.curve))))].filter((c) => fit.curves.has(c))
     const notSewn = new Set<number>()
+    const q: Vec3 = [0, 0, 0]
     for (const e of open) {
-      for (const s of fit.shared) {
-        const f = fit.curves.get(s.curve)!
-        const q: Vec3 = [0, 0, 0]
-        let near = Infinity
+      let nearest = -1
+      let nearestD = Infinity
+      for (const c of candidates) {
+        const f = fit.curves.get(c)!
         for (let i = 0; i <= 16; i++) {
           curvePoint(f.poles, f.spans, i / 16, q)
-          near = Math.min(near, Math.hypot(q[0] - e.mid[0], q[1] - e.mid[1], q[2] - e.mid[2]))
+          const d = Math.hypot(q[0] - e.mid[0], q[1] - e.mid[1], q[2] - e.mid[2])
+          if (d < nearestD) [nearestD, nearest] = [d, c]
         }
-        if (near < 10 * tolerance + 1e-6) notSewn.add(s.curve)
       }
+      if (nearestD < 10 * tolerance + 1e-6 && sharedIds.has(nearest) && !rim.has(nearest)) notSewn.add(nearest)
     }
     if (notSewn.size > 0) {
       k.release(shape)
@@ -262,11 +285,14 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
         const d = Math.hypot(m[0] - f.at[0], m[1] - f.at[1], m[2] - f.at[2])
         if (d < bestD) [bestD, best] = [d, i]
       })
-      faceOf.set(f.hash, best)
+      faceOf.set(f.hash, patchOf[best])
     }
     const report: NetworkReport = {
       patches: fit.patches.map((p) => ({ seed: p.seed, rms: p.rms, max: p.max, misfit: p.misfit, net: { u: p.net.nu, v: p.net.nv }, points: p.points, worst: p.worst, ...(p.dropped !== undefined ? { dropped: p.dropped } : {}), sides: p.sides.map((s) => s.edges.map((h) => h.curve)), corners: p.corners, grid: sampled(p) })),
-      cells: reading.outcomes,
+      cells: reading.outcomes.map((o): CellOutcome => {
+        const lost = 'patches' in o ? o.patches.find((p) => failed.has(p)) : undefined
+        return lost === undefined ? o : { seed: o.seed, refused: failed.get(lost)! }
+      }),
       unfilled: reading.cells.unfilled,
       curves: shared,
       corners: fit.corners,

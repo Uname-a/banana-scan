@@ -120,8 +120,10 @@ function cacheOf(scan: ScanPaths): ReadCache {
   return c
 }
 
-/** The network read off the scan, every stage (see above). */
-export function readNetwork(scan: ScanPaths, f: Pick<NetworkFeature, 'nodes' | 'curves' | 'cells' | 'spans' | 'fit'>, bodies?: NetworkBodies): NetworkReading {
+/** The network read off the scan, every stage (see above) — or with `fit`
+ *  false, every stage but the fit: its cells as the build reads them, split
+ *  from their centres and mapped. */
+export function readNetwork(scan: ScanPaths, f: Pick<NetworkFeature, 'nodes' | 'curves' | 'cells' | 'spans' | 'fit'>, bodies?: NetworkBodies, opts: { fit?: boolean } = {}): NetworkReading {
   const t0 = performance.now()
   const cache = cacheOf(scan)
   cache.begin()
@@ -183,7 +185,7 @@ export function readNetwork(scan: ScanPaths, f: Pick<NetworkFeature, 'nodes' | '
   const crease = new Map(f.curves.map((c) => [c.id, c.crease === true]))
   const creaseOf = (id: number) => crease.get(id) ?? (split ? (split.originOf.has(id) ? (crease.get(split.originOf.get(id)!) ?? false) : false) : false)
   const fit =
-    patches.length > 0
+    patches.length > 0 && opts.fit !== false
       ? fitNetwork({
           patches,
           curves: graph.curves.map((c) => ({ ...c, crease: creaseOf(c.id) })),

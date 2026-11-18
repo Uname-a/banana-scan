@@ -37,6 +37,9 @@ const BOX_MARGIN = 0.5
 /** The same for the regions no seed fills, which Fill all offers: a dome
  *  that bulges further past its curves is filled by a click in it. */
 const UNFILLED_MARGIN = 0.25
+/** The curves round a node are put in order by where each is this many
+ *  mean edges along its trace from it. */
+const ORDER_EDGES = 8
 /** The share of the edges round a piece that have to agree on its face. */
 const FACE_AGREEMENT = 0.9
 /** A piece of fewer triangles than this is a crumb between curves at a
@@ -216,11 +219,31 @@ export function graphFaces(scan: ScanPaths, nodes: readonly GraphNode[], curves:
     list.push({ edge, angle })
     around.set(node, list)
   }
+  // Each curve leaves its node toward its trace's point ORDER_EDGES mean
+  // edges along — past where the snapping leaves two curves at a node
+  // unjoined (networkClose's guard) — or its far end if it is shorter:
+  // where a knot of short creases was drawn into one node, its curves can
+  // cross within that reach, and the order of their tangents at the node
+  // is not the order the scan lies in between them.
   for (const c of curves) {
-    const out = endTangent(c.fit, 0)
-    const into = endTangent(c.fit, 1)
-    add(c.from, { curve: c.id, forward: true }, out)
-    add(c.to, { curve: c.id, forward: false }, [-into[0], -into[1], -into[2]])
+    const t = c.trace
+    const n = t.at.length
+    if (n < 2) {
+      const out = endTangent(c.fit, 0)
+      const into = endTangent(c.fit, 1)
+      add(c.from, { curve: c.id, forward: true }, out)
+      add(c.to, { curve: c.id, forward: false }, [-into[0], -into[1], -into[2]])
+      continue
+    }
+    const reach = Math.min(ORDER_EDGES * scan.edge, 0.99 * t.length)
+    let i = 1
+    while (i < n - 1 && t.at[i] < reach) i++
+    let j = n - 2
+    while (j > 0 && t.length - t.at[j] < reach) j--
+    const p = t.points
+    const o = (n - 1) * 3
+    add(c.from, { curve: c.id, forward: true }, [p[i * 3] - p[0], p[i * 3 + 1] - p[1], p[i * 3 + 2] - p[2]])
+    add(c.to, { curve: c.id, forward: false }, [p[j * 3] - p[o], p[j * 3 + 1] - p[o + 1], p[j * 3 + 2] - p[o + 2]])
   }
   for (const list of around.values()) list.sort((a, b) => a.angle - b.angle)
   const keyOf = (h: HalfEdge) => `${h.curve}${h.forward ? '+' : '-'}`
@@ -745,6 +768,68 @@ export function scanRegions(scan: ScanPaths, nodes: readonly GraphNode[], curves
   const regions: ScanRegion[] = found.map((p) => ({ triangles: Uint32Array.from(p.triangles), faces: [], rimEdges: p.rimEdges, curveEdges: p.curveEdges }))
   for (const [f, o] of [...owner].sort((a, b) => a[0] - b[0])) regions[o.region].faces.push(f)
   return { faces, regions, label }
+}
+
+/** For each curve, the regions either side of it, as scanRegions' labels
+ *  read them: of the triangles beside the scan's edges it crosses or runs
+ *  along, those left of it and those right — each placed by its third
+ *  vertex, as the flood's votes are — the region most of each side is in,
+ *  crumbs of fewer than CRUMB_TRIANGLES not counted. A curve with the same
+ *  region both sides separates nothing — a bridge between two tangles of
+ *  curves, a loop round nothing — whatever the graph's faces say. */
+export function curveSides(scan: ScanPaths, curves: readonly GraphCurve[], label: Int32Array, regions: readonly ScanRegion[]): Map<number, { left: number; right: number; votes: number }> {
+  const inc = incidence(scan)
+  const marks = markEdges(scan, curves)
+  const idx = scan.indices
+  const pos = scan.positions
+  const vertexCount = pos.length / 3
+  const votes = new Map<number, [Map<number, number>, Map<number, number>]>()
+  const nb: number[] = []
+  for (const [k, list] of marks.byEdge) {
+    const a = Math.floor(k / vertexCount)
+    const b = k - a * vertexCount
+    // The triangles either side of the edge.
+    let t = -1
+    for (let i = inc.offsets[a]; i < inc.offsets[a + 1] && t < 0; i++) {
+      const u = inc.list[i]
+      if (idx[u * 3] === b || idx[u * 3 + 1] === b || idx[u * 3 + 2] === b) t = u
+    }
+    if (t < 0) continue
+    across(scan, inc, t, a, b, nb)
+    const both = [t, ...nb]
+    for (const m of list) {
+      const d: Vec3 = [marks.dir[m * 3], marks.dir[m * 3 + 1], marks.dir[m * 3 + 2]]
+      if (Number.isNaN(d[0])) continue
+      const c = marks.curve[m]
+      let v = votes.get(c)
+      if (!v) votes.set(c, (v = [new Map(), new Map()]))
+      for (const u of both) {
+        const r = label[u]
+        if (r < 0 || regions[r].triangles.length < CRUMB_TRIANGLES) continue
+        let w = -1
+        for (let e = 0; e < 3; e++) if (idx[u * 3 + e] !== a && idx[u * 3 + e] !== b) w = idx[u * 3 + e]
+        if (w < 0) continue
+        const n = scan.triangleNormal(u)
+        const left: Vec3 = [n[1] * d[2] - n[2] * d[1], n[2] * d[0] - n[0] * d[2], n[0] * d[1] - n[1] * d[0]]
+        const side = (pos[w * 3] - marks.at[m * 3]) * left[0] + (pos[w * 3 + 1] - marks.at[m * 3 + 1]) * left[1] + (pos[w * 3 + 2] - marks.at[m * 3 + 2]) * left[2]
+        const s = v[side > 0 ? 0 : 1]
+        s.set(r, (s.get(r) ?? 0) + 1)
+      }
+    }
+  }
+  const most = (s: Map<number, number>) => {
+    let region = -1
+    let best = 0
+    for (const [r, n] of s) if (n > best) [best, region] = [n, r]
+    return { region, best }
+  }
+  const out = new Map<number, { left: number; right: number; votes: number }>()
+  for (const [c, [l, r]] of votes) {
+    const a = most(l)
+    const b = most(r)
+    out.set(c, { left: a.region, right: b.region, votes: Math.min(a.best, b.best) })
+  }
+  return out
 }
 
 /** A point well inside a region (see insidePoint), for its seed. */

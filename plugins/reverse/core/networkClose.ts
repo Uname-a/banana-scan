@@ -70,6 +70,8 @@ export interface Closing {
 
 /** A crossing: traces within this many mean edges of each other. */
 const CROSS_EDGES = 1.5
+/** The most passes of snapping crossings. */
+const SNAP_PASSES = 40
 /** Points within this many mean edges of a node both curves share are
  *  their meeting there, not a crossing. */
 const GUARD_EDGES = 4
@@ -352,12 +354,14 @@ function contractShort(w: ClosingWork, out: Closing): void {
   }
 }
 
-/** 1: crossings and near misses made shared nodes. */
-function snapCrossings(w: ClosingWork, out: Closing): void {
+/** 1: crossings and near misses made shared nodes — a pair of curve
+ *  families once a pass, as many passes as there are crossings, up to
+ *  SNAP_PASSES. */
+export function snapCrossings(w: ClosingWork, out: Pick<Closing, 'crossings'>): void {
   const scan = w.scan
   const r = Math.max(CROSS_EDGES * scan.edge, 1e-6)
   const guard = GUARD_EDGES * scan.edge
-  for (let pass = 0; pass < 8; pass++) {
+  for (let pass = 0; pass < SNAP_PASSES; pass++) {
     const grid = new TraceGrid(Math.max(r, scan.edge))
     for (const c of w.curves) grid.add(c.id, w.traceOf(c).points)
     const byId = new Map(w.curves.map((c) => [c.id, c]))
