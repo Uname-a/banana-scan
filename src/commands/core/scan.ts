@@ -1081,6 +1081,9 @@ const qa: Command<{ axis?: 'x' | 'y' | 'z' | Vec3 }> = {
     'One call before modelling, to know what the scan will and will not give. Returns rims (the open edges of its holes: count, total length, the longest few with rim number, centre, size and circle where one fits — element.fit { kind: "circle", rim } makes it an element), noise (the median scatter of small plane fits, mm; 0 on a CAD tessellation), tessellation where the mesh is an STL exported from CAD (cad, its facets exactly flat; sparse where its vertices lie only on edges and rims, too far apart to fit on — densifyTo, the edge length to subdivide it to first, noise.measured the bends between facets that a fit would read), thickness through the part along axis (p5, p50, p95, the main faces’ tiltDeg and faces { topDeg, bottomDeg }), sheet where most of the area has a second skin facing back within reach mm (gauge { p5, p50, p95 }, twoSkins: that share), apart on such a part with flat walls (regions standing over reach mm off every main wall — tabs bent in, ribs, bosses: center, box, area mm², largest first) and notes, what looks wrong, plainly. Traps: a scanned skin with no rims, or only pinholes, is a wrap bridging the holes it did not see through; on a sheet, thickness reads the box across the part — the gauge is sheet.gauge. Changes nothing.',
   input: obj({ axis: oneOf([enumOf(['x', 'y', 'z'], 'A world axis.'), vec3('A direction, any length.')], 'The thickness axis.') }),
   readOnly: true,
+  // Over the whole scan: on a few million triangles it outlasts the server's
+  // answer limit, and a read held past that is refused, not queued.
+  long: true,
   run: async ({ axis }) => {
     requireScan()
     const client = commandHost().session.clientRef.current
