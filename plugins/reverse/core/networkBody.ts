@@ -67,6 +67,9 @@ export interface NetworkReport {
    *  (deg) and the curve's stand-off from the body's edge (mm). */
   bodies: { curve: number; patch: number; mode: 'contact' | 'tangent'; angle: number; gap: number }[]
   closed: boolean
+  /** Shared curves the patches did not sew along, the body left open
+   *  there, and the gap between their faces, mm. */
+  unsewn?: { curve: number; gap: number }[]
   /** The worst angle across a tangent curve and the worst gap. */
   worstAngle: number
   worstGap: number
@@ -268,11 +271,9 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
       }
       if (nearestD < 10 * tolerance + 1e-6 && sharedIds.has(nearest) && !rim.has(nearest)) notSewn.add(nearest)
     }
-    if (notSewn.size > 0) {
-      k.release(shape)
-      const named = [...notSewn].map((c) => `curve ${c} (gap ${(shared.find((s) => s.curve === c)!.gap * 1000).toFixed(1)} µm)`).join(', ')
-      throw new Error(`The patches did not sew along ${named} — their faces stand apart there; give the strip across it more spans, or draw the curve again.`)
-    }
+    // A shared curve the faces did not sew along leaves the body open
+    // there, said with its gap — not the whole network refused for it.
+    const unsewn = [...notSewn].map((c) => ({ curve: c, gap: shared.find((s) => s.curve === c)!.gap }))
     // Each face of the body to its patch, by where its middle is.
     // Sewing keeps each face on its own surface, so the middle of a face's
     // parameter box is where its patch's is.
@@ -300,7 +301,8 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
       lost: reading.traced.lost,
       ...splitOf(reading),
       bodies: fit.bodies,
-      closed: solid,
+      closed: solid && unsewn.length === 0,
+      ...(unsewn.length > 0 ? { unsewn } : {}),
       worstAngle: shared.filter((s) => !s.crease).reduce((m, s) => Math.max(m, s.angle), 0),
       worstGap,
       ms: { ...reading.ms, faces: performance.now() - began },

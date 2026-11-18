@@ -1003,16 +1003,24 @@ creases leave no way to lay out gets its rounds' middles the same way. Such
 a region is cut more freely: along the scan inside it where a straight
 section leaves it, its five- and six-sided cells cut into four-sided ones.
 
+Where a part is laid out down its rounds, crossings are snapped near a node
+two curves share as well (within 1.5 mean edges, not the closing's 4) and
+the stubs that leaves contracted; a three-sided cell gets a fourth corner at
+the middle of its longest side; and a four-sided cell whose mean normal is
+under 0.6 long — bent round further than one patch follows — is cut across
+the bend. A network whose patches do not sew along a curve is built open
+there, the curve and its gap in the report (`unsewn`) and a warning.
+
 Not there yet: a loft through curves on the mesh (Loft lofts between
 sketches today), Auto layout on an open scan, and a whole real mechanical
 part. On the sample fridge bracket (288,582 triangles) the creases left one
-region of 95 % of it; laid out from its 21 faces, 17 cells in 24 s hold
-60.7 % of its triangles, and the build makes 14 of them — 44.3 % of the
-bracket, 23 patches, 0.043 mm RMS at the median, 0.30 mm at worst (it was
-1.5 %, 10 patches). Left: a region of 49,000 triangles of three loops
-pinched together, and three cells the build refuses (a map that folds, a
-split whose curves cross). Join or cut those by hand (`network.edit`) and
-fill what they close.
+region of 95 % of it; laid out from its 21 faces, 20 cells in 36 s hold
+72.1 % of its triangles and the build makes all of them in 52 s: 22 patches,
+0.031 mm RMS at the median, 0.92 mm at worst — a cell at the flange's
+rounded top, flat by its mean normal, 9.4 mm off at its worst point. Left:
+regions of two loops no cut stays inside (14,000 and 9,000 triangles), a
+tangle of 13,000, and cells the build would refuse (maps that fold). Join or
+cut those by hand (`network.edit`) and fill what they close.
 
 ## Agents: modelling through the commands
 

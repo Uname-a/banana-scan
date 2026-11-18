@@ -3879,6 +3879,8 @@ export class Builder {
         }
         this.bodies.set(step.id, { name: step.name, shape: made.shape, origins: new Map(k.faceHashes(made.shape).map((h) => [h, step.id])), surface: !made.report.closed, patches: made.patches })
         const refused = made.report.cells.filter((c) => 'refused' in c)
+        const unsewn = made.report.unsewn ?? []
+        if (unsewn.length > 0) this.stepWarnings.push(`The patches did not sew along ${unsewn.map((u) => `curve ${u.curve} (gap ${(u.gap * 1000).toFixed(1)} µm)`).join(', ')} — their faces stand apart there and the body is open along it; give the strip across it more spans, or draw the curve again.`)
         results.push({ id: step.id, status: 'ok', network: made.report, ...(refused.length > 0 ? { note: `${refused.length} cell${refused.length === 1 ? '' : 's'} not filled: ${refused.map((c) => ('refused' in c ? c.refused : '')).join('; ')}.` } : {}) })
         return
       }
