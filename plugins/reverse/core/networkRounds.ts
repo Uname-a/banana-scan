@@ -333,7 +333,7 @@ export function regionPath(scan: ScanPaths, triangles: ArrayLike<number>, from: 
     for (const j of nbrs[i]) {
       const pj = at(j)
       const l = Math.hypot(pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2])
-      const endNear = Math.min(Math.hypot(pj[0] - ps[0], pj[1] - ps[1], pj[2] - ps[2]), Math.hypot(pj[0] - pg[0], pj[1] - pg[1], pj[2] - pg[2])) < 2 * keepOff
+      const endNear = Math.min(Math.hypot(pj[0] - ps[0], pj[1] - ps[1], pj[2] - ps[2]), Math.hypot(pj[0] - pg[0], pj[1] - pg[1], pj[2] - pg[2])) < END_EDGES * scan.edge
       const nd = d + l * (near[j] <= hops && !endNear ? OFF_BOUNDARY : 1)
       if (nd < dist[j]) {
         dist[j] = nd
@@ -348,8 +348,10 @@ export function regionPath(scan: ScanPaths, triangles: ArrayLike<number>, from: 
   return path.reverse()
 }
 
-/** A step of a region path near its boundary costs this times its length. */
+/** A step of a region path near its boundary costs this times its length,
+ *  but within END_EDGES mean edges of either end, which are on it. */
 const OFF_BOUNDARY = 6
+const END_EDGES = 2
 
 /** A binary min-heap of (index, key). */
 class MinHeap {

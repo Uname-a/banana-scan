@@ -65,7 +65,13 @@
 // more freely after: along the scan inside it where a straight section
 // leaves it (networkRounds.regionPath), a five- or six-sided cell cut into
 // a four-sided one and another, a curve its face runs both ways round let
-// go, a loop pinched to its longest at a node cut to it once.
+// go, a loop pinched to its longest at a node cut to it once; a three-sided
+// cell given a fourth corner at the middle of its longest side, so the
+// build need not split it from its centre; a four-sided one that bends
+// round (its mean normal under BENT_FLAT long) cut across the bend. There,
+// crossings are snapped near a node two curves share too — two curves
+// leaving one node can touch inside the closing's guard — and the stubs
+// that leaves contracted.
 //
 // Each round places what the last read asked for and reads the scan
 // again — a crossing its cuts made with a curve snapped into a node first; a region whose cut runs out of it, a region of three loops or
@@ -99,7 +105,7 @@ import { suggestCreases } from './networkCreases'
 import { type CurveTrace, endTangent, traceCurve } from './networkCurve'
 import { cellMesh } from './networkMap'
 import { regionPath, roundMiddles } from './networkRounds'
-import { Bends, type Closing, closeCreases, type ClosingWork, gripsOf, march, marchStep, snapCrossings, TraceGrid } from './networkClose'
+import { Bends, type Closing, closeCreases, type ClosingWork, contractShort, gripsOf, march, marchStep, snapCrossings, TraceGrid } from './networkClose'
 
 /** How a layout is made. */
 export interface AutoOptions {
@@ -211,6 +217,13 @@ const WHOLE_SHARE = 0.5
  *  found. */
 const CREASE_SHARE = 0.6
 const CREASE_NEAR_EDGES = 4
+/** A cell whose area-weighted mean normal is shorter than this bends round
+ *  too far for one patch (a 90° bend reads 0.71, a half-round 0.64). */
+const BENT_FLAT = 0.6
+/** Where the part was laid out down its rounds, two curves meeting at a
+ *  node that come this near again further than this many mean edges from
+ *  it cross there. */
+const NEAR_NODE_EDGES = 1.5
 /** The most pairs of corners a large cell is cut between along the scan. */
 const ALONG_TRIES = 6
 /** A cut along the scan keeps this many mean edges off the region's
@@ -281,8 +294,15 @@ class Work implements ClosingWork {
     return id
   }
 
+  /** The nodes by id, made again when the list is replaced or a node is
+   *  added; a node moved in place is the same object. */
+  private byId: { list: NetworkNode[]; length: number; map: Map<number, NetworkNode> } | null = null
+
   at(id: number): Vec3 {
-    return this.nodes.find((n) => n.id === id)!.at
+    let b = this.byId
+    if (!b || b.list !== this.nodes || b.length !== this.nodes.length) b = this.byId = { list: this.nodes, length: this.nodes.length, map: new Map(this.nodes.map((n) => [n.id, n])) }
+    const n = b.map.get(id) ?? this.nodes.find((x) => x.id === id)!
+    return n.at
   }
 
   traceOf(c: NetworkCurve): CurveTrace {
@@ -524,6 +544,14 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
   // four-sided ones, a curve its face runs both ways round let go, a loop
   // pinched to its longest cut once.
   const along = (r: ScanRegion) => roundsTried[r.triangles[0]] === 1 && r.triangles.length >= roundsMin
+  const tighten = () => {
+    if (roundsLaid.regions === 0) {
+      snapCrossings(w, snapped)
+      return
+    }
+    snapCrossings(w, snapped, NEAR_NODE_EDGES)
+    contractShort(w, { contracted: 0 })
+  }
   // Why a region was last left, by a triangle of it: what the end says of
   // the region that triangle is in then.
   const lastWhy = new Map<number, string>()
@@ -607,14 +635,17 @@ export function autoLayout(scan: ScanPaths, opts: AutoOptions = {}): AutoLayout 
     }
     if (!changed) break
     // A cut across a region can cross a curve inside it — a crease of an
-    // island, one a bridge leads to: the crossing made a node.
-    snapCrossings(w, snapped)
+    // island, one a bridge leads to: the crossing made a node. Where the
+    // part was laid out down its rounds, near a node too — two curves
+    // leaving one node can touch inside the closing's guard — and the stubs
+    // that leaves contracted.
+    tighten()
     read = w.read()
     // A round's middle drawn to a tangle can be a bridge of its own.
     if (roundsLaid.curves > roundsBefore && opts.bridges !== 'keep') {
       const tally = bridging ?? { duplicates: 0, found: 0, cut: 0, dropped: 0, knots: 0, knotCurves: 0, passes: 0 }
       for (let pass = 0; pass < BRIDGE_PASSES && unbridge(w, read, bends, 'drop', tally); pass++) {
-        snapCrossings(w, snapped)
+        tighten()
         read = w.read()
       }
     }
@@ -834,6 +865,13 @@ function disk(w: Work, read: Read, face: GraphFace, region: ScanRegion, along = 
     const pairs = list.map((a, i) => ({ a, b: list[(i + step) % count] })).sort((p, q) => dist(w.at(p.a), w.at(p.b)) - dist(w.at(q.a), w.at(q.b)))
     for (const p of pairs.slice(0, 3)) if (tryCut(w, read, region, p.a, p.b) || tryCut(w, read, region, p.a, p.b, true)) return 'cut'
   }
+  // A large three-sided cell given a fourth corner, the middle of its
+  // longest side: four-sided, the build need not split it from its centre.
+  if (along && count === 3 && fourthCorner(w, read, face, corners!.list)) return 'corners'
+  // A large four-sided cell that bends round — its mean normal short of
+  // BENT_FLAT, the scan under it turned past what one patch follows — cut
+  // across the bend, between the middles of its two longer sides.
+  if (along && count === 4 && flatness(w.scan, region.triangles) < BENT_FLAT && acrossBend(w, read, region, face, corners!.list)) return 'cut'
   if (count >= SIDES_MIN && count <= SIDES_MAX) return 'cell'
   if (count < SIDES_MIN) {
     const nodes = loopNodes(face)
@@ -1674,4 +1712,72 @@ function pinchCut(w: Work, read: Read, region: ScanRegion): boolean {
     }
   }
   return false
+}
+
+/** A node at the middle of a three-cornered face's longest side, chosen a
+ *  corner with the three; whether one was put there. */
+function fourthCorner(w: Work, read: Read, face: GraphFace, corners: readonly number[]): boolean {
+  const { at, length } = loopLengths(read, face)
+  if (!(length > 0)) return false
+  const s = corners.map((n) => at.get(n) ?? 0).sort((a, b) => a - b)
+  let best = -1
+  let bestL = 0
+  for (let i = 0; i < s.length; i++) {
+    const l = ((i + 1 < s.length ? s[i + 1] : s[0] + length) - s[i])
+    if (l > bestL) [bestL, best] = [l, i]
+  }
+  if (best < 0) return false
+  const place = pointRound(read, face, (s[best] + bestL / 2) % length)
+  if (!place) return false
+  const id = w.splitAt(place.curve, place.at)
+  if (corners.includes(id)) return false
+  for (const n of corners) w.chosen.add(n)
+  w.chosen.add(id)
+  return true
+}
+
+/** The length of the area-weighted mean of the triangles' normals: 1 on a
+ *  flat, less the further the surface turns. */
+function flatness(scan: ScanPaths, triangles: ArrayLike<number>): number {
+  const p = scan.positions
+  const idx = scan.indices
+  let x = 0
+  let y = 0
+  let z = 0
+  let area = 0
+  for (let k = 0; k < triangles.length; k++) {
+    const t = triangles[k]
+    const a = idx[t * 3] * 3
+    const b = idx[t * 3 + 1] * 3
+    const c = idx[t * 3 + 2] * 3
+    const u = [p[b] - p[a], p[b + 1] - p[a + 1], p[b + 2] - p[a + 2]]
+    const v = [p[c] - p[a], p[c + 1] - p[a + 1], p[c + 2] - p[a + 2]]
+    // The cross product is the normal times twice the area.
+    const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
+    x += n[0]
+    y += n[1]
+    z += n[2]
+    area += Math.hypot(n[0], n[1], n[2])
+  }
+  return area > 0 ? Math.hypot(x, y, z) / area : 1
+}
+
+/** A four-cornered face cut between the middles of its two longer
+ *  opposite sides, straight or along the scan; whether it was. */
+function acrossBend(w: Work, read: Read, region: ScanRegion, face: GraphFace, corners: readonly number[]): boolean {
+  const { at, length } = loopLengths(read, face)
+  if (!(length > 0) || corners.length !== 4) return false
+  const s = corners.map((n) => at.get(n) ?? 0).sort((a, b) => a - b)
+  const side = (i: number) => ({ from: s[i], len: (i + 1 < 4 ? s[i + 1] : s[0] + length) - s[i] })
+  const sides = [0, 1, 2, 3].map(side)
+  // The pair of opposite sides the longer together.
+  const k = sides[0].len + sides[2].len >= sides[1].len + sides[3].len ? 0 : 1
+  const mids = [sides[k], sides[k + 2]].map((x) => pointRound(read, face, (x.from + x.len / 2) % length))
+  if (!mids[0] || !mids[1]) return false
+  const a = w.splitAt(mids[0].curve, mids[0].at)
+  const b = w.splitAt(mids[1].curve, mids[1].at)
+  if (a === b || corners.includes(a) || corners.includes(b)) return false
+  if (!(tryCut(w, read, region, a, b) || tryCut(w, read, region, a, b, true))) return false
+  for (const n of corners) w.chosen.add(n)
+  return true
 }

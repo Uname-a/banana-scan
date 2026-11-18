@@ -152,10 +152,15 @@ export function principalNear(fit: CurvatureFit | null, h: Vec3): Vec3 | null {
 
 /** Trace points by grid cell, for what a point comes near. */
 export class TraceGrid {
-  private cells = new Map<string, { curve: number; at: Vec3 }[]>()
+  // By a hash of the cell: two cells that share one only add points the
+  // distance test then leaves out.
+  private cells = new Map<number, { curve: number; at: Vec3 }[]>()
   constructor(readonly size: number) {}
   private key(p: ArrayLike<number>, dx = 0, dy = 0, dz = 0) {
-    return `${Math.floor(p[0] / this.size) + dx},${Math.floor(p[1] / this.size) + dy},${Math.floor(p[2] / this.size) + dz}`
+    const x = Math.floor(p[0] / this.size) + dx
+    const y = Math.floor(p[1] / this.size) + dy
+    const z = Math.floor(p[2] / this.size) + dz
+    return (Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791)) | 0
   }
   add(curve: number, points: ArrayLike<number>): void {
     for (let i = 0; i + 2 < points.length; i += 3) {
@@ -169,10 +174,14 @@ export class TraceGrid {
   /** The nearest point within r (≤ size) of p that `keep` takes. */
   nearest(p: ArrayLike<number>, r: number, keep: (curve: number, at: Vec3) => boolean): { curve: number; at: Vec3; d: number } | null {
     let best: { curve: number; at: Vec3; d: number } | null = null
+    const seen = new Set<number>()
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (let dz = -1; dz <= 1; dz++) {
-          for (const x of this.cells.get(this.key(p, dx, dy, dz)) ?? []) {
+          const k = this.key(p, dx, dy, dz)
+          if (seen.has(k)) continue
+          seen.add(k)
+          for (const x of this.cells.get(k) ?? []) {
             const d = dist(x.at, p)
             if (d <= r && (!best || d < best.d) && keep(x.curve, x.at)) best = { curve: x.curve, at: x.at, d }
           }
@@ -327,7 +336,7 @@ export function closeCreases(w: ClosingWork, bends: Bends): Closing {
  *  two nodes is no patch's side — a knot of creases where a small
  *  feature's edges meet, cut by the snapping into stubs: its two nodes
  *  made one. */
-function contractShort(w: ClosingWork, out: Closing): void {
+export function contractShort(w: ClosingWork, out: Pick<Closing, 'contracted'>): void {
   const short = Math.max(SHORT_MM, SHORT_EDGES * w.scan.edge)
   for (let pass = 0; pass < 50; pass++) {
     let best: NetworkCurve | null = null
@@ -356,11 +365,12 @@ function contractShort(w: ClosingWork, out: Closing): void {
 
 /** 1: crossings and near misses made shared nodes — a pair of curve
  *  families once a pass, as many passes as there are crossings, up to
- *  SNAP_PASSES. */
-export function snapCrossings(w: ClosingWork, out: Pick<Closing, 'crossings'>): void {
+ *  SNAP_PASSES; points within `guardEdges` mean edges of a node both
+ *  curves share are their meeting there, not a crossing. */
+export function snapCrossings(w: ClosingWork, out: Pick<Closing, 'crossings'>, guardEdges = GUARD_EDGES): void {
   const scan = w.scan
   const r = Math.max(CROSS_EDGES * scan.edge, 1e-6)
-  const guard = GUARD_EDGES * scan.edge
+  const guard = guardEdges * scan.edge
   for (let pass = 0; pass < SNAP_PASSES; pass++) {
     const grid = new TraceGrid(Math.max(r, scan.edge))
     for (const c of w.curves) grid.add(c.id, w.traceOf(c).points)

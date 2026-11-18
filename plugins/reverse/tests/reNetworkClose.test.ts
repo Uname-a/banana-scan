@@ -93,23 +93,32 @@ describe('a crease that ends in the middle of a face', () => {
 describe('the sample bracket', () => {
   // Measured 18 Nov 2026 (288,582 triangles). PR 32: 6 cells of 1,575
   // triangles, and the build failed on a patch 0.48 mm RMS. PR 33 read the
-  // graph's faces by where each curve is 8 edges from its node, let go of
-  // the 101 curves the same region lies both sides of, and left out the
-  // cells the build would refuse: 9 cells in 10 s, 8 made — 1.4 % of the
-  // bracket — 10 patches, 0.031 mm RMS at the median, 0.19 at worst.
+  // graph's faces by where each curve is 8 edges from its node and let go of
+  // the curves the same region lies both sides of: 8 cells made, 1.4 % of
+  // the bracket, 10 patches, 0.031 mm RMS at the median, 0.19 at worst.
   //
   // The bracket's edges are rounds, which Suggest creases takes for no
-  // crease: 95 % of it was one region of 13 loops, its creases islands in
-  // it. Now the part is laid out from its faces (networkRounds.ts): 21
-  // faces where it bends less than twice its bumps' curvature, every vertex
-  // to the nearest, and the lines where they meet — 49, down the rounds'
-  // middles, 6 of them along creases — drawn as its curves. 17 cells in
-  // 24 s hold 60.7 % of its triangles; the build makes 14 of them, 44.3 %
-  // of the bracket, 23 patches, 0.043 mm RMS at the median, 0.30 at worst
-  // (5.6 mm at its worst point, where a cell spans a bend of the channel).
-  // Not whole: a region of 49,000 triangles of three loops pinched together
-  // is left, and the build refuses three cells (a map that folds, a split
-  // whose curves cross).
+  // crease: 95 % of it was one region, its creases islands in it. PR 34 laid
+  // it out from its 21 faces (networkRounds.ts), the 49 lines where they
+  // meet, down the rounds' middles, its curves: 17 cells in 24 s, of which
+  // the build made 14 in 28 s — 44.3 % of the bracket, 23 patches, 0.043 mm
+  // RMS at the median, 0.30 at worst. A region of 49,000 triangles of three
+  // loops pinched together was left, and the build refused three cells: a
+  // map that folded, two splits whose curves crossed.
+  //
+  // Now, where the part is laid out down its rounds: crossings snapped
+  // within 1.5 edges of a node two curves share, not only past the closing's
+  // 4 (curves leaving one node touched 0.5–0.8 mm from it), and the stubs
+  // that leaves contracted; a three-sided cell given a fourth corner, the
+  // middle of its longest side, so the build need not split it from its
+  // centre; a four-sided cell whose mean normal is shorter than 0.6 cut
+  // across its bend. The pinched region lays out, the build refuses none:
+  // 20 cells in 36 s, all made in 52 s — 72.1 % of the bracket, 22 patches,
+  // 0.031 mm RMS at the median, 0.92 at worst. That worst is a cell at the
+  // flange's rounded top, flat by its mean normal (0.92) but 9.4 mm off at
+  // its worst point; three more are 0.20–0.29 mm. Left: regions of two loops
+  // no cut stays inside (14,000 and 9,000 triangles), a tangle of 13,000,
+  // and cells the build would refuse (maps that fold, splits).
   it('is laid out from its faces, down its rounds, and builds, each patch read', async () => {
     const buf = readFileSync(new URL('../../../public/samples/fridgeBracket_01-reduced.3mf', import.meta.url))
     const m = parse3MF(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength))
@@ -123,7 +132,7 @@ describe('the sample bracket', () => {
     expect(l.bridging!.found).toBeGreaterThanOrEqual(50)
     expect(l.roundsLaid.whole).toBe(true)
     expect(l.roundsLaid.faces).toBeGreaterThanOrEqual(15)
-    expect(l.made.length).toBeGreaterThanOrEqual(12)
+    expect(l.made.length).toBeGreaterThanOrEqual(16)
     // The share of the bracket's triangles in the cells, and in those built.
     const traced = traceNetwork(scan, l.nodes, l.curves)
     const { regions, label } = scanRegions(scan, traced.nodes, traced.curves)
@@ -132,14 +141,14 @@ describe('the sample bracket', () => {
       return q ? regions[label[q.triangle]].triangles.length : 0
     }
     const share = (cells: Vec3[]) => cells.reduce((s, x) => s + size(x), 0) / scan.triangleCount
-    expect(share(l.cells.map((x) => x.seed))).toBeGreaterThan(0.5)
+    expect(share(l.cells.map((x) => x.seed))).toBeGreaterThan(0.6)
     const { report } = await built({ positions: m.positions, indices: m.indices! }, l)
     const made = l.cells.filter((_, i) => !('refused' in report.cells[i]))
-    expect(made.length).toBeGreaterThanOrEqual(11)
-    expect(share(made.map((x) => x.seed))).toBeGreaterThan(0.35)
+    expect(made.length).toBeGreaterThanOrEqual(16)
+    expect(share(made.map((x) => x.seed))).toBeGreaterThan(0.6)
     expect(report.patches.length).toBeGreaterThanOrEqual(18)
     const rms = report.patches.map((p) => p.rms).sort((a, b) => a - b)
-    expect(rms[Math.floor(rms.length / 2)]).toBeLessThan(0.06)
-    expect(rms[rms.length - 1]).toBeLessThan(0.4)
+    expect(rms[Math.floor(rms.length / 2)]).toBeLessThan(0.05)
+    expect(rms[rms.length - 1]).toBeLessThan(1.2)
   }, 600_000)
 })

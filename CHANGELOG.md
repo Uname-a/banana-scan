@@ -10,6 +10,20 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Auto layout takes the sample bracket to 72 % built, nothing refused**
+  (Reverse engineer, 2026-11-18). Where a part is laid out down its rounds,
+  crossings are snapped near a node two curves share too (curves leaving
+  one node touched 0.5–0.8 mm from it, inside the closing's guard) and the
+  stubs that leaves contracted; a three-sided cell is given a fourth corner
+  at the middle of its longest side, so the build need not split it from
+  its centre; a four-sided cell that bends round (its mean normal under
+  0.6 long) is cut across the bend. A patch network whose patches do not
+  sew along a curve is now built open there, the curve and its gap reported
+  and warned of, instead of failing whole. The sample fridge bracket: 20
+  cells, all made — 72.1 % of it (44.3 % before), 22 patches, 0.031 mm RMS
+  at the median; the worst patch is 0.92 mm (it was 0.30), a cell at the
+  flange's rounded top. Layout 36 s, build 52 s (26 s and 35 s before).
+
 - **Auto layout lays out a part from its faces, down the middles of its
   rounds** (Reverse engineer, 2026-11-18). Where Suggest creases leaves
   most of a part one region — its edges rounds, its creases islands in it
