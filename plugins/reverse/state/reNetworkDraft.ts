@@ -507,6 +507,13 @@ export function removeReportedPatch<D extends NetworkDraft>(d: D, report: Pick<N
   return removePatch(d, cell, own)
 }
 
+/** The network laid out by itself (networkAuto.ts) in place of what is
+ *  drawn: its nodes, curves and cells, the fit kept. One step of the undo. */
+export function withLayout<D extends NetworkDraft>(d: D, layout: Pick<NetworkData, 'nodes' | 'curves' | 'cells'> & { nextId: number }): D {
+  const fresh = cloneData({ ...layout, spans: {}, fit: d.fit })
+  return edited(d, { nodes: fresh.nodes, curves: fresh.curves, cells: fresh.cells, spans: {} }, { nextId: Math.max(d.nextId, layout.nextId), picked: null, placing: null, suggested: null })
+}
+
 /** The network's fit changed. */
 export function setNetworkFit<D extends NetworkDraft>(d: D, fit: Partial<NetworkFitParams>): D {
   return edited(d, { fit: { ...d.fit, ...fit } })
