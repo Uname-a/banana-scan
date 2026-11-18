@@ -37,7 +37,7 @@
 import type { MeshoptSimplifier as Simplifier } from 'meshoptimizer/simplifier'
 import { emptyHit, NominalSurface } from '../../../src/core/deviation/surface'
 import type { FieldScale } from '../../../src/core/field/colormap'
-import { compactEdit } from './edit'
+import { compactEdit, type EditedMesh } from './edit'
 import { round125 } from './round125'
 
 export { round125 }
@@ -226,7 +226,7 @@ export function reduceMesh(
   // last pass leaves the whole field its own.
   const deviation = new Float32Array(scan.vertexCount).fill(NaN)
 
-  const run = (target: number, triangles: number, pins: Uint8Array | null): Measured => {
+  const simplify = (target: number, triangles: number, pins: Uint8Array | null): EditedMesh => {
     const indices = scan.indices.slice()
     const positions = scan.positions.slice()
     const [count] = simplifier.simplifyWithUpdate(
@@ -234,7 +234,9 @@ export function reduceMesh(
       Math.min(indices.length, triangles * 3), target, ['ErrorAbsolute'],
     )
     // The vertices left keep their numbers' order, as an edit's do.
-    const reduced = compactEdit(positions, indices.subarray(0, count), scan.vertexCount)
+    return compactEdit(positions, indices.subarray(0, count), scan.vertexCount)
+  }
+  const measure = (reduced: EditedMesh): Measured => {
     const surface = new NominalSurface(reduced.positions, reduced.indices)
     const forward = scanToReduced(surface, scan.positions, measuredVertices, deviation)
     const back = reducedToScan(scanSurface(), reduced.positions, reduced.indices, tolerance)
@@ -246,7 +248,7 @@ export function reduceMesh(
   const pins = new Uint8Array(scan.vertexCount)
   let pinned = 0
   let passes = 0
-  let m: Measured
+  let m: Measured | null = null
   for (;;) {
     passes++
     onProgress?.(
@@ -254,7 +256,17 @@ export function reduceMesh(
         ? `Reducing — pass ${passes}, ${pinned.toLocaleString('en-US')} points pinned…`
         : 'Reducing…',
     )
-    m = run(tolerance, 0, pins)
+    const reduced = simplify(tolerance, 0, pins)
+    // Past the limit already: a pin only keeps a point the simplifier would
+    // have collapsed, so no pass after this one comes back under it, and this
+    // one ends at the limit whatever it measures. Measuring it — every scan
+    // point, both ways — and pinning on would be most of the time a large
+    // scan's reduction takes, for a mesh that is thrown away.
+    if (reduced.indices.length / 3 > settings.maxTriangles) {
+      m = null
+      break
+    }
+    m = measure(reduced)
     if (holds(m) || passes >= MAX_PASSES) break
     // Pin where it strayed: each scan point left too far from the reduced
     // surface, and the scan under each spot of it that stands too far off.
@@ -275,10 +287,10 @@ export function reduceMesh(
   }
 
   let capped = false
-  if (m.indices.length / 3 > settings.maxTriangles) {
+  if (m === null) {
     passes++
     onProgress?.(`Reducing to ${settings.maxTriangles.toLocaleString('en-US')} triangles…`)
-    m = run(UNBOUNDED_ERROR, Math.max(1, Math.floor(settings.maxTriangles)), null)
+    m = measure(simplify(UNBOUNDED_ERROR, Math.max(1, Math.floor(settings.maxTriangles)), null))
     capped = true
   }
 

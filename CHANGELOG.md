@@ -10,6 +10,13 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A reduction past the triangle limit no longer pins first** (Mesh Tools,
+  2026-11-17). When the plain reduction to the tolerance already needs more
+  triangles than the limit, pins could only keep more, so the scan is
+  reduced to the limit straight away: no pinning passes, each of which
+  measured every scan point both ways and was then thrown away. The mesh
+  and its figures are the same.
+
 - **Wrap onto a free-form region of the scan** (Reverse engineer,
   2026-11-18). Wrap, which rolled a sketch onto a measured cylinder, cone
   or plane, now takes a region of the scan instead — a contoured grip, a
