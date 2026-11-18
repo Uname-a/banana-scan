@@ -114,6 +114,13 @@ const AUTO_HELPS = 0.8
 const MISFIT_POINTS = 8
 /** The conjugate gradient's tolerance. */
 const SOLVE_TOLERANCE = 1e-8
+/** G2: the curvature rows' weight as a share of the ties' (see above). */
+const G2_WEIGHT = 1
+/** A curve is read curvature-continuous (G2) where the normal curvature
+ *  square to it steps by no more than this share of the larger either
+ *  side, or by less than G2_FLOOR 1/mm (a radius of 500 mm: flat). */
+export const G2_SHARE = 0.05
+export const G2_FLOOR = 0.002
 /** How many points along a shared curve its angle and gap are read at. */
 const EDGE_SAMPLES = 24
 /** How many worst points a patch's answer names. */
@@ -158,6 +165,8 @@ export interface NetworkFitInput {
   tolerance?: number
   /** The scan's mean edge, mm: what Auto holds a strip's spans to. */
   spacing?: number
+  /** Hold curvature across every tie too (G2), by weight (see above). */
+  g2?: boolean
   /** Curves beside a body's face (PN11): the patch on the curve meets the
    *  face on its edge (contact) or tangent to it too, by the face's unit
    *  normals at the points of it nearest those given. */
@@ -197,6 +206,12 @@ export interface SharedCurve {
    *  second's: a T-junction's, whose two edges do not share poles — held
    *  tangent by weight, not exactly. */
   tee?: boolean
+  /** Across a curve not a crease: the largest step in the normal
+   *  curvature square to it from one patch to the other, 1/mm, that step
+   *  as a share of the larger curvature there, and whether it is within
+   *  G2_SHARE of it or under G2_FLOOR — curvature-continuous (G2) as
+   *  near as a fit reads. */
+  curvature?: { jump: number; share: number; g2: boolean }
 }
 
 /** A corner where three, five or six patches meet, or one of four whose
@@ -262,16 +277,16 @@ function stripsOf(patches: readonly PatchInput[]): { of: number[][]; count: numb
 
 /** Where pole m (from the side's start) of a patch's side k is in its net,
  *  and the first inner pole in from it. */
-function sidePole(nu: number, nv: number, k: number, s: number): { boundary: [number, number]; inner: [number, number] } {
+function sidePole(nu: number, nv: number, k: number, s: number): { boundary: [number, number]; inner: [number, number]; inner2: [number, number] } {
   switch (k) {
     case 0:
-      return { boundary: [s, 0], inner: [s, 1] }
+      return { boundary: [s, 0], inner: [s, 1], inner2: [s, 2] }
     case 1:
-      return { boundary: [nu + 2, s], inner: [nu + 1, s] }
+      return { boundary: [nu + 2, s], inner: [nu + 1, s], inner2: [nu, s] }
     case 2:
-      return { boundary: [nu + 2 - s, nv + 2], inner: [nu + 2 - s, nv + 1] }
+      return { boundary: [nu + 2 - s, nv + 2], inner: [nu + 2 - s, nv + 1], inner2: [nu + 2 - s, nv] }
     default:
-      return { boundary: [0, nv + 2 - s], inner: [1, nv + 2 - s] }
+      return { boundary: [0, nv + 2 - s], inner: [1, nv + 2 - s], inner2: [2, nv + 2 - s] }
   }
 }
 
@@ -599,6 +614,14 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
     ratio: number
     /** Next to a corner: its node. */
     node: number | null
+    /** The second inner poles either side, global, and the tie's place
+     *  along the curve: what the curvature rows read (G2). */
+    a2: number
+    c2: number
+    at: { patch: number; side: number; t: number }
+    /** The surface's normal there in the first fit: the curvature rows'
+     *  direction. */
+    normal: Vec3
   }
   const ties: Tie[] = []
   const shared: { curve: number; patches: [number, number]; crease: boolean; sides: [number, number] }[] = []
@@ -617,12 +640,13 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
       const at = (u: { patch: number; side: number; forward: boolean }) => {
         const net = nets[u.patch]
         const s = u.forward ? m : n - 1 - m
-        const { boundary, inner } = sidePole(net.nu, net.nv, u.side, s)
-        return { b: poleBase[u.patch] + boundary[0] * (net.nv + 3) + boundary[1], i: poleBase[u.patch] + inner[0] * (net.nv + 3) + inner[1] }
+        const { boundary, inner, inner2 } = sidePole(net.nu, net.nv, u.side, s)
+        return { b: poleBase[u.patch] + boundary[0] * (net.nv + 3) + boundary[1], i: poleBase[u.patch] + inner[0] * (net.nv + 3) + inner[1], i2: poleBase[u.patch] + inner2[0] * (net.nv + 3) + inner2[1] }
       }
       const p = at(P)
       const q = at(Q)
-      ties.push({ curve, a: p.i, c: q.i, b: p.b, exact: !(nearFrom || nearTo), ratio: 1, node: nearFrom ? c.from : nearTo ? c.to : null })
+      const gr = grevilleOf(n - 3)
+      ties.push({ curve, a: p.i, c: q.i, b: p.b, exact: !(nearFrom || nearTo), ratio: 1, node: nearFrom ? c.from : nearTo ? c.to : null, a2: p.i2, c2: q.i2, at: { patch: P.patch, side: P.side, t: P.forward ? gr[m] : 1 - gr[m] }, normal: [0, 0, 1] })
     }
   }
 
@@ -758,6 +782,21 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
   }
 
   let tiesWeight = 0
+  // The curvature rows (G2), on the ties as they stand — none in the first
+  // fit, which reads the ratios and normals they are made of.
+  let g2Ties: Tie[] = []
+  const curvatureTerms = (t: Tie): [number, number][] => {
+    const l2 = t.ratio * t.ratio
+    const rho = 0.5
+    return [
+      [t.a2, l2 * rho],
+      [t.a, -l2 * rho - l2],
+      [t.b, l2 - 1],
+      [t.c2, -rho],
+      [t.c, rho + 1],
+    ]
+  }
+  const g2Weight = (t: Tie) => (G2_WEIGHT * tiesWeight) / (1 + t.ratio ** 4)
   const solve = (lay: Layout, start: Float64Array | null): { z: Float64Array; iterations: number } => {
     // The tie weight against the data's mean diagonal.
     let diagSum = 0
@@ -792,6 +831,19 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
           G[t.a * 3 + c] += w * t.ratio * r
           G[t.c * 3 + c] += w * r
         }
+      }
+      // G2: across each tie, the normal curvature square to the curve held
+      // alike either side — with ρ = ½ the clamped cubic's first two cross
+      // spans' share, λ the tie's ratio and N the first fit's normal there,
+      // N · [λ²ρ (A₂ − A) + λ² (B − A) − ρ (C₂ − C) + (C − B)] = 0: the two
+      // patches' second cross derivatives, made to run at the one speed the
+      // tie gives their first, equal along N (see curvatureTerms).
+      for (const t of g2Ties) {
+        const terms = curvatureTerms(t)
+        const w = g2Weight(t)
+        let r = 0
+        for (const [pole, coef] of terms) r += coef * (t.normal[0] * y[pole * 3] + t.normal[1] * y[pole * 3 + 1] + t.normal[2] * y[pole * 3 + 2])
+        for (const [pole, coef] of terms) for (let c = 0; c < 3; c++) G[pole * 3 + c] += w * coef * t.normal[c] * r
       }
       for (const row of faceRows) {
         const p = row.pole * 3
@@ -834,6 +886,15 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
         const zc = lay.z[t.c * 3 + c]
         if (za >= 0) diagonal[za] += w * (t.ratio * lay.coef[t.a * 3 + c]) ** 2
         if (zc >= 0) diagonal[zc] += w * lay.coef[t.c * 3 + c] ** 2
+      }
+    }
+    for (const t of g2Ties) {
+      const w = g2Weight(t)
+      for (const [pole, coef] of curvatureTerms(t)) {
+        for (let c = 0; c < 3; c++) {
+          const z = lay.z[pole * 3 + c]
+          if (z >= 0) diagonal[z] += w * (coef * t.normal[c] * lay.coef[pole * 3 + c]) ** 2
+        }
       }
     }
     for (const row of faceRows) {
@@ -893,6 +954,7 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
   }
   smoothRatios(ties)
   for (const t of ties) t.ratio = Math.min(RATIO_LIMIT, Math.max(1 / RATIO_LIMIT, t.ratio))
+  if (input.g2) for (const t of ties) t.normal = patchNormal(nets[t.at.patch], ...onSide(t.at.side, t.at.t))
   const freePoles = Float64Array.from(allPoles)
 
   // ---- tangency across a T-junction ---------------------------------------------
@@ -950,6 +1012,7 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
   }))
 
   // ---- tied, and the parameters corrected -------------------------------------
+  if (input.g2) g2Ties = ties
   let lay = layout(ties.length > 0)
   let { rms, res } = residualRms(nets, data)
   let rounds = 0
@@ -1560,7 +1623,93 @@ function edgeReading(s: { curve: number; patches: [number, number]; crease: bool
     if (skipFrom > 0) nearFrom = Math.max(nearFrom, angleAt((skipFrom * k) / EDGE_SAMPLES))
     if (skipTo > 0) nearTo = Math.max(nearTo, angleAt(1 - (skipTo * k) / EDGE_SAMPLES))
   }
-  return { curve: s.curve, patches: s.patches, gap, angle, crease: s.crease, nearFrom, nearTo }
+  // The curvature square to the curve either side, a span in from each end
+  // — at a corner the cross curve's own bend is in it — and from an
+  // irregular corner as far as the angle is read apart.
+  let curvature: SharedCurve['curvature']
+  if (!s.crease) {
+    const spans = Math.max(P.net.nu, P.net.nv, Q.net.nu, Q.net.nv)
+    const from = Math.max(skipFrom, 1 / spans)
+    const to = Math.max(skipTo, 1 / spans)
+    let jump = 0
+    let share = 0
+    let g2 = true
+    for (let k = 0; k <= EDGE_SAMPLES; k++) {
+      const t = from + ((1 - from - to) * k) / EDGE_SAMPLES
+      if (!(t > 0 && t < 1)) continue
+      const kp = crossCurvature(P.net, s.sides[0], forwardP ? t : 1 - t)
+      const kq = crossCurvature(Q.net, s.sides[1], forwardQ ? t : 1 - t)
+      if (!kp || !kq) continue
+      // Signed alike: both by the first patch's normal.
+      const kqs = kp.normal[0] * kq.normal[0] + kp.normal[1] * kq.normal[1] + kp.normal[2] * kq.normal[2] < 0 ? -kq.k : kq.k
+      const d = Math.abs(kp.k - kqs)
+      const big = Math.max(Math.abs(kp.k), Math.abs(kqs))
+      const sh = big > 0 ? d / big : 0
+      if (d > jump) jump = d
+      if (d > G2_FLOOR) share = Math.max(share, sh)
+      if (d > G2_FLOOR && sh > G2_SHARE) g2 = false
+    }
+    curvature = { jump, share, g2 }
+  }
+  return { curve: s.curve, patches: s.patches, gap, angle, crease: s.crease, nearFrom, nearTo, ...(curvature ? { curvature } : {}) }
+}
+
+/** A patch's normal curvature, 1/mm, at f along its side k, in the
+ *  direction square to the side in the tangent plane; and its normal
+ *  there, which the curvature's sign is by. Second derivatives by
+ *  differences of the first (patchPoint's), one-sided at the net's edge. */
+export function crossCurvature(net: PatchNet, k: number, f: number): { k: number; normal: Vec3 } | null {
+  const [u, v] = onSide(k, f)
+  const h = 1e-4
+  const p: Vec3 = [0, 0, 0]
+  const du: Vec3 = [0, 0, 0]
+  const dv: Vec3 = [0, 0, 0]
+  const first = (uu: number, vv: number) => {
+    const a: Vec3 = [0, 0, 0]
+    const b: Vec3 = [0, 0, 0]
+    patchPoint(net, uu, vv, p, a, b)
+    return { du: a, dv: b }
+  }
+  /** d/dx of g at x by three points, inside [0, 1]. */
+  const diff = (g: (x: number) => Vec3, x: number): Vec3 => {
+    if (x - h < 0) {
+      const [a, b, c] = [g(x), g(x + h), g(x + 2 * h)]
+      return [0, 1, 2].map((i) => (-3 * a[i] + 4 * b[i] - c[i]) / (2 * h)) as Vec3
+    }
+    if (x + h > 1) {
+      const [a, b, c] = [g(x), g(x - h), g(x - 2 * h)]
+      return [0, 1, 2].map((i) => (3 * a[i] - 4 * b[i] + c[i]) / (2 * h)) as Vec3
+    }
+    const [a, b] = [g(x + h), g(x - h)]
+    return [0, 1, 2].map((i) => (a[i] - b[i]) / (2 * h)) as Vec3
+  }
+  patchPoint(net, u, v, p, du, dv)
+  const suu = diff((x) => first(x, v).du, u)
+  const suv = diff((x) => first(u, x).du, v)
+  const svv = diff((x) => first(u, x).dv, v)
+  const n: Vec3 = [du[1] * dv[2] - du[2] * dv[1], du[2] * dv[0] - du[0] * dv[2], du[0] * dv[1] - du[1] * dv[0]]
+  const nl = Math.hypot(n[0], n[1], n[2])
+  if (!(nl > 0)) return null
+  for (let i = 0; i < 3; i++) n[i] /= nl
+  // Along the side, and square to it in the tangent plane.
+  const along = k % 2 === 0 ? du : dv
+  const x: Vec3 = [n[1] * along[2] - n[2] * along[1], n[2] * along[0] - n[0] * along[2], n[0] * along[1] - n[1] * along[0]]
+  // x = a du + b dv.
+  const E = du[0] * du[0] + du[1] * du[1] + du[2] * du[2]
+  const F = du[0] * dv[0] + du[1] * dv[1] + du[2] * dv[2]
+  const G = dv[0] * dv[0] + dv[1] * dv[1] + dv[2] * dv[2]
+  const xu = x[0] * du[0] + x[1] * du[1] + x[2] * du[2]
+  const xv = x[0] * dv[0] + x[1] * dv[1] + x[2] * dv[2]
+  const det = E * G - F * F
+  if (!(det > 0)) return null
+  const a = (G * xu - F * xv) / det
+  const b = (E * xv - F * xu) / det
+  const L = n[0] * suu[0] + n[1] * suu[1] + n[2] * suu[2]
+  const M = n[0] * suv[0] + n[1] * suv[1] + n[2] * suv[2]
+  const N = n[0] * svv[0] + n[1] * svv[1] + n[2] * svv[2]
+  const den = E * a * a + 2 * F * a * b + G * b * b
+  if (!(den > 0)) return null
+  return { k: (L * a * a + 2 * M * a * b + N * b * b) / den, normal: n }
 }
 
 /** The parameter of a curve's point nearest x: the nearest of a few

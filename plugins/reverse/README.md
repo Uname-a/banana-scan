@@ -944,27 +944,49 @@ top, the bottom and the four sides meet corner to corner. A closed scan with
 no crease (a blended box) is laid out as a box round its principal axes, a
 corner on each corner blend and a curve along each edge blend. A node only
 two smooth curves of a kind run through, and no cell's corner, is made a
-grip. A region of three loops or more, or one the scan's own rim bounds (an
-open scan: no curve is drawn along a rim yet), is left out and said why.
+grip. Before the regions are read the crease graph is closed
+(`core/networkClose.ts`): creases turning under 30° on the average (a
+scan's ripples, a round's shoulders) and short loose chips are let go,
+crossings snapped into nodes, loose ends near each other joined, and every
+other loose end carried on along the scan — steered onto its line of
+principal curvature where it bends more one way than the other, the
+middle of a round's run — to the next curve, the crease carried on as one
+curve. A region curves touch but no loop closes round is untangled by
+letting go of its shortest curve. A region of three loops or more is cut
+from the loop nearest its longest to the longest by two curves marched
+along the principal lines. One the scan's own rim bounds (an open scan: no
+curve is drawn along a rim yet), or that cannot be cut, is left out and
+said why.
 The patches are fitted and sewn as drawn ones are: tangent across every
 curve not a crease, near tangent where three, five or six meet. On closed
 test parts with 0.01 mm of noise — a box with a domed top, sharp or with
 4 mm rounds upright, a can, a blended box — it comes out a solid of six
 faces within 0.04 % of the scan's volume, every patch 0.010–0.021 mm RMS
 and 0.09 mm at its worst point, tangent within 0.002° across its curves.
-Not reached: the patches are G1, not G2 — their curvature steps across a
-tangent curve, so it is not a Class A surface; three tangent patches
-meeting at a corner of the blended box are held about 5° apart there, not
-tangent; and the cuts are straight sections between their ends, not traced
-along the scan's lines of curvature.
+The fit's `continuity: "g2"` holds the patches curvature-continuous too:
+across each tie the two patches' second cross derivatives, run at the speed
+the tie gives their first, are held alike along the normal — by weight,
+pole by pole. The step in the normal curvature square to every curve not a
+crease is read either way, and called G2 within 5 % (or under 0.002 1/mm).
+Measured: across the cuts down a rounded box's rounds G1 steps 9–10 %, G2
+1–2 % at the same deviation; on the blended box G1 steps 18–50 %, G2 3–7 %,
+five curves of twelve within 5 %, at 0.007 mm more RMS on its worst patch.
+Not reached: G2 is held at the poles, not exactly, and not at all where
+three, five or six patches meet; three tangent patches meeting at a corner
+of the blended box are held about 5° apart there (6° with G2), not
+tangent; and cuts between a ring's loops are straight sections between
+their ends.
 
 Not there yet: a loft through curves on the mesh (Loft lofts between
-sketches today), and Auto layout on an open scan, on a face more than
-two loops of curves bound (a plate with two bosses on it) — and on a real
-mechanical part whose creases do not close: on the sample fridge bracket
-(288,582 triangles) the creases cross and end where no node joins them,
-and of its regions 30 are left out for that and 5 come out cells. Join
-its creases by hand (`network.edit`) and fill what they close.
+sketches today), Auto layout on an open scan, and a whole real mechanical
+part. On the sample fridge bracket (288,582 triangles) closing carries
+every loose crease end on to another curve (31 of them; 56 creases were
+let go before), but the part still does not lay out: its two largest
+regions are bounded by loops that meet themselves (16 and 6 of them,
+which no cut from one loop to another separates), a knot of short creases
+round its clip leaves some 20 regions no loop closes round, and 6 come out
+cells. Join its creases by hand (`network.edit`) and fill what they
+close.
 
 ## Agents: modelling through the commands
 
@@ -1000,7 +1022,7 @@ models in the workspace with the commands under `reverse.` — tools
 | `reverse.export.stl` | the bodies as one binary STL to a chord, for printing — or a 3MF (`format`), a body an object |
 | `reverse.network.create / edit / read` | a Patch network from curves given as points on the scan — joined where one lands on another, its regions filled (`fill: "all"`); edited in one undo step (curves and points added, moved and taken out, creases, a strip's spans, the side on a body); read as the box reads it: cells with their sides or why refused, patches with σ, worst and net, curves with their gap and angle |
 | `reverse.network.suggest_creases` | the scan's sharp edges and folds as crease curves, ready to add, with their length and angle |
-| `reverse.network.auto` | a Patch network laid out by itself over the whole scan, as Auto layout lays it out: the creases, the regions cut into cells, filled and built — with the layout (creases, cuts, cells, each region and what was done), the deviation in short and how the patches meet (tangent, corners; curvature not held) |
+| `reverse.network.auto` | a Patch network laid out by itself over the whole scan, as Auto layout lays it out: the creases, the regions cut into cells, filled and built — with the layout (creases, how the crease graph was closed, cuts, cells, each region and what was done), the deviation in short and how the patches meet (tangent, corners, and the curvature's step across each curve — G2 held with `fit.continuity: "g2"`) |
 | `reverse.import.step` | a STEP file brought in as bodies, as Import STEP brings one: a body for every solid, named after its part; a `moveBody` feature puts them in place |
 | `reverse.note.list / add / resolve` | the notes pinned on the part (below): each with its pin, and what it is on found again on the bodies as they stand — a face or an edge by its index in `body.describe` and the feature that made it, or the scan with the body face nearest; `add` pins the agent's own question — on faces or edges picked as `body.describe` gives them, or at a point; `resolve` marks a note handled with a line on what was done, or closes the agent's question once answered |
 

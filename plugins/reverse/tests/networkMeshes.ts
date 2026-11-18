@@ -266,3 +266,27 @@ export function blendedBoxScan(a: number, b: number, c: number, e: number, n: nu
     { noise },
   )
 }
+
+/** A box with sharp edges whose top is a low roof along x that fades out
+ *  both ways: a fold of `deg` along y = 0 for |x| up to a / 4, flattening
+ *  to none over the next `fadeMm` mm — a crease that ends in the middle of
+ *  the face at both ends, the top's rims straight. */
+export function fadingFoldScan(a: number, b: number, h: number, deg: number, fadeMm: number, n: number, noise = 0.01) {
+  const s0 = Math.tan(((deg / 2) * Math.PI) / 180)
+  const fade = (x: number) => {
+    const t = Math.min(1, Math.max(0, (Math.abs(x) - a / 4) / fadeMm))
+    return 1 - t * t * (3 - 2 * t)
+  }
+  const top = (x: number, y: number) => h + s0 * fade(x) * (b - Math.abs(y))
+  return cubeScan(
+    n,
+    ([x, y, z]) => {
+      const px = a * x
+      const py = b * y
+      if (z >= 1 - 1e-12) return [px, py, top(px, py)]
+      if (z <= -1 + 1e-12) return [px, py, 0]
+      return [px, py, ((z + 1) / 2) * top(px, py)]
+    },
+    { noise },
+  )
+}

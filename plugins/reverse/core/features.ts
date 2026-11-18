@@ -1040,6 +1040,10 @@ export interface NetworkFitParams {
    *  its strips get more spans, mm (networkCurve's DEFAULT_TOLERANCE if
    *  none). */
   tolerance?: number
+  /** How smoothly the patches meet across a curve not a crease: 'g1'
+   *  (the default) tangent; 'g2' tangent and curvature-continuous too, as
+   *  near as the scan lets (networkFit.ts). */
+  continuity?: 'g1' | 'g2'
 }
 
 /** A Patch network: curves drawn on the scan, and the regions they close

@@ -192,6 +192,7 @@ export function readNetwork(scan: ScanPaths, f: Pick<NetworkFeature, 'nodes' | '
           smoothness: f.fit.smoothness,
           robust: f.fit.robust,
           tolerance: f.fit.tolerance,
+          ...(f.fit.continuity === 'g2' ? { g2: true } : {}),
           spacing: scan.edge,
           // The patches beside a body's face: held tangent to it, by the
           // face's normals where it is asked; on its edge, either way.

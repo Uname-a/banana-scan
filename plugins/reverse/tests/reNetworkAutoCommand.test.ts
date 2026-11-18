@@ -55,7 +55,7 @@ interface Auto {
   patches?: { patch: number; rms: number; max: number }[]
   layout: { creases: number; cuts: number; cells: number; patches: number; regions: { kind: string; action: string; cuts?: number }[]; left?: unknown[] }
   deviation: { rms: number; worstRms: number; worstMax: number; worstPatch: number }
-  continuity: { tangent: number; creases: number; curvature: string; corners?: number }
+  continuity: { held: string; tangent: number; creases: number; curvature: { g2: number; of: number; worstJump: number; worstShare: number; note: string }; boundaries: { curve: number; angle: number; jump?: number; share?: number; g2?: boolean }[]; corners?: number }
   bodies?: { changed?: { id: number; closed?: boolean; surface?: boolean; faces: number }[]; added?: { closed?: boolean; faces: number }[] }
 }
 
@@ -84,10 +84,15 @@ describe('reverse.network.auto', () => {
     }
     expect(made.deviation.worstMax).toBe(Math.max(...made.patches!.map((p) => p.max)))
     expect(made.deviation.rms).toBeLessThan(2 * NOISE)
-    // Tangent across the cuts, the rims folded; curvature said not held.
+    // Tangent across the cuts, the rims folded; the curvature's step read
+    // across each of the four cuts — G1 asked for, and on a cylinder's
+    // sides it is all but continuous anyway.
+    expect(made.continuity.held).toBe('g1')
     expect(made.continuity.tangent).toBeLessThan(0.01)
     expect(made.continuity.creases).toBe(8)
-    expect(made.continuity.curvature).toMatch(/not held/)
+    expect(made.continuity.boundaries.length).toBe(4)
+    expect(made.continuity.curvature.of).toBe(4)
+    for (const b of made.continuity.boundaries) expect(b.jump).toBeLessThan(0.01)
     expect(made.line).toMatch(/closed — a solid/)
     expect(undoLabels().at(-1)).toBe('Agent: lay out patch network “Can skin”')
 

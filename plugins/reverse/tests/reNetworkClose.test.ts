@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// The crease graph closed before a network is laid out (networkClose.ts),
+// on a part whose crease ends in the middle of a face: a 40 × 30 × 20 box
+// with sharp edges whose top is a 60° roof along x for |x| ≤ 5, flattening
+// to none by |x| = 17 — the fold fades out at both ends, 0.01 mm of noise.
+// Suggest creases finds the fold only where it is sharp; its two ends are
+// loose. Closing carries each on along the scan, steered by its principal
+// lines, to the rim ahead, so the top comes out two cells either side of
+// the fold, and the part one closed solid within its noise. Let go (as PR
+// 27 did), the fold is left inside one patch, which misses it by 0.56 mm.
+//
+// And on the app's sample bracket, a real scan: every loose crease end is
+// carried to another curve — where 56 creases were let go before — though
+// the bracket does not lay out whole yet (see the plugin README).
+
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+import { NominalSurface } from '../../../src/core/deviation/surface'
+import { ScanPaths } from '../../../src/core/geometry/scanPath'
+import { parse3MF } from '../../../src/core/parsers/threemf'
+import { Builder } from '../core/build'
+import type { NetworkFeature } from '../core/features'
+import { ReKernel } from '../core/kernel'
+import { type AutoLayout, autoLayout } from '../core/networkAuto'
+import { traceCurve } from '../core/networkCurve'
+import { fadingFoldScan, meshVolume } from './networkMeshes'
+import { build } from './reKit'
+
+const kernelPromise = ReKernel.load()
+const NOISE = 0.01
+const fold = fadingFoldScan(20, 15, 20, 60, 12, 60, NOISE)
+
+async function built(m: { positions: Float32Array; indices: Uint32Array }, l: AutoLayout) {
+  const k = await kernelPromise
+  const f: NetworkFeature = { id: 1, kind: 'network', name: 'Auto', nodes: l.nodes, curves: l.curves, cells: l.cells, spans: {}, fit: { smoothness: 0.001 }, visible: true }
+  const b = new Builder(k)
+  b.setScan(new NominalSurface(m.positions, m.indices), m.positions)
+  const out = await build(b, [f])
+  const r = out.results.find((x) => x.id === 1)!
+  expect(r.status, r.message).toBe('ok')
+  return { report: r.network!, body: out.bodies.find((x) => x.id === 1)! }
+}
+
+describe('a crease that ends in the middle of a face', () => {
+  it('is carried on to the rim ahead, and the part lays out and sews', async () => {
+    const scan = new ScanPaths(fold.positions, fold.indices)
+    const l = autoLayout(scan)
+    const c = l.closing!
+    expect(c.stuck).toEqual([])
+    // Both ends of the fold, each carried on along y = 0 to a rim of the top.
+    expect(c.extended.length).toBe(2)
+    for (const e of c.extended) {
+      expect(Math.abs(Math.abs(e.to[0]) - 20)).toBeLessThan(0.1)
+      expect(Math.abs(e.to[1])).toBeLessThan(0.6)
+      expect(Math.abs(e.to[2] - 20)).toBeLessThan(0.1)
+      expect(e.steered).toBeGreaterThan(0.5)
+    }
+    expect(l.creasesDropped).toBe(0)
+    expect(l.left).toEqual([])
+    expect(l.made.map((x) => x.sides)).toEqual([4, 4, 4, 4, 4, 4, 4])
+    // The fold's curve, rim to rim along its ridge.
+    const at = new Map(l.nodes.map((n) => [n.id, n.at]))
+    const ridge = l.curves
+      .map((x) => traceCurve(scan, [at.get(x.from)!, ...x.via, at.get(x.to)!]).points)
+      .find((p) => Math.abs(p[1]) < 0.6 && p[2] > 19.9 && Math.abs(Math.abs(p[0]) - 20) < 0.1 && Math.abs(Math.abs(p[p.length - 3]) - 20) < 0.1 && Math.sign(p[0]) !== Math.sign(p[p.length - 3]))
+    expect(ridge).toBeTruthy()
+    for (let i = 0; i < ridge!.length; i += 3) expect(Math.abs(ridge![i + 1])).toBeLessThan(0.6)
+
+    const { report, body } = await built(fold, l)
+    expect(report.closed).toBe(true)
+    expect(body.closed).toBe(true)
+    expect(body.faces).toBe(7)
+    expect(Math.abs(body.volume / meshVolume(fold) - 1)).toBeLessThan(0.001)
+    for (const p of report.patches) {
+      expect(p.rms).toBeLessThan(2.5 * NOISE)
+      expect(p.max).toBeLessThan(0.15)
+    }
+  }, 120_000)
+
+  it('let go instead, leaves the fold inside one patch, which misses it', async () => {
+    const l = autoLayout(new ScanPaths(fold.positions, fold.indices), { close: false })
+    expect(l.closing).toBeNull()
+    expect(l.creasesDropped).toBeGreaterThan(0)
+    const { report } = await built(fold, l)
+    expect(Math.max(...report.patches.map((p) => p.max))).toBeGreaterThan(0.4)
+  }, 120_000)
+})
+
+describe('the sample bracket', () => {
+  it('has every loose crease end carried on to another curve', () => {
+    const buf = readFileSync(new URL('../../../public/samples/fridgeBracket_01-reduced.3mf', import.meta.url))
+    const m = parse3MF(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength))
+    const l = autoLayout(new ScanPaths(m.positions, m.indices!))
+    const c = l.closing!
+    // 50 loose ends among Suggest creases' 105 curves: less the weak ones
+    // and the chips, the rest carried on, none let go for it.
+    expect(c.extended.length).toBeGreaterThanOrEqual(25)
+    expect(c.stuck.length).toBeLessThanOrEqual(2)
+    expect(l.creasesDropped).toBeLessThanOrEqual(2)
+    expect(l.made.length).toBeGreaterThanOrEqual(5)
+  }, 180_000)
+})

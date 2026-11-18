@@ -52,7 +52,7 @@ export interface NetworkReport {
    *  the kernel's faces lie — on the ghost, which makes none, as the
    *  patches do), and the largest angle between the patches' normals
    *  along it (deg). */
-  curves: { curve: number; gap: number; angle: number; crease: boolean }[]
+  curves: { curve: number; gap: number; angle: number; crease: boolean; curvature?: { jump: number; share: number; g2: boolean } }[]
   corners: { node: number; at: Vec3; patches: number; angle: number }[]
   strips: { spans: number; auto: boolean; curves: number[] }[]
   /** Curves left out: a node gone, a trace empty. */
@@ -77,7 +77,7 @@ export interface NetworkReport {
 export function emptyReport(reading: NetworkReading): NetworkReport {
   const fit = reading.fit
   if (!fit) return { patches: [], cells: reading.outcomes, unfilled: reading.cells.unfilled, curves: [], corners: [], strips: [], lost: reading.traced.lost, ...splitOf(reading), bodies: [], closed: false, worstAngle: 0, worstGap: 0, ms: { ...reading.ms, faces: 0 } }
-  const curves = fit.shared.map((s) => ({ curve: s.curve, gap: s.gap, angle: s.angle, crease: s.crease }))
+  const curves = fit.shared.map((s) => ({ curve: s.curve, gap: s.gap, angle: s.angle, crease: s.crease, ...(s.curvature ? { curvature: s.curvature } : {}) }))
   return {
     patches: fit.patches.map((p) => ({ seed: p.seed, rms: p.rms, max: p.max, misfit: p.misfit, net: { u: p.net.nu, v: p.net.nv }, points: p.points, worst: p.worst, ...(p.dropped !== undefined ? { dropped: p.dropped } : {}), sides: p.sides.map((s) => s.edges.map((h) => h.curve)), corners: p.corners, grid: sampled(p) })),
     cells: reading.outcomes,
@@ -218,7 +218,7 @@ export function networkBody(k: ReKernel, reading: NetworkReading): { shape: Shap
         curvePoint(f.poles, f.spans, (i + 0.5) / GAP_SAMPLES, q)
         gap = Math.max(gap, k.distanceToPoint(faces[s.patches[0]], q) + k.distanceToPoint(faces[s.patches[1]], q))
       }
-      return { curve: s.curve, gap: Math.max(gap, s.gap), angle: s.angle, crease: s.crease }
+      return { curve: s.curve, gap: Math.max(gap, s.gap), angle: s.angle, crease: s.crease, ...(s.curvature ? { curvature: s.curvature } : {}) }
     })
     const worstGap = shared.reduce((m, s) => Math.max(m, s.gap), 0)
     const closed = networkCloses(fit)
