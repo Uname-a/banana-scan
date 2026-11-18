@@ -10,6 +10,13 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **scan.qa and mesh.inspect run as jobs** (agent server, 2026-11-17).
+  Both read the whole scan. On a few million triangles, or on a busy
+  computer, they outlast the server's answer limit (40 s in Scan2CAD
+  Local), and as plain reads they were refused there: "did not answer
+  within 40 s". They are long reads now, run as jobs like
+  reverse.body.review: answered `{ queued, job }` at the limit,
+  `bananascan_wait` gives the answer, and both take `wait`.
 - **Unroll / flatten** (Mesh Tools, 2026-11-17). A flat pattern of a
   surface of the scan, true to size, to cut it from sheet: drawn in the
   panel and saved as a DXF or an SVG in millimetres, the outline and the

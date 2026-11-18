@@ -333,6 +333,8 @@ const inspect: Command<{ pieceSize?: number; holeSize?: number; deviation?: bool
     deviation: bool('Measure the edited copy against the scan in use.'),
   }),
   readOnly: true,
+  // Over the whole mesh, as scan.qa: run as a job, not refused at the answer limit.
+  long: true,
   run: async ({ pieceSize, holeSize, deviation }) => {
     requireScan()
     const t = client()
