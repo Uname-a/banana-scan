@@ -139,7 +139,7 @@ export type BuildStep =
   /** A sketch's profiles wrapped onto a cylinder, cone or plane and given
    *  a depth along its normal — see WrapFeature and core/buildWrap.ts.
    *  `sketches`: the one sketch, as a loft's. */
-  | ({ kind: 'wrap'; id: number; name: string; sketchId: number; regions: string[]; regionsByPlace?: string[]; regionPick?: RegionPick['given']; sketches: number[]; op: BodyOp; target?: number } & WrapGeometry)
+  | ({ kind: 'wrap'; id: number; name: string; sketchId: number; regions: string[]; regionsByPlace?: string[]; regionPick?: RegionPick['given']; maxStretchPct?: number; sketches: number[]; op: BodyOp; target?: number } & WrapGeometry)
   /** A sheet body made a solid — see ThickenFeature. */
   | { kind: 'thicken'; id: number; name: string; sheet: number; thickness: number; side: ThickenSide; op: BodyOp; target?: number }
   | { kind: 'pattern'; id: number; name: string; body: number; mode: 'circular' | 'linear'; origin: Vec3; dir: Vec3; count: number; step: number; grid?: { dir: Vec3; count: number; step: number } }

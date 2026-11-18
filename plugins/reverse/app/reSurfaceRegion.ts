@@ -50,7 +50,7 @@ export function boxByExprs(asked: RegionQuery, exprs: Record<string, unknown> | 
 
 /** Whether a surface's input asks for its region by a query. */
 export function asksRegion(kind: string, input: Record<string, unknown>): boolean {
-  return kind === 'surface' && input.region !== undefined && input.region !== null && !Array.isArray(input.region)
+  return (kind === 'surface' || kind === 'wrap') && input.region !== undefined && input.region !== null && !Array.isArray(input.region)
 }
 
 const inBox = (p: Float32Array, i: number, b: Box) =>
@@ -58,7 +58,7 @@ const inBox = (p: Float32Array, i: number, b: Box) =>
 
 /** The vertices a region query names, on the scan as it is now. */
 export async function regionOf(asked: RegionQuery): Promise<number[]> {
-  if (!useStore.getState().fileName) throw new CommandError('no_scan', 'A surface is fitted through the scan, and none is open.')
+  if (!useStore.getState().fileName) throw new CommandError('no_scan', 'A region is read off the scan, and none is open.')
   let vertices: number[]
   let what: string
   if (asked.marked !== undefined) {

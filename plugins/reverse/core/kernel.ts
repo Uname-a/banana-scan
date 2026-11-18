@@ -800,6 +800,25 @@ export class ReKernel {
     })
   }
 
+  /** Points taken onto a one-face sheet: the nearest point of its surface
+   *  to each, and its normal there, the way the face's normal points. */
+  sheetPoints(sheet: Shape, points: readonly Vec3[]): { point: Vec3; normal: Vec3 }[] {
+    return run('Reading the sheet', () => {
+      const o = this.occt
+      const faces = o.getSubShapes(sheet, 'face')
+      try {
+        if (faces.length !== 1) throw new KernelError(`the sheet has ${faces.length} faces, not one.`)
+        const face = faces[0]
+        return points.map((p) => {
+          const { u, v } = o.uvFromPoint(face, xyz(p))
+          return { point: vec(o.pointOnSurface(face, u, v)), normal: normalize(vec(o.surfaceNormal(face, u, v))) ?? ([0, 0, 1] as Vec3) }
+        })
+      } finally {
+        for (const f of faces) o.release(f)
+      }
+    })
+  }
+
   /** Every face the tools cut the shape into — each once, though the
    *  fragments share them — for the trim to test against the scan. The
    *  faces are the compound's, kept alive by their handles after the

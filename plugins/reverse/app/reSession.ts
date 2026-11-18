@@ -663,7 +663,7 @@ export function createReverseSession({
   /** The scan's vertices without a viewport to read them off — every one
    *  of them, from the mesh worker, in the frame the part is measured in
    *  now, with their normals; null with no scan, or no worker. */
-  const scanFromWorker = async (): Promise<{ positions: Float32Array; normals: Float32Array } | null> => {
+  const scanFromWorker = async (): Promise<{ positions: Float32Array; normals: Float32Array; triangles: Uint32Array | null } | null> => {
     const s = useStore.getState()
     if (!s.fileName || s.vertexCount === 0) return null
     let worker
@@ -675,7 +675,10 @@ export function createReverseSession({
     }
     if (!worker) return null
     const all = await worker.query({ min: [-Infinity, -Infinity, -Infinity], max: [Infinity, Infinity, Infinity], limit: s.vertexCount })
-    return { positions: all.positions, normals: all.normals }
+    // Its triangles too, for a wrap onto a region of it: numbered as the
+    // query numbers the vertices, every one of them taken in order.
+    const tri = all.step === 1 && all.vertices.length === s.vertexCount ? await worker.scanIndices().catch(() => null) : null
+    return { positions: all.positions, normals: all.normals, triangles: tri && tri.vertexCount === all.vertices.length ? tri.indices : null }
   }
 
   /** Give the kernel the scan as the viewport shows it — or, without a
@@ -694,7 +697,7 @@ export function createReverseSession({
     scanSent = now
     const fromWorker = scene ? null : await scanFromWorker()
     const positions = scene ? scene.scanPositions() : (fromWorker?.positions ?? null)
-    const sending = client.setScan(positions ? positions.slice() : null, null, scene ? scene.scanIndices() : null, fromWorker?.normals ?? null)
+    const sending = client.setScan(positions ? positions.slice() : null, null, scene ? scene.scanIndices() : null, fromWorker?.normals ?? null, fromWorker?.triangles ?? null)
     scanSending = sending
     try {
       await sending

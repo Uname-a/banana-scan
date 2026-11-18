@@ -30,7 +30,7 @@ import { datumTraces } from './datums'
 import { projectEdge, projectSketchEntity, retake, retakeMoved } from './project'
 import { findRegions, lostPicks, matchRegions, type Region, regionsByPick, samePick } from './regions'
 import { solveSketch } from './solver'
-import { carriedHeight, fitSurfaceReported, GRID_AREA_SLACK, GRID_RETRIES, gridArea, gridOf, meshTriangles, reachingGridOf, reachOver, StraysRefusal, type SurfaceFitResult } from './surfaceFit'
+import { carriedHeight, DEFAULT_SURFACE_FIT, fitSurfaceReported, GRID_AREA_SLACK, GRID_RETRIES, gridArea, gridOf, meshTriangles, reachingGridOf, reachOver, StraysRefusal, type SurfaceFitResult } from './surfaceFit'
 import { fieldAt, type NearScan, offPastRegion, PAST_REGION_MM, pastRegion, regionOutline } from './surfaceRegion'
 import { constrainCylinder, constrainPlane, cylinderPatch, planePatch, type ConstrainRef } from './autoConstrain'
 import { surfaceOfMeshes } from './liveMap'
@@ -38,8 +38,9 @@ import { describeEdge, describeFace, edgeDistance, faceDistance, matchEdge, matc
 import { livePicks, runStoredWhere, sharpBySurfaces, type StoredPick, whereWords } from './where'
 import { type Body, bodyBrief, type BodyCheck, type BodyStep, boxesMeet, type BuildResult, type BuildSteps, type BuiltBody, type Diagnosis, diagonalOf, type DrawnBody, type DrawnBuild, type EdgeBrief, type EdgeInfo, type FaceInfo, type FeatureResult, type FilletTries, type FilletTry, halton, type KeptBuild, type Look, meshBox, meshDeflection, type Overlap, pickEach, type PlacedSketch, type PrefixNode, type PreviewResult, type PreviewStep, type RoundTrip, type RoundTripFind, type SketchStep, type Snapshot, type SolidStep, SPLIT_SAMPLES, stepKeys, surfaceMeshDeflection, SURFACE_TRIANGLES, type OffScanReport, type SurfaceReport, type TrimReport } from './buildTypes'
 import { cylinderSolid, primitiveSolid } from './primitives'
-import { wrapSolid } from './buildWrap'
-import { profilesMiddle } from './wrap'
+import { regionWrapSolid, wrapSolid } from './buildWrap'
+import { profilesMiddle, wrapOfGeometry, type WrapSurface } from './wrap'
+import { layOutRegion, regionDevelopment, type RegionLayout, stretchProblem, stretchUnder, WRAP_REGION_MAX_STRETCH_PCT, WRAP_REGION_WARN_STRETCH_PCT } from './wrapRegion'
 import { extrudeUpTo, fuseAll, outlineOf, reachAlong, taperedPrism, taperLimitOf, taperRefusal, trimByPlanes } from './buildExtrude'
 import { NOTHING, noteRead, ReadMap, readsStand, ReadSet, replay, type StateName, type StepReads } from './buildReads'
 import { objectsOf, readPart, type PartExport, type Tokens, writePart } from './buildTransfer'
@@ -192,6 +193,9 @@ export class Builder {
   /** The scan's vertices, the frame the bodies are built in — what a
    *  surface is fitted through, by the region's indices. */
   private scanPositions: Float32Array | null = null
+  /** The scan's triangles, by the same vertex numbers — what a region of it
+   *  is laid out flat by for a wrap onto it (core/wrapRegion.ts). */
+  private scanTriangles: Uint32Array | null = null
 
   /** The builder's state after every step of the builds it made, in a
    *  tree of steps by their keys (stepKeys) from the first: what a build
@@ -312,9 +316,10 @@ export class Builder {
    *  first time a network is built on this scan. */
   private paths: ScanPaths | null = null
 
-  setScan(surface: NominalSurface | null, positions: Float32Array | null = null): void {
+  setScan(surface: NominalSurface | null, positions: Float32Array | null = null, triangles: Uint32Array | null = null): void {
     this.scan = surface
     this.scanPositions = positions
+    this.scanTriangles = triangles
     this.paths = null
     // A split and a trim test against the scan: built against another one,
     // the same steps may not come out the same. The build standing stays —
@@ -2068,7 +2073,51 @@ export class Builder {
 
   /** A wrap's solid: its profiles on the surface, between their offsets. */
   private wrapOf(step: Extract<BuildStep, { kind: 'wrap' }>): Shape {
-    return wrapSolid(this.kernel, this.wrapPlaced(step))
+    const placed = this.wrapPlaced(step)
+    if (placed.surface.kind === 'region') return this.wrapRegionOf(placed, placed.surface)
+    return wrapSolid(this.kernel, placed)
+  }
+
+  /** The last region laid out, by its vertices: the layout a preview and
+   *  the build after it share. */
+  private regionLayout: { key: Uint32Array; scan: Float32Array; layout: RegionLayout } | null = null
+
+  /** A region of the scan laid out flat — or why not. */
+  private layoutOf(region: Uint32Array): RegionLayout {
+    const scan = this.scanPositions
+    const triangles = this.scanTriangles
+    if (!scan || !triangles) throw new Error('The scan’s triangles are not here to lay the region out by — open the scan in the Reverse engineer again.')
+    const kept = this.regionLayout
+    if (kept && kept.scan === scan && kept.key.length === region.length && kept.key.every((v, i) => v === region[i])) return kept.layout
+    for (let i = 0; i < region.length; i++) if (region[i] >= scan.length / 3) throw new Error('The region names a vertex the scan does not have — it was marked on another scan.')
+    const layout = layOutRegion(scan, triangles, scan.length / 3, region)
+    if (typeof layout === 'string') throw new Error(layout)
+    this.regionLayout = { key: Uint32Array.from(region), scan, layout }
+    return layout
+  }
+
+  /** A wrap onto a region of the scan: the region laid out, the sketch
+   *  placed in the layout and carried back, refused where the layout
+   *  stretches the scan under it past the limit; then stood on a sheet
+   *  fitted through the region. */
+  private wrapRegionOf(step: Extract<BuildStep, { kind: 'wrap' }>, surface: Extract<WrapSurface, { kind: 'region' }>): Shape {
+    const layout = this.layoutOf(surface.region)
+    const made = wrapOfGeometry(step, (s, n, m) => regionDevelopment(layout, s, n, m))
+    if (typeof made === 'string') throw new Error(made)
+    const stretch = stretchUnder(layout, made.wrapped)
+    const problem = stretchProblem(stretch, step.maxStretchPct ?? WRAP_REGION_MAX_STRETCH_PCT)
+    if (problem) throw new Error(problem)
+    if (stretch.maxPct > WRAP_REGION_WARN_STRETCH_PCT) this.stepWarnings.push(`Laying the region out stretches a length under the sketch by up to ${Math.round(stretch.maxPct * 100) / 100} % (${Math.round(stretch.meanPct * 1000) / 1000} % on average): the sketch's lengths on the scan are true to that.`)
+    const scan = this.scanPositions!
+    const xyz = new Float32Array(surface.region.length * 3)
+    for (let i = 0; i < surface.region.length; i++) for (let k = 0; k < 3; k++) xyz[i * 3 + k] = scan[surface.region[i] * 3 + k]
+    const { fit } = fitSurfaceReported(xyz, DEFAULT_SURFACE_FIT)
+    const sheet = this.faceThrough(fit)
+    try {
+      return regionWrapSolid(this.kernel, step, made.dev, made.wrapped, sheet)
+    } finally {
+      this.kernel.release(sheet)
+    }
   }
 
   /** A sweep's solid, from its sketches as the build placed them. */

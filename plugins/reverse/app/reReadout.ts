@@ -77,6 +77,11 @@ export function featureOut(f: Feature): Record<string, unknown> {
     const { region, ...rest } = f
     return { ...rest, region: { points: region.length } }
   }
+  if (f.kind === 'wrap' && f.region) {
+    const { region, ...rest } = f
+    const out = { ...(featureToJson(rest as Feature) as unknown as Record<string, unknown>), region: { points: region.length } }
+    return 'exprs' in f && f.exprs ? { ...exprFieldsShown(out, f.exprs), exprs: exprsForCommand(f.kind, f.exprs) } : out
+  }
   if (f.kind !== 'sketch') {
     const out = queriesShown(featureToJson(f) as unknown as Record<string, unknown>)
     return 'exprs' in f && f.exprs ? { ...exprFieldsShown(out, f.exprs), exprs: exprsForCommand(f.kind, f.exprs) } : out
