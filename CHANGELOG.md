@@ -10,6 +10,27 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **Auto layout closes the crease graph, and patches can meet G2**
+  (Reverse engineer, 2026-11-17). Before Auto layout reads the regions,
+  creases that end in the open are carried on along the scan's lines of
+  principal curvature to the next curve; crossings are snapped into nodes,
+  near ends joined, weak creases (under 30°) and short loose chips let go,
+  and regions no loop closes round untangled. A region of three loops or
+  more is cut from loop to loop along the principal lines. A synthetic
+  part whose fold fades out mid-face now lays out and sews: 7 faces within
+  0.013 % of its volume, every patch under 0.021 mm RMS (its fold was
+  missed by 0.56 mm when the crease was let go). The fit's new
+  `continuity: "g2"` holds patches curvature-continuous across their
+  tangent curves, and every network now reads the curvature's step across
+  each tangent curve: G1 steps 9–10 % across a rounded box's cuts, G2
+  1–2 %; a blended box comes to 3–7 % from 18–50 %.
+  `reverse.network.auto` answers with how the graph was closed and each
+  boundary's angle and curvature jump. Not reached: the sample fridge
+  bracket still does not lay out whole — every loose crease end is carried
+  on (31), but its largest regions are bounded by loops that meet
+  themselves, and 6 come out cells; G2 is held by weight at the poles, and
+  not where three, five or six patches meet.
+
 - **A reduction past the triangle limit no longer pins first** (Mesh Tools,
   2026-11-17). When the plain reduction to the tolerance already needs more
   triangles than the limit, pins could only keep more, so the scan is

@@ -23,6 +23,7 @@ import { traceNetwork } from '../core/network'
 import type { NetworkReport } from '../core/networkBody'
 import { readCells } from '../core/networkCells'
 import { type AutoLayout, autoLayout } from '../core/networkAuto'
+import { G2_SHARE } from '../core/networkFit'
 import { suggestCreases } from '../core/networkCreases'
 import { type CurveTrace, SPANS_MAX, SPANS_MIN, traceCurve } from '../core/networkCurve'
 import { addCurve, addSeeds, cloneData, emptyNetworkDraft, insertGrip, moveGrip, moveNode, networkDraftOf, networkReady, removeCurve, removeGrip, removeNode, removeSeed, setNetworkFit, setStripSpans, splitCurve, toggleCrease } from '../state/reNetworkDraft'
@@ -110,6 +111,7 @@ const fitIn = obj(
     smoothness: num('Fairing weight: 0 exact, 0.001 (the default) fairs noise, 0.1 smooths well over it.', { minimum: 0 }),
     robust: bool('Fit again without the points past three sigmas of the first fit.'),
     tolerance: num('mm, 0.01 by default: how far Auto lets a patch miss the scan before adding spans.', { minimum: 0 }),
+    continuity: enumOf(['g1', 'g2'], 'g1 (the default): tangent across each curve not a crease. g2: their curvature square to the curve held alike either side too (curvature-continuous, Class A) — as near as the scan lets; each curve’s curvature jump is read either way.'),
   },
   [],
   'How the patches are fitted to the scan.',
@@ -813,7 +815,7 @@ interface AutoIn {
   creases?: boolean
   strongDeg?: number
   weakDeg?: number
-  fit?: { smoothness?: number; robust?: boolean; tolerance?: number }
+  fit?: { smoothness?: number; robust?: boolean; tolerance?: number; continuity?: 'g1' | 'g2' }
   detail?: 'none' | 'brief'
 }
 
@@ -822,6 +824,20 @@ function layoutOut(l: AutoLayout): Json {
   return {
     creases: l.creases,
     ...(l.creasesDropped > 0 ? { creasesDropped: l.creasesDropped } : {}),
+    ...(l.creasesWeak > 0 ? { creasesWeak: l.creasesWeak } : {}),
+    ...(l.creasesChips > 0 ? { creasesChips: l.creasesChips } : {}),
+    ...(l.closing
+      ? {
+          closing: {
+            crossings: l.closing.crossings,
+            joined: l.closing.joined,
+            extended: l.closing.extended.map((e) => ({ from: e.from.map(r4), to: e.to.map(r4), length: r4(e.length), steered: Math.round(e.steered * 100) / 100 })),
+            ...(l.closing.contracted > 0 ? { contracted: l.closing.contracted } : {}),
+            ...(l.closing.stuck.length > 0 ? { stuck: l.closing.stuck.map((x) => ({ at: x.at.map(r4), why: x.why })) } : {}),
+          },
+        }
+      : {}),
+    ...(l.untangled > 0 ? { untangled: l.untangled } : {}),
     cuts: l.cuts,
     cells: l.made.length,
     patches: l.patches,
@@ -849,16 +865,32 @@ function deviationOut(report: NetworkReport | undefined): Json | null {
 
 /** How the patches meet: tangent across the curves not creases (the
  *  angle), near tangent at the corners of three, five or six patches with
- *  no crease (the worst), and what is not held. */
+ *  no crease (the worst), and — curve by curve — the curvature's step
+ *  across each, whether G2 was asked for or not. */
 function continuityOut(f: NetworkFeature | undefined, report: NetworkReport | undefined): Json | null {
   if (!f || !report || report.patches.length === 0) return null
   const creaseAt = new Set(f.curves.filter((c) => c.crease).flatMap((c) => [c.from, c.to]))
   const smooth = report.corners.filter((c) => !creaseAt.has(c.node))
+  const tangent = report.curves.filter((c) => !c.crease)
+  const read = tangent.filter((c) => c.curvature)
+  const held = f.fit.continuity === 'g2' ? 'g2' : 'g1'
+  const reached = read.filter((c) => c.curvature!.g2).length
   return {
+    held,
     tangent: r4(report.worstAngle),
     ...(smooth.length > 0 ? { corners: r4(Math.max(...smooth.map((c) => c.angle))) } : {}),
     creases: report.curves.filter((c) => c.crease).length,
-    curvature: 'not held: the patches meet tangent (G1) across each curve not a crease; their curvature may step there (G2 is not fitted)',
+    curvature: {
+      g2: reached,
+      of: read.length,
+      worstJump: r4(Math.max(0, ...read.map((c) => c.curvature!.jump))),
+      worstShare: r4(Math.max(0, ...read.map((c) => c.curvature!.share))),
+      note:
+        reached === read.length
+          ? `every curve not a crease is curvature-continuous within ${Math.round(G2_SHARE * 100)} % (G2)`
+          : `${read.length - reached} of ${read.length} curves not creases step in curvature by more than ${Math.round(G2_SHARE * 100)} % — ${held === 'g2' ? 'held toward G2 as near as the scan and the poles let' : 'G1 only; fit.continuity g2 holds it'}; and where three, five or six patches meet, neither is held`,
+    },
+    boundaries: tangent.map((c) => ({ curve: c.curve, angle: r4(c.angle), ...(c.curvature ? { jump: r4(c.curvature.jump), share: r4(c.curvature.share), g2: c.curvature.g2 } : {}) })),
   }
 }
 
@@ -866,7 +898,7 @@ export const networkAuto: Command<AutoIn> = {
   name: 'auto',
   title: 'Lay out a patch network by itself',
   description:
-    'Make a Patch network laid out by itself over the whole scan, one undo step: the scan’s creases (reverse.network.suggest_creases) as crease curves, and the regions they leave cut into cells of three to six sides by tangent curves that follow the part — a smooth loop (a rim with rounded corners, a circle) given four corners spread round it, a ring between two loops (a side wall between sharp rims) cut across from one loop’s corners to the other’s, down the middles of its rounds; a cell of more than six corners cut in two; a closed scan with no crease laid out as a box round its principal axes, its corners and curves on its corner and edge blends. A region of three loops or more, or one the scan’s own rim bounds (an open scan), is left out and said why. The patches are fitted together and sewn as reverse.network.create’s: tangent (G1) across every curve not a crease, near tangent where three, five or six meet; their curvature is not held across a curve (no G2). Answers as reverse.network.create, and layout (creases, cuts, cells, patches, each region as found with what was done, left), deviation (the patches’ RMS over all, worst RMS, worst point and its patch, mm) and continuity (tangent: worst angle across a tangent curve, deg; corners: worst where patches meet with no crease; creases). A closed network is a solid. reverse.network.read reads it whole, reverse.network.edit changes it.',
+    'Make a Patch network laid out by itself over the whole scan, one undo step: the scan’s creases (reverse.network.suggest_creases) as crease curves, and the regions they leave cut into cells of three to six sides by tangent curves that follow the part — a smooth loop (a rim with rounded corners, a circle) given four corners spread round it, a ring between two loops (a side wall between sharp rims) cut across from one loop’s corners to the other’s, down the middles of its rounds; a cell of more than six corners cut in two; a closed scan with no crease laid out as a box round its principal axes, its corners and curves on its corner and edge blends. A region of three loops or more is cut from its nearest loop to its longest by two curves along the principal lines; one the scan’s own rim bounds (an open scan), or that cannot be cut, is left out and said why. The patches are fitted together and sewn as reverse.network.create’s: tangent (G1) across every curve not a crease, near tangent where three, five or six meet; their curvature is held alike across them too with fit.continuity g2 (Class A, as near as the scan lets). Before the regions are read, the crease graph is closed: creases turning under 30° and short loose chips let go, crossings snapped into nodes, near ends joined, and every loose end carried on along the scan’s principal-curvature lines to the next curve; regions no loop of curves closes round are untangled by letting go of their shortest curve. Answers as reverse.network.create, and layout (creases, closing, cuts, cells, patches, each region as found with what was done, left), deviation (the patches’ RMS over all, worst RMS, worst point and its patch, mm) and continuity (held; tangent: worst angle across a tangent curve, deg; corners: worst where patches meet with no crease; creases; curvature: how many curves not creases are G2 within 5 %, the worst jump 1/mm and share; boundaries: each curve’s angle, jump, share and g2). A closed network is a solid. reverse.network.read reads it whole, reverse.network.edit changes it.',
   input: obj({
     name: str('The feature’s name; “Patch network n” when left out. Unique across sketches and features.', { minLength: 1 }),
     creases: bool('Take the scan’s creases as crease curves (true, the default); false lays the scan out as if it had none.'),
