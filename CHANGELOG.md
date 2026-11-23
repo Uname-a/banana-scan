@@ -10,6 +10,25 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A bent sheet's skin, named by a point; points placed on its flat
+  pattern** (Mesh Tools, 2026-11-23). A region may now be `skin: { at }`:
+  one skin of a bent sheet, grown from the triangle nearest the point
+  across its bends for as long as the surface bends no tighter than
+  `minRadius` (0.6 mm to start), and no further — a sheet's edge is a
+  corner, so the other skin is never reached. The turn is read between
+  triangles' own normals, not the vertices': a vertex on a corner takes a
+  normal between its faces, and a chain of them walked round a corner in
+  steps small enough to pass for a bend. With `thickness`, a triangle
+  facing against the skin and behind it within 1.5 times that is kept out
+  where an edge was scanned soft. That is what `mesh.flatten` wants, and
+  what a box round a bent part could not name. `mesh.pattern_points`
+  places points of the sheet on the pattern it was flattened to, for lines
+  to draw on the blank — a bend's centre line read off its round in 3D.
+  On a scanned L, 2 mm thick, its inside radius 2 mm, 50 mm wide: the
+  outer skin flattened to 70.38 × 50.10 mm (70.28 × 50 true), the inner
+  to 67.08 × 50.22 (67.14 × 50), all four holes, its bend line straight
+  across it to within 0.03 mm, 0.12 mm from where it lies.
+
 - **Auto layout takes the sample bracket to 72 % built, nothing refused**
   (Reverse engineer, 2026-11-18). Where a part is laid out down its rounds,
   crossings are snapped near a node two curves share too (curves leaving

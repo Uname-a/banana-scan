@@ -31,13 +31,14 @@ Both write their pattern with `mesh_export_pattern` as a DXF or an SVG, in milli
 
 ## 3. Flatten a bent sheet
 
-1. Name the sheet: `mesh_flatten { region }` with a box round the part and `facing` to keep one skin (`{ box, facing: [0, 0, 1], angleDeg: 80 }` keeps what faces up, not what faces down), or `"marked"` for what the person marked. Only the largest connected piece is laid out; `leftOut` counts the rest.
+1. Name the sheet. A bent sheet's skin faces every way round its bends, so a box with `facing` keeps only the flanges that face one way: name it by a point instead, `mesh_flatten { region: { skin: { at } } }` with `at` in the middle of a flange on the skin wanted, away from its edges and holes. The skin is grown from there across the bends and stops at the sheet's edges, which are corners — the other skin is never reached. `minRadius` (0.6 mm to start) is the tightest bend followed: the outer skin bends at the inside radius and the thickness, so start there; lower it for a tight bend on the inner skin. Give `thickness` too where an edge was scanned soft, so the far skin is kept out. A flat part or a single face still takes a box with `facing`, or `"marked"` for what the person marked. Only the largest connected piece is laid out; `leftOut` counts the rest.
 2. Read `distortion`, per cent:
    - `lengthPercent` — a length on the pattern against the same length on the scan, in the direction each triangle changed most: `max`, `mean` and `p95` over the surface, by area.
    - `areaPercent` — the same for area; `totalAreaPercent` for the whole pattern.
    - `flipped` — triangles turned over: the pattern overlaps itself. Anything but 0 and the pattern is wrong — the region is not a sheet (a closed tube, both skins, a fold the scanner made).
 3. Judge it: a sheet bent from flat reads a mean of a fraction of a per cent, the max a little more where the scan is rough. A dished, drawn or stretched part — which no flat blank makes exactly — reads several per cent; say so, and that the blank is an estimate. A closed tube or a band right round a part cannot be flattened without cutting it: unroll it by its cylinder instead.
-4. The pattern is turned so the smallest rectangle round it lies along x and y, its long side along x. A flattening says nothing about where the bend lines were; read those off the 3D part (sections across the bends) if they are needed.
+4. The pattern is turned so the smallest rectangle round it lies along x and y, its long side along x. The bend lines are not drawn: read each bend off the 3D part (its round, `element_fit` or a section across it), then `mesh_pattern_points { points }` with points along the middle of its round on the skin laid out — they come back as [u, v] on the pattern, on one line for a bend made straight. A point more than 2 mm off the sheet comes back null.
+5. The blank: the skin laid out is longer than the neutral fibre by the thickness's share at each bend — at a bend of angle θ (radians) and inside radius r, the outer skin's arc is θ(r + t), the inner's θr, the blank's θ(r + K t) with K the K-factor (about 0.33 to 0.5 for steel folded on a press brake). Say which skin, the bends and their angles, and the K-factor any correction assumed.
 
 ## 4. The files
 

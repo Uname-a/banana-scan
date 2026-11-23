@@ -24,8 +24,9 @@ export function selectVertices(
   vertexCount: number,
   region: MeshRegion,
 ): Uint32Array {
+  if (region.skin) throw new Error('A skin is grown over the triangles: skinVertices (core/skin) finds it.')
   const shapes = [region.box, region.sphere, region.vertices].filter((x) => x !== undefined).length
-  if (shapes !== 1) throw new Error('Name the surface one way: a box, a sphere or a list of vertices.')
+  if (shapes !== 1) throw new Error('Name the surface one way: a box, a sphere, a list of vertices or a skin.')
   let facing: Vec3 | null = null
   if (region.facing) {
     const [x, y, z] = region.facing

@@ -78,7 +78,7 @@ export async function makePattern(tools: Tools, job: PatternJob, units: DisplayU
       made = { mode: 'unroll', points: r.points, offsets: r.offsets, report: r.report, offset: job.offset, source: job.element.name }
     } else {
       const r = await tools.flatten(job.region, job.iterations)
-      made = { mode: 'flatten', points: r.points, offsets: r.offsets, report: r.report, source: 'region' }
+      made = { mode: 'flatten', points: r.points, offsets: r.offsets, report: r.report, layout: r.layout, source: 'region' }
     }
     if (scanVersion !== tools.scanVersion || editedVersion !== tools.editedVersion) return null
     usePattern.getState().resolve(made)

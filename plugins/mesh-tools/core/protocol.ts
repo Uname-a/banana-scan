@@ -24,6 +24,7 @@ import type { PointPair } from '../../../src/core/deviation/align'
 import type { OverlapResult } from '../../../src/core/deviation/overlap'
 import type { UnrollReport, UnrollSurface } from './unroll'
 import type { FlattenReport } from './flatten'
+import type { SkinSettings } from './skin'
 
 /** The plugin's id, which its worker part answers to. */
 export const MESH_TOOLS = 'mesh-tools'
@@ -126,11 +127,13 @@ export interface TrimResult {
 /** Surface named without a mouse, as a marking would mark it: the
  *  vertices inside an axis-aligned box or a ball, or a list of them by
  *  number — of those, only the ones whose normal is within `angleDeg` of
- *  `facing`, when that is given (core/select). */
+ *  `facing`, when that is given (core/select) — or one skin of a bent
+ *  sheet, grown from a point on it (core/skin). */
 export interface MeshRegion {
   box?: { min: Vec3; max: Vec3 }
   sphere?: { center: Vec3; radius: number }
   vertices?: Uint32Array
+  skin?: SkinSettings
   facing?: Vec3
   angleDeg?: number
 }
@@ -217,5 +220,5 @@ export interface MeshToolsOps {
   unroll: { payload: { surface: UnrollSurface; vertices: Uint32Array | null; band: number; offset: number }; result: PatternResult<UnrollReport> }
   /** The region flattened with the least distortion (core/flatten).
    *  Nothing changes. */
-  flatten: { payload: { vertices: Uint32Array; iterations?: number }; result: PatternResult<FlattenReport> }
+  flatten: { payload: { vertices: Uint32Array; iterations?: number }; result: PatternResult<FlattenReport> & { layout: { positions: Float64Array; uv: Float64Array } } }
 }
