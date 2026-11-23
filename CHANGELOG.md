@@ -10,6 +10,19 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A sketch's pieces that nothing ties together are solved apart, and a
+  drilled hole's cut is one circle** (Reverse engineer, 2026-11-23). A
+  section of a plate with many holes was one solve over every piece of it,
+  one hole slow to settle damping the steps of all the rest until the steps
+  ran out: a plate with 160 holes took 22 s and was refused. Each group of
+  pieces that shares no relation is solved by itself now, and the count of
+  redundant relations and of loose pieces is taken group by group; what is
+  tied through a fixed piece alone is apart too. And a closed cut that comes
+  out as two or three pieces where one circle holds all its points as well,
+  a facet of the mesh taken for a line or two arcs of a near radius, is that
+  circle: the pieces, tangent at both their ends, could not be solved. The
+  160 holes are fitted in 1.6 s, every one a circle.
+
 - **A varying round's radii driven by parameters** (Reverse engineer,
   2026-11-23). Each edge a fillet rounds from a start radius to an end one
   takes an expression for either, in its box and in `exprs`
