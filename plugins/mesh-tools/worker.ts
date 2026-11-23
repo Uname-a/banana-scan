@@ -28,6 +28,7 @@ import { loadManifold } from './core/manifold'
 import { defaultBreakSpeck, findBreak } from './core/breakSurface'
 import { prepareBody, trimToScan, type PreparedBody } from './core/trimToScan'
 import { selectVertices } from './core/select'
+import { skinVertices } from './core/skin'
 import { mergeScan, type OtherScan } from './core/merge'
 import { overlapAuto, overlapFromPairs } from '../../src/core/deviation/overlap'
 import { MESH_TOOLS, type MeshEditReport, type MeshToolsOps, type TrimBody } from './core/protocol'
@@ -263,7 +264,9 @@ const ops: { [K in keyof MeshToolsOps]: (payload: Payload<K>, ctx: WorkerContext
 
   select({ region }, ctx) {
     const g = subjectOf(ctx)
-    const vertices = selectVertices(g.positions, g.normals, g.vertexCount, region)
+    // One skin of a sheet, grown over the triangles from a point on it; any other region by where its vertices lie.
+    if (region.skin && (region.box || region.sphere || region.vertices)) throw new Error('Name the surface one way: a box, a sphere, a list of vertices or a skin.')
+    const vertices = region.skin ? skinVertices(g.positions, g.normals, g.indices, g.vertexCount, region.skin) : selectVertices(g.positions, g.normals, g.vertexCount, region)
     return { result: { vertices, vertexCount: g.vertexCount }, transfer: [vertices.buffer] }
   },
 
@@ -279,8 +282,8 @@ const ops: { [K in keyof MeshToolsOps]: (payload: Payload<K>, ctx: WorkerContext
   flatten({ vertices, iterations }, ctx) {
     const g = subjectOf(ctx)
     ctx.progress('Flattening…')
-    const { pattern, report } = flatten(g.positions, g.indices, g.vertexCount, vertices, { iterations }, (round) => ctx.progress(`Flattening — round ${round}…`))
-    return { result: { points: pattern.points, offsets: pattern.offsets, report }, transfer: [pattern.points.buffer, pattern.offsets.buffer] }
+    const { pattern, report, layout } = flatten(g.positions, g.indices, g.vertexCount, vertices, { iterations }, (round) => ctx.progress(`Flattening — round ${round}…`))
+    return { result: { points: pattern.points, offsets: pattern.offsets, report, layout }, transfer: [pattern.points.buffer, pattern.offsets.buffer, layout.positions.buffer, layout.uv.buffer] }
   },
 
   'set-edited'({ staged }, ctx) {

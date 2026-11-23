@@ -24,7 +24,7 @@
 
 import { boundaryLoops } from './boundary'
 import { cholesky, choleskySolver, csrOf, dissect, solve, type Csr, type Preconditioner } from './sparse'
-import { distortionOf, patternOf, regionPatch, type Distortion, type FlatPattern, type Patch, type PatternFigures } from './flatPattern'
+import { distortionOf, patternOf, regionPatch, type Distortion, type FlatPattern, type Patch, type PatternFigures, type PatternLayout } from './flatPattern'
 
 export interface FlattenSettings {
   /** As-rigid-as-possible rounds at most — the layout usually settles in a
@@ -46,6 +46,9 @@ export interface FlattenReport {
 export interface FlattenResult {
   pattern: FlatPattern
   report: FlattenReport
+  /** Where each vertex of the region landed on the pattern: what places a
+   *  point of the sheet on it (patternPointsOf) — a bend line, say. */
+  layout: PatternLayout
 }
 
 export const FLATTEN_ITERATIONS = 60
@@ -519,9 +522,16 @@ export function flatten(
 ): FlattenResult {
   const patch = regionPatch(positions, indices, vertexCount, region)
   const laid = flattenPatch(patch, settings, progress)
-  const { pattern, figures } = patternOf(laid.uv, patch.indices, patch.vertexCount)
+  const { pattern, figures, shift } = patternOf(laid.uv, patch.indices, patch.vertexCount)
+  // The layout moved as the pattern was, its low corner to the origin.
+  const uv = new Float64Array(laid.uv.length)
+  for (let i = 0; i < uv.length; i += 2) {
+    uv[i] = laid.uv[i] + shift[0]
+    uv[i + 1] = laid.uv[i + 1] + shift[1]
+  }
   return {
     pattern,
+    layout: { positions: patch.positions, uv },
     report: {
       vertices: patch.vertexCount,
       triangles: patch.indices.length / 3,

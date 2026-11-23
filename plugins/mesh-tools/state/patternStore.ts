@@ -10,7 +10,7 @@
 import { create } from 'zustand'
 import type { UnrollReport } from '../core/unroll'
 import type { FlattenReport } from '../core/flatten'
-import type { FlatPattern } from '../core/flatPattern'
+import type { FlatPattern, PatternLayout } from '../core/flatPattern'
 
 /** Unroll by a cylinder's or a cone's geometry, or flatten a sheet with the
  *  least distortion. */
@@ -28,7 +28,7 @@ export const PATTERN_MARK_COLOR = '#d6409f'
 export type PatternMade = FlatPattern &
   (
     | { mode: 'unroll'; report: UnrollReport; offset: number }
-    | { mode: 'flatten'; report: FlattenReport }
+    | { mode: 'flatten'; report: FlattenReport; /** Where each vertex landed on it (core/flatPattern patternPointsOf). */ layout: PatternLayout }
   ) & {
     /** What it was made of, for the file's title: the element's name, or
      *  "region". */

@@ -113,6 +113,57 @@ export interface FlatPattern {
   offsets: Uint32Array
 }
 
+/** A region laid flat, vertex by vertex: where each was on the mesh (x, y,
+ *  z) and where it lies on the pattern (u, v), in the pattern's own frame. */
+export interface PatternLayout {
+  positions: Float64Array
+  uv: Float64Array
+}
+
+/** A point of the sheet on its pattern: where it lies there, and how far it
+ *  stood off the region (the nearest vertex's distance), mm. */
+export interface PatternPoint {
+  uv: [number, number] | null
+  off: number
+}
+
+/**
+ * Points of the sheet placed on its pattern (layout): each by the vertices
+ * of the region nearest it, weighted by how near they are (the inverse
+ * square of the distance) — within a millimetre on a scan's mesh, far
+ * closer than a bend line needs. A point further than `reach` mm from every
+ * vertex stood off the sheet and is placed nowhere.
+ */
+export function patternPointsOf(layout: PatternLayout, points: readonly (readonly number[])[], { near = 4, reach = 2 } = {}): PatternPoint[] {
+  const count = layout.uv.length / 2
+  const P = layout.positions
+  return points.map((p) => {
+    // The nearest few, kept in order of distance.
+    const best: { v: number; d: number }[] = []
+    for (let v = 0; v < count; v++) {
+      const d = (P[v * 3] - p[0]) ** 2 + (P[v * 3 + 1] - p[1]) ** 2 + (P[v * 3 + 2] - p[2]) ** 2
+      if (best.length < near || d < best[best.length - 1].d) {
+        best.push({ v, d })
+        best.sort((a, b) => a.d - b.d)
+        if (best.length > near) best.pop()
+      }
+    }
+    const off = best.length ? Math.sqrt(best[0].d) : Infinity
+    if (!(off <= reach)) return { uv: null, off }
+    if (best[0].d === 0) return { uv: [layout.uv[best[0].v * 2], layout.uv[best[0].v * 2 + 1]], off: 0 }
+    let w = 0
+    let u = 0
+    let t = 0
+    for (const b of best) {
+      const k = 1 / b.d
+      w += k
+      u += k * layout.uv[b.v * 2]
+      t += k * layout.uv[b.v * 2 + 1]
+    }
+    return { uv: [u / w, t / w], off }
+  })
+}
+
 export interface PatternHole {
   /** The middle of its bounding box, mm. */
   center: [number, number]

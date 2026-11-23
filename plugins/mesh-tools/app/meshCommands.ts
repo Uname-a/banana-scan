@@ -33,6 +33,7 @@ import type { FillMode } from '../core/fillHoles'
 import type { ThickenSide } from '../core/offset'
 import type { WrapEdges } from '../core/wrap'
 import { DEFAULT_FACING_DEG } from '../core/select'
+import { SKIN_MIN_RADIUS } from '../core/skin'
 import {
   DELETE_MARK_COLOR,
   FLIP_MARK_COLOR,
@@ -56,6 +57,7 @@ import { editOut, partsOut, pieceOut, pointOut, reductionOut, wrapOut } from './
 import { meshToolsSession, type EditLanded, type MeshToolsSession } from './meshToolsSession'
 import { errorMessage } from '../../../src/commands/types'
 import { bandFor, buildPatternFile, surfaceOf, unrollable } from './flatPatterns'
+import { patternPointsOf } from '../core/flatPattern'
 import { usePattern, type PatternMade } from '../state/patternStore'
 import { FLATTEN_ITERATIONS } from '../core/flatten'
 
@@ -129,7 +131,7 @@ async function step<T>(label: string, what: string, job: () => Promise<T | null>
 
 type RegionIn =
   | 'marked'
-  | { box?: { min: Vec3; max: Vec3 }; sphere?: { center: Vec3; radius: number }; vertices?: number[]; facing?: Vec3; angleDeg?: number }
+  | { box?: { min: Vec3; max: Vec3 }; sphere?: { center: Vec3; radius: number }; vertices?: number[]; skin?: { at: Vec3; minRadius?: number; thickness?: number }; facing?: Vec3; angleDeg?: number }
 
 const regionSchema = (what: string): JsonSchema =>
   oneOf(
@@ -140,11 +142,20 @@ const regionSchema = (what: string): JsonSchema =>
           box: obj({ min: vec3('The low corner, mm.'), max: vec3('The high corner, mm.') }, ['min', 'max'], 'The vertices inside an axis-aligned box, its sides included.'),
           sphere: obj({ center: vec3('The centre, mm.'), radius: num('mm.', { exclusiveMinimum: 0 }) }, ['center', 'radius'], 'The vertices within a radius of a point.'),
           vertices: arr(int(undefined, { minimum: 0, maximum: 0xffffffff }), 'The vertices by number — the edited copy’s while there is one, else the scan’s.', { minItems: 1 }),
+          skin: obj(
+            {
+              at: vec3('A point on the skin, mm — the middle of a flange, not near its edge; the vertex nearest it is where the skin grows from.'),
+              minRadius: num(`The tightest bend the skin is followed round, mm — ${SKIN_MIN_RADIUS} to start: pick the outer skin, whose bends are the inside radius and the thickness, and lower it for a tight bend on the inner one.`, { exclusiveMinimum: 0 }),
+              thickness: num('The sheet’s thickness, mm — with it, a vertex facing against the skin and behind it within 1.5 times this is the far skin, kept out where an edge was scanned soft.', { exclusiveMinimum: 0 }),
+            },
+            ['at'],
+            'One skin of a bent sheet: the surface grown from a point on it across its bends, as long as it bends no tighter than minRadius, and no further — a sheet’s edge is a corner, so the other skin is never reached. What mesh.flatten wants, which a box round a bent part cannot name. Not with facing.',
+          ),
           facing: vec3('Of those, only the vertices whose normal points within angleDeg of this direction — [0, 0, 1] for the faces looking up. Narrows a box to one face of the part.'),
           angleDeg: num(`How far a normal may turn from facing and still face it, degrees — ${DEFAULT_FACING_DEG} to start.`, { exclusiveMinimum: 0, maximum: 180 }),
         },
         [],
-        'Exactly one of box, sphere or vertices, with facing and angleDeg to narrow it. Coordinates are mm in the frame the part is measured in now (session.state gives the scan’s bounds).',
+        'Exactly one of box, sphere, vertices or skin, with facing and angleDeg to narrow the first three. Coordinates are mm in the frame the part is measured in now (session.state gives the scan’s bounds).',
       ),
     ],
     what,
@@ -172,8 +183,9 @@ async function regionVertices(region: RegionIn): Promise<Uint32Array> {
     }
     return vertices
   }
-  const shapes = (['box', 'sphere', 'vertices'] as const).filter((k) => region[k] !== undefined)
-  if (shapes.length !== 1) invalid('Name the region one way: a box, a sphere or vertices — with facing and angleDeg to narrow it.')
+  const shapes = (['box', 'sphere', 'vertices', 'skin'] as const).filter((k) => region[k] !== undefined)
+  if (shapes.length !== 1) invalid('Name the region one way: a box, a sphere, vertices or a skin — with facing and angleDeg to narrow the first three.')
+  if (region.skin && (region.facing || region.angleDeg !== undefined)) invalid('A skin follows the surface round its bends: facing does not narrow it.')
   // A number past 32 bits would wrap round to another vertex when made a
   // Uint32Array, out of reach of the worker's own check that it is one.
   const tooBig = region.vertices?.find((v) => !(v >= 0 && v <= 0xffffffff))
@@ -184,6 +196,7 @@ async function regionVertices(region: RegionIn): Promise<Uint32Array> {
       ...(region.box ? { box: region.box } : {}),
       ...(region.sphere ? { sphere: region.sphere } : {}),
       ...(region.vertices ? { vertices: Uint32Array.from(region.vertices) } : {}),
+      ...(region.skin ? { skin: region.skin } : {}),
       ...(region.facing ? { facing: region.facing } : {}),
       ...(region.angleDeg !== undefined ? { angleDeg: region.angleDeg } : {}),
     })
@@ -1035,6 +1048,22 @@ const flattenCommand: Command<{ region: RegionIn; iterations?: number }> = {
   },
 }
 
+const patternPoints: Command<{ points: Vec3[] }> = {
+  name: 'pattern_points',
+  title: 'Place points on the flat pattern',
+  description:
+    'Points of the sheet mesh.flatten laid out last, placed on its pattern: where each lies there, [u, v] mm in the pattern’s own frame (as mesh.export_pattern draws it, its low corner the origin), from the vertices of the region nearest it — or null for a point further than 2 mm from the sheet. With off, how far each stood off it, mm. For lines to draw on the blank — a bend’s centre line, read off its round in 3D, a hole’s centre — where they fall once it is flat. A pattern unrolled by a cylinder or cone is laid out by the element instead, and is refused.',
+  input: obj({ points: arr(vec3('A point on the sheet, mm.'), 'The points, in the frame the part is measured in now.', { minItems: 1, maxItems: 2000 }) }, ['points']),
+  readOnly: true,
+  run: async ({ points }) => {
+    const made = usePattern.getState().made
+    if (!made) throw new CommandError('invalid_state', 'There is no flat pattern — mesh.flatten makes one.')
+    if (made.mode !== 'flatten') throw new CommandError('invalid_state', 'The pattern was unrolled by an element, not flattened: its points follow the element — mesh.flatten lays a sheet out so its points can be placed.')
+    const round = (v: number) => Math.round(v * 1e4) / 1e4
+    return { points: patternPointsOf(made.layout, points).map((p) => ({ uv: p.uv ? [round(p.uv[0]), round(p.uv[1])] : null, off: round(p.off) })) }
+  },
+}
+
 const exportPattern: Command<{ format?: 'dxf' | 'svg' }> = {
   name: 'export_pattern',
   title: 'Export the flat pattern',
@@ -1153,6 +1182,7 @@ export const meshCommands = [
   unrollCommand,
   flattenCommand,
   exportPattern,
+  patternPoints,
   useEdited,
   discardEdited,
   exportPart,
