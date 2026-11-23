@@ -7,6 +7,7 @@ import type { StoreApi } from 'zustand'
 import { len, sub } from '../../../src/core/vec'
 import type { Vec3 } from '../../../src/core/types'
 import { movableFace, partialRound, type SketchFeature, toolsOf, type TrimTool, withKeptQueries } from '../core/features'
+import { exprsFollowingEdges } from '../core/parameters'
 import { findRegions } from '../core/regions'
 import { DEFAULT_SURFACE_FIT } from '../core/surfaceFit'
 import { emptyNetworkDraft, networkDraftOf } from './reNetworkDraft'
@@ -49,6 +50,20 @@ function withVarying(d: Extract<FeatureDraft, { kind: 'fillet' }>, varying: read
   const out = [...varying]
   for (const edge of added) out.push({ edge, radius: varyingRadii(d, out, edge) })
   return out
+}
+
+/** A fillet's box after a change, the expressions on its varying edges'
+ *  radii following the edges: an edge is the same by its hash, or — its
+ *  box opened from the feature, the edges not placed on the body yet — by
+ *  its place in a list as long. */
+function withVaryingExprs(before: FeatureDraft, after: FeatureDraft): FeatureDraft {
+  if (before.kind !== 'fillet' || after.kind !== 'fillet' || before.variable === after.variable || !after.exprs) return after
+  const [was, now] = [before.variable ?? [], after.variable ?? []]
+  const unplaced = was.length === now.length && was.some((v) => v.edge.hash < 0)
+  const from = now.map((v, i) => (unplaced ? i : was.findIndex((w) => w.edge.hash === v.edge.hash)))
+  const { exprs, ...rest } = after
+  const kept = exprsFollowingEdges(exprs, from)
+  return kept ? { ...rest, exprs: kept } : rest
 }
 
 type StoreSet = StoreApi<ReState>['setState']
@@ -294,7 +309,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
       return { ...CLOSE_OTHERS, featureDraft: draft, buildVersion: s.buildVersion + 1 }
     }),
   setFeatureDraft: (patch) =>
-    set((s) => (s.featureDraft ? { featureDraft: { ...s.featureDraft, ...(patch as object) } as FeatureDraft } : {})),
+    set((s) => (s.featureDraft ? { featureDraft: withVaryingExprs(s.featureDraft, { ...s.featureDraft, ...(patch as object) } as FeatureDraft) } : {})),
   cancelFeature: () => set((s) => ({ featureDraft: null, preview: { status: 'idle' }, gripField: null, bodyPick: null, hint: null, ...(s.featureDraft?.featureId !== undefined ? { buildVersion: s.buildVersion + 1 } : {}) })),
   commitFeature: () => {
     const s = get()
@@ -442,9 +457,9 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
       const varying = d.kind === 'fillet' && d.body === bodyId ? (d.variable ?? []) : []
       const fresh = added.filter((e) => !edges.some((x) => x.hash === e.hash) && !varying.some((v) => v.edge.hash === e.hash))
       if (fresh.length === 0) return {}
-      if (d.kind === 'fillet' && d.mode === 'variable') return { featureDraft: { ...d, body: bodyId, edges, variable: withVarying(d, varying, fresh) } }
+      if (d.kind === 'fillet' && d.mode === 'variable') return { featureDraft: withVaryingExprs(d, { ...d, body: bodyId, edges, variable: withVarying(d, varying, fresh) }) }
       const next = [...edges, ...fresh]
-      if (d.kind === 'fillet') return { featureDraft: { ...d, body: bodyId, edges: next, variable: varying.length > 0 ? varying : undefined, estimate: d.edges.length === 0 ? { status: 'idle' } : d.estimate } }
+      if (d.kind === 'fillet') return { featureDraft: withVaryingExprs(d, { ...d, body: bodyId, edges: next, variable: varying.length > 0 ? varying : undefined, estimate: d.edges.length === 0 ? { status: 'idle' } : d.estimate }) }
       return { featureDraft: { ...d, body: bodyId, edges: next } }
     }),
   addDraftFaces: (bodyId, added) =>
@@ -469,9 +484,9 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
         const varying = d.body === bodyId ? (d.variable ?? []) : []
         const varies = varying.some((v) => v.edge.hash === edge.hash)
         const rest = varying.filter((v) => v.edge.hash !== edge.hash)
-        if (has || varies) return { featureDraft: { ...d, body: bodyId, edges: edges.filter((e) => e.hash !== edge.hash), variable: rest.length > 0 ? rest : undefined } }
-        if (d.mode === 'variable') return { featureDraft: { ...d, body: bodyId, edges, variable: withVarying(d, varying, [edge]) } }
-        return { featureDraft: { ...d, body: bodyId, edges: [...edges, edge], variable: varying.length > 0 ? varying : undefined, estimate: { status: 'idle' } } }
+        if (has || varies) return { featureDraft: withVaryingExprs(d, { ...d, body: bodyId, edges: edges.filter((e) => e.hash !== edge.hash), variable: rest.length > 0 ? rest : undefined }) }
+        if (d.mode === 'variable') return { featureDraft: withVaryingExprs(d, { ...d, body: bodyId, edges, variable: withVarying(d, varying, [edge]) }) }
+        return { featureDraft: withVaryingExprs(d, { ...d, body: bodyId, edges: [...edges, edge], variable: varying.length > 0 ? varying : undefined, estimate: { status: 'idle' } }) }
       }
       const next = has ? edges.filter((e) => e.hash !== edge.hash) : [...edges, edge]
       return { featureDraft: { ...d, body: bodyId, edges: next } }
@@ -480,7 +495,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
     set((s) => {
       const d = s.featureDraft
       if (!d) return {}
-      if (d.kind === 'fillet') return { featureDraft: d.mode === 'variable' ? { ...d, variable: undefined } : { ...d, edges: [], estimate: { status: 'idle' } } }
+      if (d.kind === 'fillet') return { featureDraft: d.mode === 'variable' ? withVaryingExprs(d, { ...d, variable: undefined }) : { ...d, edges: [], estimate: { status: 'idle' } } }
       if (d.kind === 'chamfer') return { featureDraft: { ...d, edges: [] } }
       if (d.kind === 'shell' || d.kind === 'draft' || d.kind === 'deleteFace') return { featureDraft: { ...d, faces: [] } }
       if (d.kind === 'thread') return { featureDraft: { ...d, face: null, internal: null } }

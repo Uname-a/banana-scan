@@ -12,6 +12,7 @@ import { mulberry32 } from '../../../src/core/fit/ransac'
 import { refused, run, startHeadless, stlBytes, type Headless } from '../../../tests/commandKit'
 import { createReverseSession, installReverseSession, type ReverseSession } from '../app/reSession'
 import { ReClient } from '../core/reClient'
+import { useReverse } from '../state/reStore'
 import plugin from '../plugin'
 import { localKernel } from './reLocal'
 import { resetReverse } from './reReset'
@@ -164,6 +165,59 @@ describe('a round read along its edge', () => {
     expect(v.code).toBe('failed')
     expect(v.message).toMatch(/follows neither one number nor a line/)
     expect(v.message).toMatch(/t 0\.5: R1\.\d+/)
+  })
+
+  it('its two radii are driven by parameters, each edge’s its own, and let go where edges are given again', async () => {
+    const body = await sharpBox()
+    type Listed = { variable: { radius: [number, number] }[]; exprs?: Record<string, string> }
+    const listed = () => run<Listed>('reverse.feature.list', { feature: 'Run' })
+    await run('reverse.parameter.add', { name: 'r_small', kind: 'length', expression: '1.5' })
+    await run('reverse.parameter.add', { name: 'r_big', kind: 'length', expression: '2 * r_small' })
+    const edges = [{ edge: TOP_RIGHT, radius: [1, 1] }, { edge: TOP_LEFT, radius: [2, 2.5] }]
+    const added = await run<{ result?: { status: string; message?: string } }>('reverse.feature.add', { feature: { kind: 'fillet', name: 'Run', body, edges, exprs: { 'variable.0.start': 'r_small', 'variable.0.end': 'r_big' } } })
+    expect(added.result?.status, added.result?.message).toBe('ok')
+    expect((await listed()).variable.map((v) => v.radius)).toEqual([[1.5, 3], [2, 2.5]])
+    const volume = async () => (await run<{ bodies: { volume: number }[] }>('reverse.body.describe', { body })).bodies[0].volume
+    const before = await volume()
+    // The parameter moved: both its ends follow, the other edge stands, and the part is built again.
+    await run('reverse.parameter.set', { parameter: 'r_small', expression: '2' })
+    expect((await listed()).variable.map((v) => v.radius)).toEqual([[2, 4], [2, 2.5]])
+    expect(await volume()).toBeLessThan(before - 1)
+    // An edge it does not have is refused, the ones there named; a chain's jump is the build's to refuse.
+    const none = await refused('reverse.feature.update', { feature: 'Run', set: { exprs: { 'variable.2.start': 'r_small' } } })
+    expect(none.message).toMatch(/variable\.0\.start, variable\.0\.end, variable\.1\.start/)
+    // One let go by null; the number stands.
+    await run('reverse.feature.update', { feature: 'Run', set: { exprs: { 'variable.0.end': null } } })
+    expect((await listed()).exprs).toEqual({ 'variable.0.start': 'r_small' })
+    // The edges given again, the other way round: nothing is left driving an edge it was not written for.
+    await run('reverse.feature.update', { feature: 'Run', set: { edges: [edges[1], edges[0]] } })
+    expect((await listed()).exprs).toBeUndefined()
+    expect((await listed()).variable.map((v) => v.radius)).toEqual([[2, 2.5], [1, 1]])
+  })
+
+  it('in the box, an expression follows its edge when another is let go, and goes with its own', () => {
+    const edge = (hash: number) => ({ hash, fingerprint: { kind: 'line', dir: [0, 1, 0], mid: [hash, 0, 0], length: 40 } }) as never
+    const box = () => useReverse.getState().featureDraft as { variable?: unknown[]; exprs?: Record<string, string> }
+    useReverse.getState().startFeature('fillet')
+    useReverse.getState().setFeatureDraft({ body: 1, mode: 'variable', variable: [1, 2, 3].map((h) => ({ edge: edge(h), radius: [h, h] })) } as never)
+    useReverse.getState().setDraftExpr('variable.0.start', 'a')
+    useReverse.getState().setDraftExpr('variable.2.end', 'c')
+    useReverse.getState().toggleDraftEdge(1, edge(1))
+    expect(box().exprs).toEqual({ 'variable.1.end': 'c' })
+    // A radius typed leaves the others' alone; every edge let go takes them all.
+    useReverse.getState().setFeatureDraft({ variable: [2, 3].map((h) => ({ edge: edge(h), radius: [9, h] })) } as never)
+    expect(box().exprs).toEqual({ 'variable.1.end': 'c' })
+    useReverse.getState().clearDraftPicks()
+    expect(box().exprs).toBeUndefined()
+    useReverse.getState().cancelFeature()
+  })
+
+  it('a STEP of it reads back as one valid solid', async () => {
+    const body = await sharpBox()
+    await run('reverse.feature.add', { feature: { kind: 'fillet', name: 'Run', body, edges: [{ edge: TOP_RIGHT, radius: [2, 5] }] } })
+    const check = await run<Record<string, unknown>>('reverse.body.check', { body, roundTrip: true })
+    expect(JSON.stringify(check)).toMatch(/"valid":true/)
+    expect(JSON.stringify(check)).not.toMatch(/"valid":false/)
   })
 
   it('radius "fit" for the edges together says which one runs along it', async () => {

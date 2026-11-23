@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Feature, SketchFeature } from '../core/features'
-import { applyParameters, applySketchExpressions, applySlots, evaluateParameters, featureExpressionErrors, nameProblem, renameInFeature, renameInParameters, replaceSketch, slotAt, slotsOf, unlinkSlot, usersOf, withSlot, type Parameter } from '../core/parameters'
+import { applyParameters, applySketchExpressions, applySlots, evaluateParameters, featureExpressionErrors, nameProblem, renameInFeature, renameInParameters, replaceSketch, slotAt, slotsOf, unlinkSlot, usersOf, withSlot, type Parameter, exprsFollowingEdges } from '../core/parameters'
 import { addConstraint, addEntity, addRectangle, emptySketch, isDimension, type Sketch } from '../core/sketch'
 import { lineLength } from '../core/sketch'
 import { XY } from './reKit'
@@ -119,6 +119,22 @@ describe('slots', () => {
     expect(lifted.frame.origin).toEqual([0, 0, 7])
     const fitted: Feature = { ...sketch, plane: { kind: 'fitted', frame: XY } }
     expect(slotsOf(fitted)).toEqual([])
+  })
+
+  it('read and write the two radii of each edge a fillet rounds at a varying one', () => {
+    const edge = { kind: 'line', dir: [1, 0, 0], mid: [0, 0, 0], length: 1 }
+    const fillet = { id: 5, kind: 'fillet', name: 'F', body: 2, edges: [], radius: 1, chain: true, visible: true, variable: [{ edge, radius: [1, 2] }, { edge, radius: [2, 4] }] } as unknown as Extract<Feature, { kind: 'fillet' }>
+    expect(slotsOf(fillet).map((s) => s.path)).toEqual(['radius', 'variable.0.start', 'variable.0.end', 'variable.1.start', 'variable.1.end'])
+    expect(slotAt(fillet, 'variable.1.end')!.get(fillet)).toBe(4)
+    const set = slotAt(fillet, 'variable.1.start')!.set(fillet, -3)
+    expect(set.variable!.map((v) => v.radius)).toEqual([[1, 2], [3, 4]])
+    expect(fillet.variable![1].radius).toEqual([2, 4])
+    expect(slotsOf({ ...fillet, variable: undefined }).map((s) => s.path)).toEqual(['radius'])
+    // An expression follows its edge to its place in the list now; one of an edge let go goes.
+    const exprs = { radius: 'r', 'variable.0.start': 'a', 'variable.1.end': 'b' }
+    expect(exprsFollowingEdges(exprs, [1])).toEqual({ radius: 'r', 'variable.0.end': 'b' })
+    expect(exprsFollowingEdges(exprs, [1, -1, 0])).toEqual({ radius: 'r', 'variable.0.end': 'b', 'variable.2.start': 'a' })
+    expect(exprsFollowingEdges({ 'variable.0.start': 'a' }, [])).toBeUndefined()
   })
 
   it('write an expression through, and let it go for a number', () => {

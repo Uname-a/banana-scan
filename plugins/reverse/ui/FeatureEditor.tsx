@@ -141,6 +141,13 @@ export function FeatureEditor() {
       const rows = d.kind === 'fillet' ? (d.variable ?? []) : []
       const picked = varying ? rows.length : d.edges.length
       const setRadii = (i: number, radius: [number, number]) => set({ variable: rows.map((v, j) => (j === i ? { ...v, radius } : v)) })
+      // The two radii of an edge change places, and the expressions behind them.
+      const swapRadii = (i: number) => {
+        const [start, end] = [d.exprs?.[`variable.${i}.start`] ?? null, d.exprs?.[`variable.${i}.end`] ?? null]
+        setRadii(i, [rows[i].radius[1], rows[i].radius[0]])
+        useReverse.getState().setDraftExpr(`variable.${i}.start`, end)
+        useReverse.getState().setDraftExpr(`variable.${i}.end`, start)
+      }
       fields = (
         <>
           {bodySelect(d.body, (body) => set({ body, edges: [], ...(d.kind === 'fillet' ? { variable: undefined } : {}) }))}
@@ -192,12 +199,12 @@ export function FeatureEditor() {
                       {rows.length > 1 ? `${i + 1} · ` : ''}
                       {describeEdge(v.edge.fingerprint)}
                     </span>
-                    <button data-test={`fillet-varying-swap-${i}`} title="Swap the two radii — the start radius at the other end" onClick={() => setRadii(i, [v.radius[1], v.radius[0]])}>
+                    <button data-test={`fillet-varying-swap-${i}`} title="Swap the two radii — the start radius at the other end" onClick={() => swapRadii(i)}>
                       ⇄
                     </button>
                   </div>
-                  <Num label="Start" testId={`fillet-varying-start-${i}`} value={v.radius[0]} nominal="radius" onCommit={(r) => setRadii(i, [Math.abs(r), v.radius[1]])} hint="The radius at the edge's start — the end named Start on the part" />
-                  <Num label="End" testId={`fillet-varying-end-${i}`} value={v.radius[1]} nominal="radius" onCommit={(r) => setRadii(i, [v.radius[0], Math.abs(r)])} hint="The radius at the edge's other end; the round runs evenly from the one to the other" />
+                  <Num label="Start" testId={`fillet-varying-start-${i}`} slot={`variable.${i}.start`} value={v.radius[0]} nominal="radius" onCommit={(r) => setRadii(i, [Math.abs(r), v.radius[1]])} hint="The radius at the edge's start — the end named Start on the part" />
+                  <Num label="End" testId={`fillet-varying-end-${i}`} slot={`variable.${i}.end`} value={v.radius[1]} nominal="radius" onCommit={(r) => setRadii(i, [v.radius[0], Math.abs(r)])} hint="The radius at the edge's other end; the round runs evenly from the one to the other" />
                 </div>
               ))}
               <p className="hint" data-test="fillet-varying-hint">

@@ -10,6 +10,13 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A varying round's radii driven by parameters** (Reverse engineer,
+  2026-11-23). Each edge a fillet rounds from a start radius to an end one
+  takes an expression for either, in its box and in `exprs`
+  (`variable.0.start`, `variable.0.end`, `variable.1.start` …), as the one
+  radius does. They follow their edge when another is picked or let go, and
+  change places with the radii (⇄).
+
 - **Gears read off a scan and built as gears** (Reverse engineer,
   2026-11-23). `scan.gear` finds each band of teeth along an axis and
   reads the involute gear it is: the tooth count, the module and pressure
