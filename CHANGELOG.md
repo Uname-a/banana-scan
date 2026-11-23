@@ -26,6 +26,32 @@ the same number as `appVersion`. How a release is cut is in
   wide, its flanks 0.059 mm from the scan's (rms); module 2.301 at 20°, no
   standard named, m 2.25 at 14.5°, 16° and 17.5° coming equally close.
 
+- **A freeform body over a region of the scan, that closes** (Reverse
+  engineer, 2026-11-23). `reverse.freeform.body { at, planes?, box?, sink? }`
+  makes a closed solid where profiles stop — a bent bar, a moulded arm, a
+  gear's tooth, a blob on a plate, or a whole closed scan — for a boolean to
+  join to the body profiles made, or cut from it. The region is the piece of
+  the scan between planes that holds a point. Each plane's cut is capped,
+  the cap carried past it on a straight skirt, so the solid stands into the
+  other body. It is laid out by its shape, not its creases: mapped one to
+  one onto a cylinder from its rim to the middle of its far end by a
+  harmonic function and its conjugate, cut by lines along and rings across
+  into four-sided cells, a ring on each fold across it, a branch squeezed
+  into a cell laid out as a tube of its own. Every curve is between two
+  cells, so the network closes by its construction; the patches are fitted
+  and sewn as a Patch network's. Layouts are tried simplest first, finer
+  until 98 % of the region is within the tolerance, and the answer measures
+  the one made both ways. The feature is a Patch network that keeps its
+  region and is laid out again from the scan at each build. Synthetic scans
+  with 0.01 mm of noise: a round bar bent twice on a plate, 99.9 % within
+  0.1 mm of the scan and 0.13 mm from the bar at worst, 30 faces; a lump
+  and an arch, all of them within 0.05 mm; each valid, joined to its plate
+  in one valid solid, and back from STEP. The sample fridge bracket whole,
+  72 % built and open by Auto layout, is one closed valid solid: 96 faces,
+  96.8 % within 0.1 mm and 99.1 % within 0.25 mm, its three layouts tried,
+  built and measured in 210 s; a tooth of a scanned helical gear 99.2 % in
+  6 s. A region with a hole through it is refused: cut it by planes.
+
 - **A bent sheet's skin, named by a point; points placed on its flat
   pattern** (Mesh Tools, 2026-11-23). A region may now be `skin: { at }`:
   one skin of a bent sheet, grown from the triangle nearest the point

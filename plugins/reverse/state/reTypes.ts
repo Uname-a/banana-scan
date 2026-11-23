@@ -465,7 +465,7 @@ export type FeatureDraft = { exprs?: ExprMap } & (
 )
 
 /** A patch network as the feature holds it. */
-export type NetworkData = Pick<NetworkFeature, 'nodes' | 'curves' | 'cells' | 'spans' | 'fit'>
+export type NetworkData = Pick<NetworkFeature, 'nodes' | 'curves' | 'cells' | 'spans' | 'fit' | 'region'>
 
 /** Where a curve starts or ends: a node of the network, or a point of the
  *  scan that becomes one when the curve is made. */

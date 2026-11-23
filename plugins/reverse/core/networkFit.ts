@@ -87,6 +87,12 @@ const POINTS_PER_CELL = 50
 const ROUNDS = 3
 const ROUNDS_SETTLE = 0.01
 const NEWTON_STEPS = 3
+/** How far, of its square, a point of a cell that bends may be projected at
+ *  a time. */
+const BENDS_MOVE = 0.08
+/** A cell said to bend does where its points lie this far off its sides'
+ *  Coons surface, as a share of its size. */
+const BENDS_OFF = 0.12
 /** Robust: points past this many robust sigmas of the first pass are left
  *  out, never closer than ROBUST_FLOOR mm. */
 const ROBUST_SIGMAS = 3
@@ -134,6 +140,10 @@ export interface PatchInput {
   xyz: Float64Array
   uv: Float64Array
   seed: Vec3
+  /** The cell may bend far off the Coons surface of its sides (a cell over
+   *  the end of an arm): a point stays where the map put it unless its
+   *  projection ends near there and nearer the patch. */
+  bends?: boolean
 }
 
 /** A curve to fit: traced, fitted provisionally (the directions it leaves
@@ -585,7 +595,10 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
   // which the sides parameterise: the map keeps it in the right place on a
   // cell that folds back, the Coons surface makes its (u, v) the sides'.
   const data = patches.map((p, i) => takeEvenly(p, POINTS_PER_CELL * nets[i].nu * nets[i].nv))
-  project(nets, data)
+  // A cell said to bend, and that does — far off that surface — keeps the
+  // map's (u, v) where the projection loses its way.
+  const bends = patches.map((p, i) => p.bends === true && offCoons(nets[i], data[i]) > BENDS_OFF)
+  project(nets, data, bends)
 
   // ---- the shared curves, the ties across them, and the corners -------------
   const sharedBy = new Map<number, { patch: number; side: number; forward: boolean }[]>()
@@ -1035,7 +1048,7 @@ function fitAt(input: NetworkFitInput, strips: Strips, stripSpans: readonly numb
       }
     }
     if (rounds === 0 && input.robust) dropOutliers(nets, data)
-    project(nets, data)
+    project(nets, data, bends)
     // The last round's residuals are the answers': nothing moves after.
     const next = residualRms(nets, data)
     res = next.res
@@ -1471,9 +1484,28 @@ function tornCorners(nets: readonly PatchNet[], free: Float64Array, poleBase: re
   return torn
 }
 
+/** How far points lie off a net where the map put them, RMS, against the
+ *  net's size (its corners' spread). */
+function offCoons(net: PatchNet, d: PatchData): number {
+  const p: Vec3 = [0, 0, 0]
+  const corners: Vec3[] = []
+  for (const u of [0, 1]) for (const v of [0, 1]) {
+    patchPoint(net, u, v, p)
+    corners.push([p[0], p[1], p[2]])
+  }
+  let size = 0
+  for (const a of corners) for (const b of corners) size = Math.max(size, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]))
+  let sum = 0
+  for (let k = 0; k < d.count; k++) {
+    patchPoint(net, d.uv[k * 2], d.uv[k * 2 + 1], p)
+    sum += (d.xyz[k * 3] - p[0]) ** 2 + (d.xyz[k * 3 + 1] - p[1]) ** 2 + (d.xyz[k * 3 + 2] - p[2]) ** 2
+  }
+  return Math.sqrt(sum / Math.max(1, d.count)) / Math.max(size, 1e-9)
+}
+
 /** Each point projected onto its patch: Gauss–Newton from its (u, v),
  *  held inside the square. */
-function project(nets: readonly PatchNet[], data: PatchData[]): void {
+function project(nets: readonly PatchNet[], data: PatchData[], bends: readonly boolean[]): void {
   const p: Vec3 = [0, 0, 0]
   const du: Vec3 = [0, 0, 0]
   const dv: Vec3 = [0, 0, 0]
@@ -1482,6 +1514,11 @@ function project(nets: readonly PatchNet[], data: PatchData[]): void {
     for (let k = 0; k < d.count; k++) {
       let u = d.uv[k * 2]
       let v = d.uv[k * 2 + 1]
+      let off = 0
+      if (bends[i]) {
+        patchPoint(net, u, v, p)
+        off = Math.hypot(d.xyz[k * 3] - p[0], d.xyz[k * 3 + 1] - p[1], d.xyz[k * 3 + 2] - p[2])
+      }
       for (let step = 0; step < NEWTON_STEPS; step++) {
         patchPoint(net, u, v, p, du, dv)
         const rx = d.xyz[k * 3] - p[0], ry = d.xyz[k * 3 + 1] - p[1], rz = d.xyz[k * 3 + 2] - p[2]
@@ -1494,6 +1531,11 @@ function project(nets: readonly PatchNet[], data: PatchData[]): void {
         if (!(det > 1e-300)) break
         u = Math.min(1, Math.max(0, u + (c * gu - b * gv) / det))
         v = Math.min(1, Math.max(0, v + (a * gv - b * gu) / det))
+      }
+      if (bends[i]) {
+        if (Math.hypot(u - d.uv[k * 2], v - d.uv[k * 2 + 1]) > BENDS_MOVE) continue
+        patchPoint(net, u, v, p)
+        if (Math.hypot(d.xyz[k * 3] - p[0], d.xyz[k * 3 + 1] - p[1], d.xyz[k * 3 + 2] - p[2]) > off) continue
       }
       d.uv[k * 2] = u
       d.uv[k * 2 + 1] = v

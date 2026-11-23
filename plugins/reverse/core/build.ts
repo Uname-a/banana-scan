@@ -62,11 +62,17 @@ import { HAIR_MM, JOINING, stepsOfJoin, type StepBetween } from './stepsBetween'
 import { cutElsewhereWords, cutsElsewhere } from './cutElsewhere'
 import { ScanPaths } from '../../../src/core/geometry/scanPath'
 import { type NetworkBodies, type NetworkReading, readNetwork } from './network'
+import { type NetworkRegion, type RegionMesh, regionMesh } from './regionMesh'
+import { regionLayout, regionReading } from './regionLayout'
 import { emptyReport, networkBody, networkGhost, type NetworkReport } from './networkBody'
 export { type BodyBrief, type BodyCheck, type BodyStep, type BuildResult, type BuildSteps, type BuiltBody, type Diagnosis, type DrawnBody, type EdgeBrief, type EdgeInfo, type FaceInfo, type FeatureResult, type FilletTries, type FilletTry, type Overlap, type PreviewResult, type PreviewStep, type SketchStep, type SolidStep, stepKeys, type SurfaceReport, type TrimReport } from './buildTypes'
 
 /** How far out of the face a hole drilled into one starts, mm. */
 const HOLE_LEAD_MM = 0.01
+/** The regions of the scan kept prepared for the networks drawn on them. */
+const KEPT_REGIONS = 8
+/** …and the layouts of each fitted. */
+const KEPT_READINGS = 3
 
 /** How many picks found again only loosely a row names. */
 const LOOSE_NAMED = 4
@@ -315,12 +321,15 @@ export class Builder {
   /** The scan prepared for paths along it, for a patch network: made the
    *  first time a network is built on this scan. */
   private paths: ScanPaths | null = null
+  /** The regions of the scan networks are drawn on, by what names each. */
+  private regions = new Map<string, { paths: ScanPaths; mesh: RegionMesh; readings: Map<string, NetworkReading> }>()
 
   setScan(surface: NominalSurface | null, positions: Float32Array | null = null, triangles: Uint32Array | null = null): void {
     this.scan = surface
     this.scanPositions = positions
     this.scanTriangles = triangles
     this.paths = null
+    this.regions.clear()
     // A split and a trim test against the scan: built against another one,
     // the same steps may not come out the same. The build standing stays —
     // its bodies are still what an export or a preview works on — but
@@ -624,7 +633,21 @@ export class Builder {
         return i === null ? null : this.kernel.faceNormals(t.body.shape, t.topology.faces[i].hash, points)
       },
     }
-    const reading = readNetwork(this.paths, step, bodies)
+    const on = step.region ? this.regionOf(step.region) : null
+    let reading: NetworkReading
+    if (on && step.region?.laid) {
+      // Kept: a preview's is the build's, where it is made.
+      const key = JSON.stringify([step.region.laid, step.spans, step.fit])
+      let had = on.readings.get(key)
+      if (!had) {
+        const layout = regionLayout(on.mesh, step.region.laid)
+        if (typeof layout === 'string') throw new Error(`The network’s region of the scan: ${layout}`)
+        had = regionReading(on.mesh, layout, step)
+        if (on.readings.size >= KEPT_READINGS) on.readings.delete(on.readings.keys().next().value!)
+        on.readings.set(key, had)
+      }
+      reading = had
+    } else reading = readNetwork(on?.paths ?? this.paths, step, bodies)
     if (!reading.fit) {
       const refused = reading.outcomes.find((o) => 'refused' in o)
       const message =
@@ -634,6 +657,20 @@ export class Builder {
       return { message, report: emptyReport(reading) }
     }
     return reading
+  }
+
+  /** A region of the scan networks are drawn on, as a closed mesh. */
+  private regionOf(region: NetworkRegion): { paths: ScanPaths; mesh: RegionMesh; readings: Map<string, NetworkReading> } {
+    const key = JSON.stringify({ ...region, laid: undefined })
+    let had = this.regions.get(key)
+    if (!had) {
+      const mesh = regionMesh(this.paths!, region)
+      if (typeof mesh === 'string') throw new Error(`The network’s region of the scan: ${mesh}`)
+      had = { paths: new ScanPaths(mesh.positions, mesh.indices), mesh, readings: new Map() }
+      if (this.regions.size >= KEPT_REGIONS) this.regions.delete(this.regions.keys().next().value!)
+      this.regions.set(key, had)
+    }
+    return had
   }
 
   /** A patch network read off the scan and made a body — see network.ts

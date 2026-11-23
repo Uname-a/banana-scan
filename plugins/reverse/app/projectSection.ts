@@ -165,6 +165,21 @@ export function validateFeatureJson(e: Record<string, unknown>): void {
       if (c.centre !== undefined) vector(c.centre, 3, 'network.cell.centre')
       if (c.corners !== undefined) indices(c.corners, 'network.cell.corners')
     }
+    if (e.region !== undefined) {
+      const r = object(e.region, 'network.region')
+      vector(r.seed, 3, 'network.region.seed')
+      fields(r, 'sink', 'number', 'network.region')
+      if (r.laid !== undefined) {
+        const laid = object(r.laid, 'network.region.laid')
+        fields(laid, 'density', 'number', 'network.region.laid')
+        if (laid.lines !== 4 && laid.lines !== 8) invalid('network.region.laid.lines')
+      }
+      for (const item of array(r.planes, 'network.region.planes')) {
+        const q = object(item, 'network.region.plane')
+        vector(q.origin, 3, 'network.region.plane.origin')
+        vector(q.normal, 3, 'network.region.plane.normal')
+      }
+    }
     object(e.spans, 'network.spans')
     const fit = object(e.fit, 'network.fit')
     fields(fit, 'smoothness', 'number', 'network.fit')

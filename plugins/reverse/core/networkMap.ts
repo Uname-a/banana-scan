@@ -185,8 +185,11 @@ export function polygonCorners(n: number): [number, number][] {
   return Array.from({ length: n }, (_, k) => [0.5 + 0.5 * Math.cos((2 * Math.PI * k) / n), 0.5 + 0.5 * Math.sin((2 * Math.PI * k) / n)] as [number, number])
 }
 
-/** The cell mapped onto its polygon (see above), or why not. */
-export function mapCell(mesh: CellMesh, start?: Float64Array): CellMap | string {
+/** The cell mapped onto its polygon (see above), or why not — or, `folds`
+ *  let by, as it came: where the cell's own boundary is ragged (a cell told
+ *  apart triangle by triangle), a triangle folded by it is only a start for
+ *  the fit a little off. */
+export function mapCell(mesh: CellMesh, start?: Float64Array, folds = false): CellMap | string {
   const nv = mesh.scanVertex.length
   const pos = mesh.positions
   const corners = polygonCorners(mesh.cornerAt.length)
@@ -287,6 +290,7 @@ export function mapCell(mesh: CellMesh, start?: Float64Array): CellMap | string 
     signed[f] = (uv[q * 2] - uv[p * 2]) * (uv[r * 2 + 1] - uv[p * 2 + 1]) - (uv[r * 2] - uv[p * 2]) * (uv[q * 2 + 1] - uv[p * 2 + 1])
     area += Math.abs(signed[f])
   }
+  if (folds) return { mesh, uv, iterations }
   const slack = 1e-9 * (area / Math.max(1, signed.length))
   for (let f = 0; f < signed.length; f++) {
     if (signed[f] < -slack) {

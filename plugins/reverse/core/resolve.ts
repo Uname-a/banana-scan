@@ -430,8 +430,8 @@ export function resolveFeatures(
       continue
     }
     if (f.kind === 'network') {
-      if (f.curves.length === 0) failed(f, 'Place a patch: click its corners on the scan.')
-      else steps.push({ kind: 'network', id: f.id, name: f.name, nodes: f.nodes, curves: f.curves, cells: f.cells, spans: f.spans, fit: f.fit })
+      if (f.curves.length === 0 && !f.region?.laid) failed(f, 'Place a patch: click its corners on the scan.')
+      else steps.push({ kind: 'network', id: f.id, name: f.name, nodes: f.nodes, curves: f.curves, cells: f.cells, spans: f.spans, fit: f.fit, ...(f.region ? { region: f.region } : {}) })
       continue
     }
     if (f.kind === 'split') {

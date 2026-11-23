@@ -151,7 +151,7 @@ export type BuildStep =
   /** A patch network is read off the scan where the scan is, as a surface
    *  is fitted: the step carries the network as drawn — its nodes, curves
    *  and cells by position — and the worker traces and fits it there. */
-  | ({ kind: 'network'; id: number; name: string } & Pick<NetworkFeature, 'nodes' | 'curves' | 'cells' | 'spans' | 'fit'>)
+  | ({ kind: 'network'; id: number; name: string } & Pick<NetworkFeature, 'nodes' | 'curves' | 'cells' | 'spans' | 'fit' | 'region'>)
   | { kind: 'trim'; id: number; name: string; bodies: number[]; primitives: TrimPrimitive[]; tolerance: number; overlap: number }
   /** A sketch placed on the part before the features on it are built: its
    *  face found again and its projected pieces taken again from what they
