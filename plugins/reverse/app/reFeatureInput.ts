@@ -20,7 +20,7 @@ import { DEFAULT_NETWORK_FIT } from '../state/reNetworkDraft'
 import { describePlaneRef, resolveHoleAxis, resolvePlaneFrame } from '../core/resolve'
 import { cloneSketch, emptySketch, type SketchEntity } from '../core/sketch'
 import { INSERT_SIZES, insertHole, insertSize } from '../core/inserts'
-import { applySlots, type ExprMap, exprsFromCommand, slotAt, slotsOf, unlinkSlot } from '../core/parameters'
+import { applySlots, type ExprMap, exprsFollowingEdges, exprsFromCommand, slotAt, slotsOf, unlinkSlot } from '../core/parameters'
 import { shadowSketch } from '../core/shadowPieces'
 import { DEFAULT_SURFACE_FIT, NET_MAX } from '../core/surfaceFit'
 import { sizeOf, threadFaceReading, threadProblem, threadSizes, type ThreadStandard } from '../core/thread'
@@ -164,7 +164,11 @@ function boxFields(s: ReverseSession, kind: FeatureDraftKind, input: Json, box: 
         out.edges = plain.length > 0 ? edgesPicked(s, bodyOf(), plain, kind === 'fillet' ? 'round' : 'bevel') : []
         if (plain.length > 0 && (out.edges as unknown[]).length === 0 && varying.length === 0)
           throw new CommandError('not_found', `None of the ${plain.length} edge picks names an edge of ${bodyOf().name} — every one is optional and missed (reverse.body.describe { where } shows what there is).`)
-        if (kind === 'fillet') out.variable = varying.length > 0 ? varying.map((v) => ({ edge: edgePicked(s, bodyOf(), v.edge), radius: v.radius })) : undefined
+        if (kind === 'fillet') {
+          out.variable = varying.length > 0 ? varying.map((v) => ({ edge: edgePicked(s, bodyOf(), v.edge), radius: v.radius })) : undefined
+          // Edges given with radii of their own: the expressions on the ones before go, as a number typed over one lets it go.
+          out.exprs = exprsFollowingEdges((box as { exprs?: ExprMap }).exprs, [])
+        }
         if (kind === 'fillet' && plain.length > 0 && !editing && !has('radius')) invalid('radius: the edges given plainly need one — or give each { edge, radius: [start, end] }.')
       }
       // A box given its edges at a varying radius alone opens on them.

@@ -96,6 +96,21 @@ check((await re(() => JSON.stringify(window.__re.store.getState().featureDraft.v
 await sleep(200)
 labels = await endLabels()
 check(/R 4 mm/.test(labels[0]?.text ?? '') && /R 1 mm/.test(labels[1]?.text ?? ''), `and the labels follow (${labels.map((l) => l?.text).join(' / ')})`)
+// A radius typed as an expression over a parameter is driven by it; ⇄ takes
+// the expression with it, and a number typed over it lets it go.
+await re(() => {
+  const s = () => window.__re.store.getState()
+  const id = s().addParameter('length')
+  s().setParameter(id, { name: 'rv', expression: '1' })
+})
+const driven = () => re(() => { const d = window.__re.store.getState().featureDraft; return JSON.stringify([d.variable[0].radius, d.exprs ?? {}]) })
+await type('[data-test=fillet-varying-start-0]', 'rv * 4')
+check((await driven()) === '[[4,1],{"variable.0.start":"rv * 4"}]', `a radius takes an expression (${await driven()})`)
+await click(page, '[data-test=fillet-varying-swap-0]')
+check((await driven()) === '[[1,4],{"variable.0.end":"rv * 4"}]', `⇄ takes the expression with it (${await driven()})`)
+await click(page, '[data-test=fillet-varying-swap-0]')
+await type('[data-test=fillet-varying-start-0]', 4)
+check((await driven()) === '[[4,1],{}]', `a number typed over it lets it go (${await driven()})`)
 // Turned to look along the other way, the labels still stand off their ends.
 await re(() => window.__re.scene().viewFrom('front'))
 await sleep(600)

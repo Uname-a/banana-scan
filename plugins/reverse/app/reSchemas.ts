@@ -771,7 +771,7 @@ export const FEATURE_IN: Record<string, JsonSchema> = {
       reach: fitReachIn('round'),
       chain: bool('Round the edges tangent to them too (the default). The kernel rounds a tangent chain as one in any case.'),
       skipFailing: bool('Round what the kernel can: a tangent chain it cannot round at the radius is left out — the result’s note says which and where — in place of the whole round failing. For many edges read off a mesh, a few of which may not take it.'),
-      exprs: exprsIn('radius'),
+      exprs: exprsIn('radius, variable.0.start, variable.0.end — the two of each edge at a varying radius, counted from 0 among them as edges lists them (variable.1.start …); edges given again let those go'),
     },
     ['kind', 'body', 'edges'],
     'Round edges, at one radius or at radii that change along a chain of edges.',

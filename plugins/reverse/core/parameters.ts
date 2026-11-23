@@ -271,8 +271,18 @@ export function slotsOf<T extends Slotted>(x: T, kind: string | undefined = x.ki
     }
     case 'shell':
       return [field('thickness', 'Wall', 'length', positive)]
-    case 'fillet':
-      return [field('radius', 'Radius', 'length', positive)]
+    case 'fillet': {
+      // The one radius, and the two of each edge rounded at a varying one.
+      const varying = (y: Slotted) => ((y as Fields).variable as { radius: [number, number] }[] | undefined) ?? []
+      const end = (i: number, k: 0 | 1): Slot<T> => ({
+        path: `variable.${i}.${k === 0 ? 'start' : 'end'}`,
+        label: `${k === 0 ? 'Start' : 'End'} ${i + 1}`,
+        kind: 'length',
+        get: (y) => varying(y)[i].radius[k],
+        set: (y, v) => ({ ...y, variable: varying(y).map((e, j) => (j === i ? { ...e, radius: k === 0 ? [Math.abs(v), e.radius[1]] : [e.radius[0], Math.abs(v)] } : e)) }),
+      })
+      return [field<T>('radius', 'Radius', 'length', positive), ...varying(x).flatMap((_, i) => [end(i, 0), end(i, 1)])]
+    }
     case 'chamfer': {
       const out: Slot<T>[] = [field('distance', 'Distance', 'length', positive)]
       if (f.mode === 'twoDistances') out.push(field('distance2', 'Distance 2', 'length', positive))
@@ -380,6 +390,22 @@ export function slotsOf<T extends Slotted>(x: T, kind: string | undefined = x.ki
 }
 
 const pitchOf = (x: Slotted): number => ((x as Fields).pitch as number | undefined) ?? 0
+
+/** The expressions of a fillet's box after its varying edges changed: each
+ *  edge's two follow it to its place in the list now — `from` says where
+ *  each edge now listed was before, −1 for one that was not — and those of
+ *  an edge let go go with it. */
+export function exprsFollowingEdges(exprs: ExprMap | undefined, from: readonly number[]): ExprMap | undefined {
+  if (!exprs) return undefined
+  const out: ExprMap = {}
+  for (const [path, expr] of Object.entries(exprs)) {
+    const m = /^variable\.(\d+)\.(start|end)$/.exec(path)
+    const at = m ? from.indexOf(Number(m[1])) : -1
+    if (!m) out[path] = expr
+    else if (at >= 0) out[`variable.${at}.${m[2]}`] = expr
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
 
 /** The slot of a feature or a draft at a path, or undefined. */
 export function slotAt<T extends Slotted>(x: T, path: string, kind?: string): Slot<T> | undefined {
