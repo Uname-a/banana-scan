@@ -934,7 +934,45 @@ export function segmentChain(chain: readonly Vec2[], opts: SegmentOptions = {}):
     segments.push({ kind: piece.kind, lo: r.lo, hi: r.hi, points: pts, fit: piece.fit, ...(r.cornerAfter ? { cornerAfter: true } : {}) })
   }
   if (segments.length === 0) throw new FitError('No line or arc could be fitted to the chain.')
+  if (closed && segments.length > 1 && segments.length <= ROUND_PIECES) {
+    const round = oneRound([...points, points[0]], masked, segments, tol.arc, scatter)
+    if (round) return { segments: [round], points, closed, scatter, spacing, tolerance }
+  }
   return { segments, points, closed, scatter, spacing, tolerance }
+}
+
+/** A loop cut into as few pieces as this is tried as one circle: no shape of
+ *  lines and arcs but the round itself closes smooth in two, and a drilled
+ *  hole's cut, a facet of the mesh taken for a line, comes out in two or three. */
+const ROUND_PIECES = 3
+/** How much worse than its pieces, root mean square, the one circle may sit
+ *  on the points: the noise two pieces soak up that one does not. */
+const ROUND_WORSE = 1.5
+
+/** A closed chain as the one circle it is, its points (the first again at
+ *  the end) all on it as near as a piece is held to — or null where the
+ *  pieces say something a circle does not: a flat on a shaft, a keyway. */
+function oneRound(loop: readonly Vec2[], masked: Uint8Array, segments: readonly ChainSegment[], tolerance: number, scatter: number): ChainSegment | null {
+  const pts = loop.filter((_, i) => !masked[i % (loop.length - 1)])
+  const fit = arcOf(pts)
+  if (!fit) return null
+  let worst = 0
+  let sum = 0
+  for (const p of pts) {
+    const off = Math.abs(Math.hypot(p[0] - fit.center[0], p[1] - fit.center[1]) - fit.radius)
+    worst = Math.max(worst, off)
+    sum += off * off
+  }
+  if (worst > tolerance) return null
+  let cut = 0
+  let count = 0
+  for (const s of segments) {
+    cut += s.fit.sigma ** 2 * s.points.length
+    count += s.points.length
+  }
+  const rms = Math.sqrt(sum / pts.length)
+  if (rms > ROUND_WORSE * Math.max(Math.sqrt(cut / Math.max(1, count)), scatter)) return null
+  return { kind: 'arc', lo: 0, hi: loop.length - 1, points: [...pts], fit }
 }
 
 /** A segment as it enters the sketch, and which of the entity's anchors

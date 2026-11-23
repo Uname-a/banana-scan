@@ -18,8 +18,10 @@
 // Levenberg–Marquardt on the stacked residual, with the Jacobian taken by
 // finite differences piece by piece: every residual block names the few
 // parameters it depends on, so a sketch of a hundred pieces costs a hundred
-// small blocks rather than one dense wall. The normal equations are solved
-// directly — a sketch has a few hundred parameters at most.
+// small blocks rather than one dense wall. Pieces nothing ties together — a
+// plate's outline and each of its holes — are solved apart, each group's
+// normal equations directly: a hundred and sixty holes are as many small
+// solves, and one hole slow to settle does not damp the steps of the rest.
 
 import { choleskySolve, solveLinear, symmetricEigenN } from '../../../src/core/fit/linalg'
 import type { Vec2 } from '../../../src/core/flat/types'
@@ -123,6 +125,33 @@ export interface SolveReport {
    *  the scan holds it. Empty on a drag's quick step, where it is not
    *  worked out. */
   underConstrained: number[]
+}
+
+/**
+ * The lists of parameters that share none, gathered: the number of the
+ * group each list belongs to, by union over the parameters, and how many
+ * groups there are. A list of none is −1.
+ */
+function groupsOf(n: number, lists: readonly (readonly number[])[]): { of: Int32Array; count: number } {
+  const parent = Int32Array.from({ length: n }, (_, i) => i)
+  const root = (i: number) => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]]
+      i = parent[i]
+    }
+    return i
+  }
+  for (const list of lists) for (let k = 1; k < list.length; k++) parent[root(list[k])] = root(list[0])
+  const number = new Int32Array(n).fill(-1)
+  const of = new Int32Array(lists.length).fill(-1)
+  let count = 0
+  lists.forEach((list, i) => {
+    if (list.length === 0) return
+    const r = root(list[0])
+    if (number[r] < 0) number[r] = count++
+    of[i] = number[r]
+  })
+  return { of, count }
 }
 
 /** A residual block: a few parameters in, a few residuals out. */
@@ -737,10 +766,7 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
   }
 
   // ---- Levenberg–Marquardt ----------------------------------------------------
-  const freeIndex = new Int32Array(n).fill(-1)
-  let m = 0
-  for (let i = 0; i < n; i++) if (free[i]) freeIndex[i] = m++
-  if (m === 0) return finish(sketch, slots, x, blocks, 0, softCount, false)
+  if (!free.some((f) => f === 1)) return finish(sketch, slots, x, blocks, 0, softCount, false)
 
   const cost = (rs: number[][]) => {
     let c = 0
@@ -748,21 +774,44 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
     return c
   }
 
-  const JtJ = new Float64Array(m * m)
-  const Jtr = new Float64Array(m)
+  const freeIndex = new Int32Array(n).fill(-1)
   const xt = new Float64Array(n)
   let iterations = 0
 
   /** Descend over `active` from where x stands, for at most `maxIterations`
-   *  or until a step or its gain is under the tolerances. */
+   *  or until a step or its gain is under the tolerances — each group of
+   *  blocks that shares no moving parameter with the rest by itself. */
   const descend = (active: Block[], maxIterations: number, stepTolerance: number, gainTolerance: number) => {
+    const moving = active.map((b) => b.params.filter((p) => free[p]))
+    const groups = groupsOf(n, moving)
+    const blocksOf: Block[][] = Array.from({ length: groups.count }, () => [])
+    const paramsOfGroup: Set<number>[] = Array.from({ length: groups.count }, () => new Set())
+    active.forEach((b, i) => {
+      const g = groups.of[i]
+      if (g < 0) return
+      blocksOf[g].push(b)
+      for (const p of moving[i]) paramsOfGroup[g].add(p)
+    })
+    let most = 0
+    for (let g = 0; g < groups.count; g++) most = Math.max(most, descendGroup(blocksOf[g], [...paramsOfGroup[g]].sort((a, b) => a - b), maxIterations, stepTolerance, gainTolerance))
+    iterations += most
+  }
+
+  /** One group's descent, over its blocks and the parameters they move:
+   *  how many steps it took. */
+  const descendGroup = (active: Block[], moved: readonly number[], maxIterations: number, stepTolerance: number, gainTolerance: number): number => {
+    const m = moved.length
+    moved.forEach((p, i) => (freeIndex[p] = i))
+    const JtJ = new Float64Array(m * m)
+    const Jtr = new Float64Array(m)
+    let it = 0
     const residuals = (xs: Float64Array): number[][] => active.map((b) => b.eval(xs).map((r) => r * b.weight))
     let lambda = 1e-3
     let converged = false
     let rs = residuals(x)
     let current = cost(rs)
 
-    for (let it = 0; it < maxIterations && !converged; it++, iterations++) {
+    for (; it < maxIterations && !converged; it++) {
       JtJ.fill(0)
       Jtr.fill(0)
       xt.set(x)
@@ -827,12 +876,10 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
         }
         xt.set(x)
         let stepNorm = 0
-        for (let i = 0; i < n; i++) {
-          if (free[i]) {
-            const d = scaled[freeIndex[i]] * S[freeIndex[i]]
-            xt[i] += d
-            stepNorm = Math.max(stepNorm, Math.abs(d))
-          }
+        for (let i = 0; i < m; i++) {
+          const d = scaled[i] * S[i]
+          xt[moved[i]] += d
+          stepNorm = Math.max(stepNorm, Math.abs(d))
         }
         const rt = residuals(xt)
         const ct = cost(rt)
@@ -850,6 +897,7 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
       }
       if (!improved) break
     }
+    return it
   }
 
   const quick = Boolean(options.quick)
@@ -1003,15 +1051,29 @@ function looseEntities(rows: number[][], cols: number[][], n: number, sketch: Sk
     }
     at += count
   }
-  const column = new Int32Array(n).fill(-1)
-  const param: number[] = []
-  for (let p = 0; p < n; p++) {
-    if (held[p]) continue
-    column[p] = param.length
-    param.push(p)
+  // Each group of rows that shares no such parameter with the rest by
+  // itself; a parameter no row reaches is loose.
+  const groups = groupsOf(n, cols.map((c) => c.filter((p) => !held[p])))
+  const of: number[][] = Array.from({ length: groups.count }, () => [])
+  rows.forEach((_, i) => {
+    if (groups.of[i] >= 0) of[groups.of[i]].push(i)
+  })
+  const reached = new Uint8Array(n)
+  const free = new Uint8Array(n)
+  for (const g of of) {
+    for (const i of g) for (const p of cols[i]) if (!held[p]) reached[p] = 1
+    for (const p of looseInGroup(g.map((i) => rows[i]), g.map((i) => cols[i]), held)) free[p] = 1
   }
+  const loose = new Set<number>()
+  for (let p = 0; p < n; p++) if (!held[p] && (free[p] || !reached[p])) loose.add(owner[p])
+  return [...loose]
+}
+
+/** The parameters of one group of rows that can still move. */
+function looseInGroup(rows: number[][], cols: number[][], held: Uint8Array): number[] {
+  const param = [...new Set(cols.flat().filter((p) => !held[p]))].sort((a, b) => a - b)
+  const column = new Map(param.map((p, j) => [p, j]))
   const m = param.length
-  if (m === 0) return []
   // Dense rows over the loose parameters, each brought to unit length so
   // one tolerance serves every equation.
   const dense: Float64Array[] = []
@@ -1019,10 +1081,10 @@ function looseEntities(rows: number[][], cols: number[][], n: number, sketch: Sk
     const row = new Float64Array(m)
     let norm = 0
     cols[i].forEach((p, ci) => {
-      if (column[p] >= 0) {
-        row[column[p]] = r[ci]
-        norm += r[ci] * r[ci]
-      }
+      const j = column.get(p)
+      if (j === undefined) return
+      row[j] = r[ci]
+      norm += r[ci] * r[ci]
     })
     norm = Math.sqrt(norm)
     if (norm > 1e-9) {
@@ -1052,29 +1114,28 @@ function looseEntities(rows: number[][], cols: number[][], n: number, sketch: Sk
     pivotOf[j] = rank
     rank++
   }
-  const loose = new Set<number>()
+  const loose: number[] = []
   for (let j = 0; j < m; j++) {
     if (pivotOf[j] < 0) {
-      loose.add(owner[param[j]])
+      loose.push(param[j])
       continue
     }
     const row = dense[pivotOf[j]]
     for (let k = 0; k < m; k++) {
       if (pivotOf[k] < 0 && Math.abs(row[k]) > EPS) {
-        loose.add(owner[param[j]])
+        loose.push(param[j])
         break
       }
     }
   }
-  return [...loose]
+  return loose
 }
 
 /** How many of the constraint equations are linearly dependent on the
  *  others at the solution, the parameters of fixed entities left out: the
- *  Gram matrix of the rows has one zero eigenvalue per dependency. */
+ *  Gram matrix of the rows has one zero eigenvalue per dependency. Counted
+ *  over each group of rows that shares no parameter with the rest. */
 function redundantRows(rows: number[][], cols: number[][], n: number, sketch: Sketch): number {
-  const k = rows.length
-  if (k === 0) return 0
   const fixed = new Uint8Array(n)
   let at = 0
   for (const e of sketch.entities) {
@@ -1082,6 +1143,21 @@ function redundantRows(rows: number[][], cols: number[][], n: number, sketch: Sk
     if (e.fixed) for (let i = 0; i < count; i++) fixed[at + i] = 1
     at += count
   }
+  const groups = groupsOf(n, cols.map((c) => c.filter((p) => !fixed[p])))
+  const of: number[][] = Array.from({ length: groups.count }, () => [])
+  let redundant = 0
+  // An equation on fixed pieces alone says nothing new.
+  rows.forEach((_, i) => (groups.of[i] < 0 ? redundant++ : of[groups.of[i]].push(i)))
+  for (const g of of) redundant += redundantInGroup(g.map((i) => rows[i]), g.map((i) => cols[i]), fixed)
+  return redundant
+}
+
+/** The dependent equations of one group: every column in it counted from 0. */
+function redundantInGroup(rows: number[][], cols: number[][], fixed: Uint8Array): number {
+  const k = rows.length
+  const column = new Map<number, number>()
+  for (const c of cols) for (const p of c) if (!fixed[p] && !column.has(p)) column.set(p, column.size)
+  const n = column.size
   // Dense rows over every parameter, each brought to unit length — a
   // coincidence on a large arc has derivatives the size of its radius, and
   // left unscaled it would set the eigenvalue threshold for every other row
@@ -1089,7 +1165,7 @@ function redundantRows(rows: number[][], cols: number[][], n: number, sketch: Sk
   const dense = rows.map((r, i) => {
     const row = new Float64Array(n)
     cols[i].forEach((p, ci) => {
-      if (!fixed[p]) row[p] = r[ci]
+      if (!fixed[p]) row[column.get(p)!] = r[ci]
     })
     let norm = 0
     for (const v of row) norm += v * v
