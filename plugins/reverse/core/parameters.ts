@@ -294,6 +294,20 @@ export function slotsOf<T extends Slotted>(x: T, kind: string | undefined = x.ki
     case 'extract':
     case 'thicken':
       return [field('thickness', 'Thickness', 'length', positive)]
+    case 'gear':
+      return [
+        field('teeth', 'Teeth', 'integer', (v) => Math.max(3, Math.round(Math.abs(v)))),
+        field('module', 'Module', 'length', positive),
+        field('pressureDeg', 'Pressure angle', 'angle', positive),
+        field('helixDeg', 'Helix angle', 'angle'),
+        field('shift', 'Profile shift', 'number'),
+        field('tipDiameter', 'Tip Ø', 'length', positive),
+        field('rootDiameter', 'Root Ø', 'length', positive),
+        field('from', 'From', 'length'),
+        field('to', 'To', 'length'),
+        field('phaseDeg', 'Phase', 'angle'),
+        field('bore', 'Bore Ø', 'length', positive),
+      ]
     case 'wrap':
       return [field('depth', 'Depth', 'length', positive)]
     case 'draft':

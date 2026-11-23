@@ -87,6 +87,11 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
           // the scan with would vanish into a body it overlaps.
           draft = { kind, element: null, section: null, thickness: DEFAULT_WALL_MM, op: 'new' }
           break
+        case 'gear':
+          // A spur gear of 20 teeth, module 2, on Z: numbers to type over,
+          // or the ones scan.gear reads off the scan.
+          draft = { kind, origin: [0, 0, 0], dir: [0, 0, 1], zeroDir: [1, 0, 0], from: 0, to: 10, phaseDeg: 0, teeth: 20, module: 2, pressureDeg: 20, helixDeg: 0, shift: 0, tipDiameter: 44, rootDiameter: 35, bore: 0, op: 'new' }
+          break
         case 'cutPlane':
           draft = { kind, body, plane: null, keep: 1 }
           break
@@ -205,6 +210,28 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
           break
         case 'extract':
           draft = { kind: 'extract', ...head, element: f.element ?? null, section: f.section ?? null, thickness: f.thickness, op: f.op }
+          break
+        case 'gear':
+          draft = {
+            kind: 'gear',
+            ...head,
+            origin: [...f.origin],
+            dir: [...f.dir],
+            zeroDir: [...f.zeroDir],
+            from: f.from,
+            to: f.to,
+            phaseDeg: f.phaseDeg,
+            teeth: f.teeth,
+            module: f.module,
+            pressureDeg: f.pressureDeg,
+            helixDeg: f.helixDeg,
+            shift: f.shift,
+            tipDiameter: f.tipDiameter,
+            rootDiameter: f.rootDiameter,
+            bore: f.bore ?? 0,
+            op: f.op,
+            ...(f.target !== undefined ? { target: f.target } : {}),
+          }
           break
         case 'cutPlane':
           draft = { kind: 'cutPlane', ...head, body: f.body, plane: f.plane, keep: f.keep }

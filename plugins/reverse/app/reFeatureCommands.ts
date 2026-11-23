@@ -451,7 +451,7 @@ function unusedName(base: string): string {
 }
 
 /** The kinds that make a solid and may join or cut one body alone. */
-const TARGETED = ['extrude', 'revolve', 'loft', 'sweep', 'wrap', 'thicken']
+const TARGETED = ['extrude', 'revolve', 'loft', 'sweep', 'wrap', 'thicken', 'gear']
 
 /** The body a feature's `target` names, by id — refused for a sheet,
  *  which has no inside to join or cut. */

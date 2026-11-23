@@ -29,6 +29,7 @@ import { elementRefSchema, findElement, planeRef, type ElementRef } from '../ref
 import { setMarked } from '../marked'
 import { scale } from './scanScale'
 import { curvature } from './curvature'
+import { gear } from './scanGear'
 
 export const unitsSchema = enumOf(
   MESH_UNITS.map((u) => u.id),
@@ -938,13 +939,13 @@ const PATTERN_HEIGHTS = 6
 const PATTERN_HEIGHTS_MAX = 12
 const PATTERN_COUNT = 60
 
-type AxisIn = ElementRef | { origin: Vec3; dir: Vec3 }
+export type AxisIn = ElementRef | { origin: Vec3; dir: Vec3 }
 
 /** An axis as scan.pattern takes it, as a line: its direction turned to
  *  the + end of the coordinate axis it lies nearest (as a plane through an
  *  axis takes it), and its origin the world origin's foot on it — so a
  *  height along it is the coordinate itself on a coordinate axis. */
-function axisLine(axis: AxisIn): { origin: Vec3; dir: Vec3; name?: string } {
+export function axisLine(axis: AxisIn): { origin: Vec3; dir: Vec3; name?: string } {
   let line: { origin: Vec3; dir: Vec3 } | null
   let name: string | undefined
   if (typeof axis === 'object') line = axis
@@ -1286,4 +1287,4 @@ const qa: Command<{ axis?: 'x' | 'y' | 'z' | Vec3 }> = {
   },
 }
 
-export const scanCommands = [open, nearest, query, fitSurface, draft, heightmap, outline, pattern, qa, scale, curvature]
+export const scanCommands = [open, nearest, query, fitSurface, draft, heightmap, outline, pattern, gear, qa, scale, curvature]

@@ -321,6 +321,10 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
               <Icon name="extract" />
               <span>Extract</span>
             </button>
+            <button data-test="feature-gear" disabled={!ready} title="An involute gear — spur or helical — from its tooth count, module, pressure angle, helix and shift: the numbers a drawing gives, or scan.gear reads off a scan" onClick={() => re.getState().startFeature('gear')}>
+              <KeyIcon name="gear" />
+              <span>Gear</span>
+            </button>
             <StepFileKey testId="feature-import" disabled={!ready} title="Bring a STEP file in as bodies of its own — a bought-in part, a mating part, the CAD model to check the scan against. A body for every solid in the file, named as the file names its parts; Move body puts them where they belong" onFile={(file) => re.getState().startFeature('import', { file, name: file.name.replace(/\.(step|stp)$/i, '') })}>
               <KeyIcon name="importStep" />
               <span>Import STEP</span>
@@ -519,7 +523,7 @@ export function ReversePanel({ onOpenScan, onExportStep, onExportMesh, onCompare
             const bodyOf =
               f.kind === 'sketch'
                 ? null
-                : f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'extract' || f.kind === 'loft' || f.kind === 'sweep' || f.kind === 'wrap' || f.kind === 'thicken'
+                : f.kind === 'extrude' || f.kind === 'revolve' || f.kind === 'extract' || f.kind === 'gear' || f.kind === 'loft' || f.kind === 'sweep' || f.kind === 'wrap' || f.kind === 'thicken'
                   ? (r?.bodies?.[0] ?? f.target ?? f.id)
                   : f.kind === 'sheet' || f.kind === 'surface' || f.kind === 'network' || f.kind === 'trim'
                     ? f.id

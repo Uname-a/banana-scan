@@ -17,6 +17,7 @@ import { liftPoint, loftProblem, loftProfile, pickedProfiles, routeSweepGeometry
 import { profilesMiddle, wrapDepthProblem, wrapOfGeometry, type WrapSurface } from './wrap'
 import type { Region } from './regions'
 import { threadProblem } from './thread'
+import { gearProblem, type GearSpec } from '../../../src/core/geometry/gear'
 import type { StoredPick } from './where'
 
 /** The frame a plane reference stands for now, or null when the thing it
@@ -147,7 +148,7 @@ function placedOnPart(f: SketchFeature): boolean {
 }
 
 /** The solid a measured element stands for, or why there is none. */
-function primitiveOf(fit: FitData | undefined, thickness: number): Exclude<Primitive, { kind: 'prism' }> | string {
+function primitiveOf(fit: FitData | undefined, thickness: number): Exclude<Primitive, { kind: 'prism' | 'gear' }> | string {
   if (!fit) return 'The element this body is taken from is gone.'
   switch (fit.kind) {
     case 'plane':
@@ -301,6 +302,14 @@ export function resolveFeatures(
       const primitive = f.section !== undefined ? shadowPrimitive(ctx.sections.find((s) => s.id === f.section)) : primitiveOf(element?.fit && drawnFit(element.fit, element.assumed, element.extend), f.thickness)
       if (typeof primitive === 'string') failed(f, primitive)
       else steps.push({ kind: 'extract', id: f.id, name: f.name, primitive, op: f.op, target: f.target })
+      continue
+    }
+    if (f.kind === 'gear') {
+      // A gear is built as an extracted solid is: its own solid, then the op.
+      const spec: GearSpec = { teeth: f.teeth, module: f.module, pressureDeg: f.pressureDeg, helixDeg: f.helixDeg, shift: f.shift, tipDiameter: f.tipDiameter, rootDiameter: f.rootDiameter }
+      const why = gearProblem(spec) ?? (!(f.to > f.from) ? 'The gear needs a face width: to beyond from.' : f.bore && !(f.bore > 0 && f.bore < f.rootDiameter) ? 'The bore has to lie inside the root circle.' : null)
+      if (why) failed(f, why)
+      else steps.push({ kind: 'extract', id: f.id, name: f.name, primitive: { kind: 'gear', spec, origin: f.origin, dir: f.dir, zeroDir: f.zeroDir, from: f.from, to: f.to, phaseDeg: f.phaseDeg, bore: f.bore ?? 0 }, op: f.op, target: f.target })
       continue
     }
     if (f.kind === 'cutPlane') {

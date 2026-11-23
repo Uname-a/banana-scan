@@ -790,7 +790,7 @@ export function useReverseWorkspace({
   }
   const ghostColor = () => {
     if (featureDraft) {
-      if (featureDraft.kind === 'extract' || featureDraft.kind === 'loft' || featureDraft.kind === 'sweep' || featureDraft.kind === 'wrap' || featureDraft.kind === 'thicken') return featureDraft.op === 'cut' ? CUT_COLOR : bodyColor(featureDraft.featureId ?? nextFeatureId)
+      if (featureDraft.kind === 'extract' || featureDraft.kind === 'gear' || featureDraft.kind === 'loft' || featureDraft.kind === 'sweep' || featureDraft.kind === 'wrap' || featureDraft.kind === 'thicken') return featureDraft.op === 'cut' ? CUT_COLOR : bodyColor(featureDraft.featureId ?? nextFeatureId)
       if (featureDraft.kind === 'sheet' || featureDraft.kind === 'surface' || featureDraft.kind === 'network' || featureDraft.kind === 'trim' || featureDraft.kind === 'import') return bodyColor(featureDraft.featureId ?? nextFeatureId)
       // A Move's ghost is the bodies themselves, in the first one's colour.
       if (featureDraft.kind === 'moveBody') {

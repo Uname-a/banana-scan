@@ -8,6 +8,7 @@ import { useLength } from '../../../src/app/useUnits'
 import { round3 } from '../../../src/core/round'
 import { WORLD_AXES } from '../../../src/core/section/frame'
 import type { Vec3 } from '../../../src/core/types'
+import { gearProblem } from '../../../src/core/geometry/gear'
 import { useStore } from '../../../src/state/store'
 import { Icon } from '../../../src/ui/icons'
 import { InfoDot } from '../../../src/ui/InfoDot'
@@ -58,7 +59,7 @@ export function FeatureEditor() {
   const describeEdge = describeEdgeIn(len.units)
   const set = (patch: Partial<FeatureDraft>) => re.getState().setFeatureDraft(patch)
   const ready = featureDraftReady(d)
-  const title: Record<FeatureDraftKind, string> = { network: 'Patch network', import: 'Import STEP', moveBody: 'Move body', offsetBody: 'Offset body', draft: 'Draft', moveFace: 'Move face', deleteFace: 'Delete face', shell: 'Shell', fillet: 'Fillet', chamfer: 'Chamfer', hole: 'Hole', thread: 'Thread', extract: 'Extract', cutPlane: 'Cut by plane', mirror: 'Mirror', boolean: 'Combine bodies', sheet: 'Sheet', split: 'Split', loft: 'Loft', sweep: 'Sweep', wrap: 'Wrap onto surface', thicken: 'Thicken', pattern: 'Pattern', surface: 'Fit surface', trim: 'Trim' }
+  const title: Record<FeatureDraftKind, string> = { network: 'Patch network', import: 'Import STEP', moveBody: 'Move body', offsetBody: 'Offset body', draft: 'Draft', moveFace: 'Move face', deleteFace: 'Delete face', shell: 'Shell', fillet: 'Fillet', chamfer: 'Chamfer', hole: 'Hole', thread: 'Thread', extract: 'Extract', gear: 'Gear', cutPlane: 'Cut by plane', mirror: 'Mirror', boolean: 'Combine bodies', sheet: 'Sheet', split: 'Split', loft: 'Loft', sweep: 'Sweep', wrap: 'Wrap onto surface', thicken: 'Thicken', pattern: 'Pattern', surface: 'Fit surface', trim: 'Trim' }
   const sketches = features.filter((f): f is SketchFeature => f.kind === 'sketch')
   const testKind = d.kind === 'cutPlane' ? 'cut-plane' : d.kind === 'moveFace' ? 'move-face' : d.kind === 'deleteFace' ? 'delete-face' : d.kind === 'offsetBody' ? 'offset-body' : d.kind === 'moveBody' ? 'move-body' : d.kind
   const bodySelect = (value: number | null, onChange: (id: number | null) => void, label = 'Body', testId = `${testKind}-body`) => (
@@ -665,6 +666,34 @@ export function FeatureEditor() {
           )}
           {chosen?.fit?.kind === 'plane' && <Num label="Thickness" testId="extract-thickness" slot="thickness" value={d.thickness} nominal="length" onCommit={(v) => set({ thickness: Math.abs(v) })} hint="A plane becomes a slab this thick, centred on it" />}
           <OpFields op={d.op} canCut={targets.length > 0} testPrefix="extract" onOp={(op) => set({ op })} />
+        </>
+      )
+      break
+    }
+    case 'gear': {
+      const problem = gearProblem(d) ?? (!(d.to > d.from) ? 'The face width needs To beyond From.' : d.bore > 0 && !(d.bore < d.rootDiameter) ? 'The bore has to lie inside the root circle.' : null)
+      fields = (
+        <>
+          <Num label="Teeth" testId="gear-teeth" slot="teeth" kind="integer" value={d.teeth} onCommit={(v) => set({ teeth: Math.max(3, Math.round(Math.abs(v))) })} />
+          <Num label="Module" testId="gear-module" slot="module" value={d.module} onCommit={(v) => set({ module: Math.abs(v) })} hint="The normal module: the reference diameter over the tooth count, for a helical gear across the teeth's own direction" />
+          <Num label="Pressure angle" testId="gear-pressure" slot="pressureDeg" value={d.pressureDeg} unit="°" onCommit={(v) => set({ pressureDeg: Math.abs(v) })} hint="The normal pressure angle; 20° is the usual one" />
+          <Num label="Helix angle" testId="gear-helix" slot="helixDeg" value={d.helixDeg} unit="°" onCommit={(v) => set({ helixDeg: v })} hint="At the reference circle: plus for a right hand, minus for a left, 0 for a spur gear" />
+          <Num label="Profile shift" testId="gear-shift" slot="shift" kind="number" value={d.shift} onCommit={(v) => set({ shift: v })} hint="The profile shift coefficient, in modules: what makes the teeth thicker (plus) or thinner (minus) than a standard gear's" />
+          <Num label="Tip Ø" testId="gear-tip" slot="tipDiameter" value={d.tipDiameter} onCommit={(v) => set({ tipDiameter: Math.abs(v) })} />
+          <Num label="Root Ø" testId="gear-root" slot="rootDiameter" value={d.rootDiameter} onCommit={(v) => set({ rootDiameter: Math.abs(v) })} />
+          <Num label="From" testId="gear-from" slot="from" value={d.from} onCommit={(v) => set({ from: v })} hint="Where the face starts, along the axis from its point" />
+          <Num label="To" testId="gear-to" slot="to" value={d.to} onCommit={(v) => set({ to: v })} />
+          <Num label="Phase" testId="gear-phase" slot="phaseDeg" value={d.phaseDeg} unit="°" onCommit={(v) => set({ phaseDeg: v })} hint="Where tooth 0's middle lies at the axis point's height, from the zero direction" />
+          <Num label="Bore Ø" testId="gear-bore" slot="bore" value={d.bore} onCommit={(v) => set({ bore: Math.abs(v) })} hint="A hole through the gear; 0 for none" />
+          <XyzField label="Axis point" kind="length" slot="origin" value={d.origin} testId="gear-origin" hint="A point on the axis the gear turns on" onCommit={(i, v) => set({ origin: d.origin.map((x, j) => (j === i ? v : x)) as Vec3 })} />
+          <XyzField label="Axis direction" kind="number" slot="dir" value={d.dir} testId="gear-dir" hint="The way the axis runs, any length" onCommit={(i, v) => set({ dir: d.dir.map((x, j) => (j === i ? v : x)) as Vec3 })} />
+          <XyzField label="Zero direction" kind="number" slot="zeroDir" value={d.zeroDir} testId="gear-zero" hint="The direction the teeth's angles are counted from, square to the axis" onCommit={(i, v) => set({ zeroDir: d.zeroDir.map((x, j) => (j === i ? v : x)) as Vec3 })} />
+          <OpFields op={d.op} canCut={bodies.some((b) => !b.surface)} testPrefix="gear" onOp={(op) => set({ op })} />
+          {problem && (
+            <p className="hint warn" data-test="gear-problem">
+              ⚠ {problem}
+            </p>
+          )}
         </>
       )
       break

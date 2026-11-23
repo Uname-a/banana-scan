@@ -400,6 +400,9 @@ export type FeatureDraft = { exprs?: ExprMap } & (
   | { kind: 'thread'; featureId?: number; name?: string; body: number | null; face: DraftFace | null; internal: boolean | null; standard: ThreadStandard; diameter: number; pitch: number; leftHanded: boolean; fullLength: boolean; length: number; start: number; flip: boolean; offset: number; chamfer: boolean; sized: boolean }
   /** `element` or `section`: a measured element, or a shadow section. */
   | { kind: 'extract'; featureId?: number; name?: string; element: number | null; section: number | null; thickness: number; op: BodyOp }
+  /** An involute gear (GearFeature): its numbers as typed or read off the
+   *  scan, its axis a point, a direction and the zero of its angles. */
+  | { kind: 'gear'; featureId?: number; name?: string; origin: Vec3; dir: Vec3; zeroDir: Vec3; from: number; to: number; phaseDeg: number; teeth: number; module: number; pressureDeg: number; helixDeg: number; shift: number; tipDiameter: number; rootDiameter: number; bore: number; op: BodyOp; target?: number }
   | { kind: 'cutPlane'; featureId?: number; name?: string; body: number | null; plane: PlaneRef | null; keep: 1 | -1 }
   | { kind: 'mirror'; featureId?: number; name?: string; body: number | null; plane: MirrorPlane | null; join: boolean; symmetry: SymmetryFinding }
   /** `keep`: the tools stay bodies of their own (BooleanFeature).
