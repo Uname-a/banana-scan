@@ -24,6 +24,7 @@ import { applySlots, type ExprMap, exprsFollowingEdges, exprsFromCommand, slotAt
 import { shadowSketch } from '../core/shadowPieces'
 import { DEFAULT_SURFACE_FIT, NET_MAX } from '../core/surfaceFit'
 import { sizeOf, threadFaceReading, threadProblem, threadSizes, type ThreadStandard } from '../core/thread'
+import { gearProblem } from '../../../src/core/geometry/gear'
 import { bodiesOfFeature } from '../state/reFeatureHelpers'
 import { settle } from '../state/reSketchDraft'
 import { type BodyInfo, type ExtrudeDraft, extrudeDraftReady, type FeatureDraft, type FeatureDraftKind, featureDraftReady, type RevolveDraft, revolveDraftReady, roundFaceLength, trimToleranceFor, useReverse } from '../state/reStore'
@@ -239,6 +240,12 @@ function boxFields(s: ReverseSession, kind: FeatureDraftKind, input: Json, box: 
       if (box.kind === 'extract' && box.element === null && box.section === null && !has('element') && !has('section')) invalid('An extract takes element — a plane, cylinder, cone, sphere or torus of 3D Measure — or section, a shadow section.')
       break
     }
+    case 'gear': {
+      for (const k of ['teeth', 'module', 'pressureDeg', 'helixDeg', 'shift', 'tipDiameter', 'rootDiameter', 'from', 'to', 'phaseDeg', 'bore', 'op', 'origin', 'dir', 'zeroDir']) if (has(k)) out[k] = input[k]
+      // A body named to join it to joins it, unless told to cut.
+      if (has('target') && input.target !== null && !has('op')) out.op = 'join'
+      break
+    }
     case 'cutPlane':
       if (has('plane')) out.plane = planeOf(s, input.plane as Json)
       if (has('keep')) out.keep = input.keep
@@ -442,6 +449,7 @@ function notReady(d: FeatureDraft): string {
   if (d.kind === 'chamfer' && d.mode === 'distanceAngle' && !(d.angleDeg > 0 && d.angleDeg < 90)) return 'The chamfer’s angle is between 0° and 90°.'
   if (d.kind === 'fillet' && (d.variable ?? []).some((v) => !(v.radius[0] > 0 && v.radius[1] > 0))) return 'An edge at a varying radius needs both its radii above zero.'
   if (d.kind === 'pattern' && !(d.count >= 2)) return 'A pattern needs a count of two or more.'
+  if (d.kind === 'gear') return gearProblem(d) ?? (!(d.to > d.from) ? 'The gear needs a face width: to beyond from.' : 'The bore has to lie inside the root circle.')
   if (d.kind === 'thicken') return d.sheet === null ? 'Name the sheet to thicken (sheet).' : 'The thicken needs a thickness above zero.'
   if (d.kind === 'wrap') return d.sketchId === null ? 'Name the sketch to wrap (sketchId).' : d.surface === null && !d.region ? 'Name the cylinder, cone or plane it wraps onto (surface), or a region of the scan (region).' : d.regions.length === 0 ? 'The sketch has no closed region to wrap.' : 'The wrap needs a depth above zero.'
   if (d.kind === 'split' && d.keep === 'between' && d.tools.length < 2) return 'Keeping what lies between the sheets takes two sheets or more (tools).'

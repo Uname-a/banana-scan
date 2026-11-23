@@ -17,6 +17,22 @@ the same number as `appVersion`. How a release is cut is in
   radius does. They follow their edge when another is picked or let go, and
   change places with the radii (⇄).
 
+- **Gears read off a scan and built as gears** (Reverse engineer,
+  2026-11-23). `scan.gear` finds each band of teeth along an axis and
+  reads the involute gear it is: the tooth count, the module and pressure
+  angle, the helix and its hand, the profile shift, the tip and root
+  diameters and the face width, on the teeth's own centre, with how close
+  the flanks lie to true involutes and which teeth are broken. The flanks
+  fix the base pitch far better than the pressure angle, so a standard
+  module is named only where its flanks lie as close to the scan as the
+  measured ones and its profile shift is one gears are cut with (1 or
+  less); otherwise 20° and the module as measured, the same flanks. A new **Gear** feature builds one from those
+  numbers — spur, or helical as a smooth loft through turned sections —
+  each number a parameter, solid to the root circle or round a bore. On
+  the Artec gear scan: 34 teeth, 30.1° right hand, tip Ø97.43, 13.1 mm
+  wide, its flanks 0.059 mm from the scan's (rms); module 2.301 at 20°, no
+  standard named, m 2.25 at 14.5°, 16° and 17.5° coming equally close.
+
 - **A freeform body over a region of the scan, that closes** (Reverse
   engineer, 2026-11-23). `reverse.freeform.body { at, planes?, box?, sink? }`
   makes a closed solid where profiles stop — a bent bar, a moulded arm, a

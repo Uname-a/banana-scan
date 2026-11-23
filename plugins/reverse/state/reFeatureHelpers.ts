@@ -240,6 +240,7 @@ export const KIND_LABELS: Record<Feature['kind'] | 'coil', string> = {
   hole: 'Hole',
   thread: 'Thread',
   extract: 'Extract',
+  gear: 'Gear',
   cutPlane: 'Cut',
   mirror: 'Mirror',
   boolean: 'Combine',

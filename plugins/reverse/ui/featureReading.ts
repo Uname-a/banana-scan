@@ -53,6 +53,7 @@ export const FEATURE_ICONS: Record<Feature['kind'], KeyIconName> = {
   // a coil's is; the key that starts one has a picture of its own.
   thread: 'revolve',
   extract: 'extract',
+  gear: 'gear',
   cutPlane: 'cutPlane',
   mirror: 'mirror',
   boolean: 'combine',
@@ -116,6 +117,15 @@ export function bodyFeatureReading(f: Exclude<Feature, { kind: 'sketch' | 'extru
       const op = f.op === 'new' ? 'New body' : f.op === 'join' ? 'Join' : 'Cut'
       if (f.section !== undefined) return { text: `${op} · ${ctx.sections.find((x) => x.id === f.section)?.name ?? 'deleted section'}`, title: 'The shadow section’s outline stood up through the part’s thickness' }
       return { text: `${op} · ${ctx.elements.find((e) => e.id === f.element)?.name ?? 'deleted element'}`, title: `The element as a solid at its fitted extents${f.thickness > 0 ? `, a plane as a ${len(f.thickness)} slab` : ''}` }
+    }
+    case 'gear': {
+      const op = f.op === 'new' ? 'New body' : f.op === 'join' ? 'Join' : 'Cut'
+      const hand = f.helixDeg > 0 ? `, ${Math.abs(f.helixDeg).toFixed(2)}° right-hand` : f.helixDeg < 0 ? `, ${Math.abs(f.helixDeg).toFixed(2)}° left-hand` : ''
+      const shift = Math.abs(f.shift) > 1e-4 ? `, shift ${f.shift.toFixed(3)}` : ''
+      return {
+        text: `${op} · z ${f.teeth} · m ${+f.module.toFixed(4)} · ${+f.pressureDeg.toFixed(2)}°${f.helixDeg ? ` · β ${f.helixDeg.toFixed(2)}°` : ''}`,
+        title: `An involute ${f.helixDeg ? 'helical' : 'spur'} gear: ${f.teeth} teeth, module ${+f.module.toFixed(4)}, pressure angle ${+f.pressureDeg.toFixed(2)}°${hand}${shift}; tip Ø${len(f.tipDiameter)}, root Ø${len(f.rootDiameter)}, ${len(f.to - f.from)} wide${f.bore ? `, bore Ø${len(f.bore)}` : ''}`,
+      }
     }
     case 'cutPlane':
       return { text: `at ${describePlaneRef(f.plane, ctx, units)}`, title: `${names(f.body)} cut at the plane, the side ${f.keep > 0 ? 'along' : 'against'} its normal kept` }
