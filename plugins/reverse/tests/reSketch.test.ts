@@ -236,6 +236,46 @@ describe('the sketch solver', () => {
   })
 })
 
+describe('a piece put somewhere', () => {
+  /** A 12 × 3 profile of fitted lines, level and upright by relations though
+   *  its slice leans by `lean` mm a side. */
+  const leaning = (lean: number) => {
+    const random = mulberry32(7)
+    const s = emptySketch()
+    const corners: Vec2[] = [[0, 0], [12, lean], [12 - lean, 3 + lean], [-lean, 3]]
+    const ids = corners.map((a, i) => {
+      const b = corners[(i + 1) % 4]
+      const n = i % 2 === 0 ? 80 : 20
+      const points = Array.from({ length: n }, (_, k): Vec2 => {
+        const t = (k + 0.5) / n
+        return [a[0] + (b[0] - a[0]) * t + gaussian(random) * 0.007, a[1] + (b[1] - a[1]) * t + gaussian(random) * 0.007]
+      })
+      return addEntity(s, { kind: 'line', a: [a[0], a[1]], b: [b[0], b[1]], points, scatter: 0.007 })
+    })
+    ids.forEach((id, i) => addConstraint(s, { kind: 'coincident', p: { entity: id, at: 'b' }, q: { entity: ids[(i + 1) % 4], at: 'a' } }))
+    addConstraint(s, { kind: 'horizontal', entity: ids[0] })
+    addConstraint(s, { kind: 'horizontal', entity: ids[2] })
+    addConstraint(s, { kind: 'vertical', entity: ids[1] })
+    solveSketch(s)
+    return { s, left: ids[3] }
+  }
+
+  it('stays there through the solves after, though fitted neighbours lean against their relations', () => {
+    const { s, left } = leaning(0.05)
+    // The left side put 0.4 mm in, off its slice points, as a drag leaves it.
+    const l = line(s, left)
+    const a: Vec2 = [l.a[0] + 0.4, l.a[1]]
+    const b: Vec2 = [l.b[0] + 0.4, l.b[1]]
+    s.entities = s.entities.map((e) => (e.id === left ? { id: left, kind: 'line' as const, a, b } : e))
+    solveSketch(s, { pull: [{ anchor: { entity: left, at: 'a' }, to: a }, { anchor: { entity: left, at: 'b' }, to: b }] })
+    expect(line(s, left).a[0]).toBeCloseTo(a[0], 1)
+    const put = [line(s, left).a[0], line(s, left).b[0]]
+    for (let i = 0; i < 6; i++) solveSketch(s)
+    expect(Math.abs(line(s, left).a[0] - put[0])).toBeLessThan(0.02)
+    expect(Math.abs(line(s, left).b[0] - put[1])).toBeLessThan(0.02)
+  })
+})
+
 describe('coincidence with a piece and with the axes', () => {
   // A sketch on the XY plane: the YZ plane's line is x = 0, the ZX
   // plane's y = 0.

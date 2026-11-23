@@ -10,6 +10,15 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A sketch piece moved by hand stays where it was put** (Reverse engineer,
+  2026-11-23). A piece with no slice points behind it crept on at every later
+  solve, whatever the edit, where the fitted pieces beside it lean against
+  their relations: 0.2 mm a time on a scanned bracket's outline. A fitted
+  line's level or upright is now held by its direction, as parallel is, and
+  letting go of a dragged point settles the sketch in full. Over 538 moves of
+  0.4 mm on scanned sketches, 2 shifted by over 0.02 mm at the next solve,
+  where 100 did, by 0.2 mm at most, where it was 14, and none after that.
+
 - **A varying round's radii driven by parameters** (Reverse engineer,
   2026-11-23). Each edge a fillet rounds from a start radius to an end one
   takes an expression for either, in its box and in `exprs`
