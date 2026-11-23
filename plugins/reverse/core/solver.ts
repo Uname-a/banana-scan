@@ -59,9 +59,9 @@ const FREE_WEIGHT = 1e-1
  *  a long drag takes past the tolerance below: so a pulled solve ends with
  *  the pull let go and the relations closed exactly from where it got to. */
 const PULL_WEIGHT = 1e2
-/** The iterations the let-go pass is allowed: it starts within microns of
- *  its answer, and one or two steps are all it takes. */
-const RELEASE_ITERATIONS = 6
+/** The iterations the pass that closes the relations is allowed: it starts
+ *  within microns of its answer, and one or two steps are all it takes. */
+const CLOSE_ITERATIONS = 6
 /** A hard residual over this, in millimetres, after convergence is a
  *  constraint the solver could not meet. */
 const UNMET_TOLERANCE = 1e-3
@@ -499,6 +499,21 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
     return [Math.cos(t), Math.sin(t)]
   }
 
+  // A fitted line's lean off level or upright, by its direction, as parallel
+  // and the angles are held. By how far one end lies over the other — what a
+  // line with no points is held by — its points gain by its growing longer:
+  // at the hair a relation is held open against them, a longer line leans
+  // less, with only the stay-put wish against it, and a free end beside it
+  // crept on at every solve, 0.2 mm a time on a scanned bracket's outline.
+  const lean = (c: Constraint & { entity: number }, across: 0 | 1) => {
+    const e = slots.get(c.entity)?.entity
+    const fitted = e?.kind === 'line' && e.points && e.points.length > 0
+    hard(c, [c.entity], (xs) => {
+      const l = lineOf(xs, c.entity)
+      return l ? [fitted ? dirOf(xs, c.entity)[across] * L : l.b[across] - l.a[across]] : [0]
+    })
+  }
+
   for (const c of sketch.constraints) {
     if (c.kind === 'coincident') {
       hard(c, [c.p.entity, c.q.entity], (xs) => {
@@ -507,15 +522,9 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
         return [p[0] - q[0], p[1] - q[1]]
       })
     } else if (c.kind === 'horizontal') {
-      hard(c, [c.entity], (xs) => {
-        const l = lineOf(xs, c.entity)
-        return l ? [l.b[1] - l.a[1]] : [0]
-      })
+      lean(c, 1)
     } else if (c.kind === 'vertical') {
-      hard(c, [c.entity], (xs) => {
-        const l = lineOf(xs, c.entity)
-        return l ? [l.b[0] - l.a[0]] : [0]
-      })
+      lean(c, 0)
     } else if (c.kind === 'parallel') {
       hard(c, [c.a, c.b], (xs) => {
         const da = dirOf(xs, c.a)
@@ -906,16 +915,19 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
   }
   if (pulls.length > 0) {
     // The hand let go: every piece now wishes to stay where the pull left
-    // it, and the relations close the last microns the pull held open.
+    // it, the relations close the last microns the pull held open, and the
+    // slice points it overruled settle in full — stopped short of that, the
+    // next solve, of whatever edit, would move the sketch to where they
+    // want it.
     for (const r of rests) for (let i = 0; i < r.init.length; i++) r.init[i] = x[r.at + i]
-    descend(blocks.filter((b) => !pulls.includes(b)), RELEASE_ITERATIONS, 1e-9, 1e-12)
+    descend(blocks.filter((b) => !pulls.includes(b)), quick ? CLOSE_ITERATIONS : MAX_ITERATIONS, 1e-9, 1e-12)
   }
   if (!quick && softCount > 0 && worstHard(blocks, x) > CLOSE_FROM) {
     // Slice points a few microns apart on a clean cut weigh as much as the
     // relations, and hold them a micron or two open: the pieces settled
     // where the data put them, now stay there and let the relations close.
     for (const r of rests) for (let i = 0; i < r.init.length; i++) r.init[i] = x[r.at + i]
-    descend(blocks.filter((b) => !pulls.includes(b) && (b.constraintId !== undefined || b.weight === FREE_WEIGHT)), RELEASE_ITERATIONS, 1e-9, 1e-12)
+    descend(blocks.filter((b) => !pulls.includes(b) && (b.constraintId !== undefined || b.weight === FREE_WEIGHT)), CLOSE_ITERATIONS, 1e-9, 1e-12)
   }
 
   return finish(sketch, slots, x, blocks, iterations, softCount, quick)
