@@ -215,12 +215,18 @@ export function useReverseWorkspace({
       rigidApply(delta, p[0], p[1], p[2], out)
       return [out[0], out[1], out[2]]
     }
+    const turnBy = (d: Vec3): Vec3 => {
+      const o = moveAt([0, 0, 0])
+      const p = moveAt(d)
+      return [p[0] - o[0], p[1] - o[1], p[2] - o[2]]
+    }
     // A network's points are on the scan, in its frame: they go with it.
     const movedNetwork = <T extends NetworkData>(n: T): T => ({
       ...n,
       nodes: n.nodes.map((x) => ({ ...x, at: moveAt(x.at) })),
       curves: n.curves.map((c) => ({ ...c, via: c.via.map(moveAt) })),
       cells: n.cells.map((c) => ({ ...c, seed: moveAt(c.seed), ...(c.centre ? { centre: moveAt(c.centre) } : {}) })),
+      ...(n.region ? { region: { ...n.region, seed: moveAt(n.region.seed), planes: n.region.planes.map((q) => ({ origin: moveAt(q.origin), normal: turnBy(q.normal) })) } } : {}),
     })
     const framed = (f: Feature): Feature =>
       f.kind === 'network'

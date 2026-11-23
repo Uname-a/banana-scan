@@ -397,6 +397,7 @@ describe('the commands hold to the panel’s rules', () => {
       'reverse.feature.schema',
       'reverse.feature.suppress',
       'reverse.feature.update',
+      'reverse.freeform.body',
       'reverse.import.step',
       'reverse.network.auto',
       'reverse.network.create',

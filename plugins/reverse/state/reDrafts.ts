@@ -199,7 +199,7 @@ export function featureOfDraft(d: FeatureDraft, id: number, name: string): Featu
   // A network with curves and no region filled yet is built all the same —
   // for the preview, whose reading of the regions the curves close is what
   // a click fills and Fill all fills; Create still waits for a cell.
-  if (d.kind === 'network') return d.curves.length > 0 ? { id, kind: 'network', name, ...cloneData(d), visible: true } : null
+  if (d.kind === 'network') return d.curves.length > 0 || d.region?.laid ? { id, kind: 'network', name, ...cloneData(d), visible: true } : null
   if (!featureDraftReady(d)) return null
   switch (d.kind) {
     case 'shell':

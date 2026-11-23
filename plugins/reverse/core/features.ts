@@ -23,6 +23,7 @@ import { DATUM_PLANES } from './datums'
 import { type ThreadStandard } from './thread'
 import type { SketchImage } from './sketchImage'
 import type { SweepRoute } from './sweepRoute'
+import type { NetworkRegion } from './regionMesh'
 import { type ResolveContext } from './buildSteps'
 export { farReach, frameMap, liftPoint, liftRegions, loftProfile, moveProfiles, pickedProfiles, profileMiddle, profilesMeetAxis, profileSpan, routeSweepGeometry, sideOf, sketchPieces, sweepPath } from './profiles'
 export { type BuildStep, type PlaneGeometry, type ResolveContext, type SketchOnFace, SURFACE_MIN_REGION } from './buildSteps'
@@ -1072,6 +1073,10 @@ export interface NetworkFeature extends FeatureFlags {
    *  of a curve in it; a strip with none is Auto. */
   spans: Record<string, number>
   fit: NetworkFitParams
+  /** The piece of the scan it is drawn on, cut by planes and capped
+   *  (regionMesh.ts), in place of the whole scan: its nodes and curves lie
+   *  on that mesh, its caps and skirts among it. */
+  region?: NetworkRegion
   visible: boolean
 }
 

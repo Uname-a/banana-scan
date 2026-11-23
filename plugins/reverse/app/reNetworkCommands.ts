@@ -127,7 +127,7 @@ const detailIn = enumOf(['none', 'brief'], 'none: id, status, line, the curves�
  *  frame the bodies are built in — kept while the scan is the same. */
 let paths: { key: unknown[]; paths: ScanPaths } | null = null
 
-function scanPaths(s: ReverseSession): ScanPaths {
+export function scanPaths(s: ReverseSession): ScanPaths {
   const st = useStore.getState()
   if (!st.fileName) throw new CommandError('no_scan', 'A patch network is drawn on the scan, and none is open.')
   const scene = s.sceneRef.current
@@ -407,7 +407,7 @@ const reportOf = (id: number): NetworkReport | undefined => re().results[id]?.ne
 function lineOf(f: NetworkFeature, report: NetworkReport | undefined): string {
   if (report) return networkStatus(report, { curves: f.curves } as unknown as Parameters<typeof networkStatus>[1])
   const r = re().results[f.id]
-  const curves = `${f.curves.length} curve${f.curves.length === 1 ? '' : 's'}`
+  const curves = f.region?.laid ? 'laid out by itself' : `${f.curves.length} curve${f.curves.length === 1 ? '' : 's'}`
   if (re().rolledBack.includes(f)) return `${curves} · below the rollback bar`
   if (f.suppressed) return `${curves} · suppressed`
   if (r?.status === 'failed') return `${curves} · failed: ${r.message ?? 'the build failed'}`
@@ -460,7 +460,7 @@ function changedAnswer(s: ReverseSession, id: number, kept: Json, detail: 'none'
 /** The network made or edited: its draft put into the feature box — a new
  *  one, or the feature's opened — and committed, one undo step, with the
  *  scan handed to the kernel first, which builds the network on it. */
-async function commit(s: ReverseSession, d: NetworkDraft, opts: { edit?: number; name?: string }): Promise<number> {
+export async function commitNetwork(s: ReverseSession, d: NetworkDraft, opts: { edit?: number; name?: string }): Promise<number> {
   await s.syncScan()
   return change(() => {
     if (opts.edit !== undefined) re().editFeature(opts.edit)
@@ -509,7 +509,7 @@ export const networkCreate: Command<{ name?: string; curves: CurveIn[]; fill?: F
     pl.d = filled(pl, fill)
     if (!networkReady(pl.d)) nothingFilled(pl)
     const before = bodyRows(s)
-    const id = await commit(s, pl.d, { ...(name !== undefined ? { name } : {}) })
+    const id = await commitNetwork(s, pl.d, { ...(name !== undefined ? { name } : {}) })
     return changedAnswer(s, id, placedOut(pl, 'curves'), detail, before)
   },
 }
@@ -612,6 +612,8 @@ export const networkEdit: Command<EditIn> = {
     if (!re().features.includes(f)) throw new CommandError('invalid_state', `${f.name} is below the rollback bar — move the bar (reverse.feature.rollback) to edit it.`)
     if ([set, move, remove, grips, add, unfill, fill, fit, name].every((x) => x === undefined)) invalid('Nothing to change — give set, move, remove, grips, add, unfill, fill, fit or name.')
     requireFreeName(name, f.id)
+    // A freeform body's layout is made from the scan at every build.
+    if (f.region?.laid && [set, move, remove, grips, add, unfill, fill].some((x) => x !== undefined)) invalid(`${f.name} is a freeform body over a region of the scan, laid out by itself: its curves are not drawn. Change its fit or name, or make it again (reverse.freeform.body).`)
     // Every id and index named, checked against the network as read.
     const curveIds = new Set(f.curves.map((c) => c.id))
     const nodeIds = new Set(f.nodes.map((n) => n.id))
@@ -694,13 +696,13 @@ export const networkEdit: Command<EditIn> = {
     else for (const i of [...(unfill ?? [])].sort((a, b) => b - a)) pl.d = removeSeed(pl.d, i)
     if (fill !== undefined) pl.d = filled(pl, fill)
     if (fit) pl.d = setNetworkFit(pl.d, fit)
-    if (pl.d.curves.length === 0) invalid(`That leaves ${f.name} with no curves — remove the feature instead (reverse.feature.remove).`)
+    if (pl.d.curves.length === 0 && !pl.d.region?.laid) invalid(`That leaves ${f.name} with no curves — remove the feature instead (reverse.feature.remove).`)
     if (!networkReady(pl.d)) {
       if (unfill !== undefined && fill === undefined) invalid(`That leaves no region of ${f.name} filled, and a network keeps one at least — fill one, or remove the feature (reverse.feature.remove).`)
       nothingFilled(pl)
     }
     const before = bodyRows(s)
-    const id = await commit(s, pl.d, { edit: f.id, ...(name !== undefined ? { name } : {}) })
+    const id = await commitNetwork(s, pl.d, { edit: f.id, ...(name !== undefined ? { name } : {}) })
     return changedAnswer(s, id, add ? placedOut(pl, 'added') : {}, detail, before)
   },
 }
@@ -927,7 +929,7 @@ export const networkAuto: Command<AutoIn> = {
     let d: NetworkDraft = { ...emptyNetworkDraft(), nodes: layout.nodes, curves: layout.curves, cells: layout.cells, nextId: layout.nextId }
     if (fit) d = setNetworkFit(d, fit)
     const before = bodyRows(s)
-    const id = await commit(s, d, { ...(name !== undefined ? { name } : {}) })
+    const id = await commitNetwork(s, d, { ...(name !== undefined ? { name } : {}) })
     const f = re().features.find((x) => x.id === id) as NetworkFeature | undefined
     const report = reportOf(id)
     const answer = changedAnswer(s, id, {}, detail, before)

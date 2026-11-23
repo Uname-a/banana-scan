@@ -1011,6 +1011,44 @@ under 0.6 long — bent round further than one patch follows — is cut across
 the bend. A network whose patches do not sew along a curve is built open
 there, the curve and its gap in the report (`unsewn`) and a warning.
 
+**A freeform body over a region** (`reverse.freeform.body`) is the network
+laid out over one piece of the scan so that it closes, for a boolean with a
+body made another way. The piece (`core/regionMesh.ts`) is what of the scan
+holds a point, between planes: cut there, vertices close by a plane moved
+along an edge onto it so that no sliver is left, and closed by a flat cap at
+the end of a straight skirt, `sink` mm long, that stands into the other body.
+The scan's holes inside it are closed flat, edges longer than a sixtieth of
+it halved. It is mapped onto a cylinder (`core/regionTube.ts`): a harmonic
+function from 0 at its largest rim to 1 at the middle of its far end — or at
+the other rim, or between two poles where there is no rim — has no peak, pit
+or saddle between, so its level lines are single loops whatever bumps the
+piece has, and with its conjugate it is one to one. The solve is a conjugate
+gradient preconditioned by a V-cycle over aggregates: 145,000 vertices in
+seconds. Four lines along (or eight) and rings across cut it into cells
+(`core/regionLayout.ts`): a ring on a fold across it (the edge of a flat
+end), a pole's ring drawn a little square, the lines turned to the folds
+along it, the rest spread so that a cell is as long as it is wide. A cell
+where 15 % of the surface comes on under 2 % of its square holds a branch,
+and is laid out again as a tube from its own four sides. The build fits the
+layout as it was drawn (`regionReading`): no curve is traced and no cell
+flooded again, so none crosses or leaks. A cell that bends far off the Coons
+surface of its sides (the cap of an arm) keeps the map's (u, v) where a
+projection would lose its way (`PatchInput.bends`). The feature keeps its
+region and how it was laid out, not curves; drawn on in the box, it is an
+ordinary network on the region from there.
+
+Measured: the bar, the lump, the arch and the arm of `reRegion.test.ts`. The
+sample fridge bracket whole (288,582 triangles), closed, valid and back from
+STEP: 26 faces, 91.7 % of its surface within 0.1 mm with a cell along for
+each the shape asks for and four lines, read in 28 s; 46 faces, 94.8 % with
+two, in 28 s; 96 faces, 96.8 % (99.1 % within 0.25 mm) with two and eight
+lines, in 49 s; all three and the build, 210 s. A tooth of a scanned helical
+gear, cut off above its root: 10 faces, 99.2 %, 6 s. A sector of three teeth of it across
+the ring, eight lines and three bands: 32 faces, 84.7 % within 0.1 mm and
+99.2 % within 0.25 mm: patches round a tooth's edges that no line lies on.
+Not there: a region with a hole through it, and creases that run askew to the
+tube.
+
 Not there yet: a loft through curves on the mesh (Loft lofts between
 sketches today), Auto layout on an open scan, and a whole real mechanical
 part. On the sample fridge bracket (288,582 triangles) the creases left one
@@ -1056,6 +1094,7 @@ models in the workspace with the commands under `reverse.` — tools
 | `reverse.export.stl` | the bodies as one binary STL to a chord, for printing — or a 3MF (`format`), a body an object |
 | `reverse.network.create / edit / read` | a Patch network from curves given as points on the scan — joined where one lands on another, its regions filled (`fill: "all"`); edited in one undo step (curves and points added, moved and taken out, creases, a strip's spans, the side on a body); read as the box reads it: cells with their sides or why refused, patches with σ, worst and net, curves with their gap and angle |
 | `reverse.network.suggest_creases` | the scan's sharp edges and folds as crease curves, ready to add, with their length and angle |
+| `reverse.freeform.body` | a closed solid over a region of the scan where profiles stop — the piece that holds a point, between planes, each cut capped and carried `sink` mm past — laid out by its shape in four-sided patches, layouts tried finer until it follows the scan, measured both ways and checked; for a boolean to join or cut |
 | `reverse.network.auto` | a Patch network laid out by itself over the whole scan, as Auto layout lays it out: the creases, the regions cut into cells, filled and built — with the layout (creases, how the crease graph was closed, cuts, cells, each region and what was done), the deviation in short and how the patches meet (tangent, corners, and the curvature's step across each curve — G2 held with `fit.continuity: "g2"`) |
 | `reverse.import.step` | a STEP file brought in as bodies, as Import STEP brings one: a body for every solid, named after its part; a `moveBody` feature puts them in place |
 | `reverse.note.list / add / resolve` | the notes pinned on the part (below): each with its pin, and what it is on found again on the bodies as they stand — a face or an edge by its index in `body.describe` and the feature that made it, or the scan with the body face nearest; `add` pins the agent's own question — on faces or edges picked as `body.describe` gives them, or at a point; `resolve` marks a note handled with a line on what was done, or closes the agent's question once answered |
