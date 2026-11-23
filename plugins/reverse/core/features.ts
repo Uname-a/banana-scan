@@ -25,6 +25,7 @@ import type { SketchImage } from './sketchImage'
 import type { SweepRoute } from './sweepRoute'
 import type { NetworkRegion } from './regionMesh'
 import { type ResolveContext } from './buildSteps'
+import type { GearSpec } from '../../../src/core/geometry/gear'
 export { farReach, frameMap, liftPoint, liftRegions, loftProfile, moveProfiles, pickedProfiles, profileMiddle, profilesMeetAxis, profileSpan, routeSweepGeometry, sideOf, sketchPieces, sweepPath } from './profiles'
 export { type BuildStep, type PlaneGeometry, type ResolveContext, type SketchOnFace, SURFACE_MIN_REGION } from './buildSteps'
 
@@ -535,6 +536,38 @@ export interface ExtractFeature extends FeatureFlags {
   section?: number
   /** A slab's thickness, centred on the plane. */
   thickness: number
+  op: BodyOp
+  target?: number
+  /** The expressions driving the numbers above, by the field as the box
+   *  shows it — see parameters.ts; the numbers hold what they last came
+   *  to. Absent when every number was typed as one. */
+  exprs?: Record<string, string>
+  visible: boolean
+}
+
+/** An involute gear, named the way a drawing names it — see
+ *  src/core/geometry/gear.ts: its teeth square to the axis are involutes of
+ *  the base circle, turned along the axis by the helix. Built straight for
+ *  a spur gear and as a smooth loft through turned sections for a helical
+ *  one; solid to the root circle, with a bore where one is given. What
+ *  scan.gear reads off a scan, it builds. */
+export interface GearFeature extends FeatureFlags, GearSpec {
+  id: number
+  kind: 'gear'
+  name: string
+  /** The axis, in the part's frame: a point on it, its direction, and the
+   *  direction the teeth's angles are counted from (square to it). */
+  origin: Vec3
+  dir: Vec3
+  zeroDir: Vec3
+  /** The face width: mm along the axis from `origin`, from below to. */
+  from: number
+  to: number
+  /** Where tooth 0's middle lies at `origin`'s height, degrees from
+   *  `zeroDir` towards dir × zeroDir. */
+  phaseDeg: number
+  /** A bore's diameter through the gear; absent or 0: solid to the root. */
+  bore?: number
   op: BodyOp
   target?: number
   /** The expressions driving the numbers above, by the field as the box
@@ -1131,10 +1164,10 @@ export interface TrimFeature extends FeatureFlags {
 /** A measured element as a trim tool, resolved: a plane by its frame,
  *  the others as the primitives Extract makes, which the builder oversizes
  *  to reach past the part. */
-export type TrimPrimitive = { kind: 'plane'; origin: Vec3; normal: Vec3; basisU: Vec3; basisV: Vec3 } | Exclude<Primitive, { kind: 'slab' | 'prism' }>
+export type TrimPrimitive = { kind: 'plane'; origin: Vec3; normal: Vec3; basisU: Vec3; basisV: Vec3 } | Exclude<Primitive, { kind: 'slab' | 'prism' | 'gear' }>
 
 export type BodyFeature = ShellFeature | FilletFeature | ChamferFeature | HoleFeature | ThreadFeature | CutPlaneFeature | MirrorFeature | BooleanFeature | SplitFeature | PatternFeature | DraftFeature | MoveFaceFeature | DeleteFaceFeature | OffsetBodyFeature
-export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | ExtractFeature | SheetFeature | LoftFeature | SweepFeature | WrapFeature | ThickenFeature | SurfaceFeature | NetworkFeature | TrimFeature | ImportFeature | MoveBodyFeature | BodyFeature
+export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | ExtractFeature | GearFeature | SheetFeature | LoftFeature | SweepFeature | WrapFeature | ThickenFeature | SurfaceFeature | NetworkFeature | TrimFeature | ImportFeature | MoveBodyFeature | BodyFeature
 
 /** The solid an extracted element or shadow becomes, resolved to plain
  *  geometry. */
@@ -1147,6 +1180,8 @@ export type Primitive =
   /** Profiles in the part stood along `dir` from `from` to `to` mm off
    *  their plane — a shadow section's block. */
   | { kind: 'prism'; profiles: Profile[]; dir: Vec3; from: number; to: number }
+  /** An involute gear (GearFeature) from `from` to `to` along `dir`. */
+  | { kind: 'gear'; spec: GearSpec; origin: Vec3; dir: Vec3; zeroDir: Vec3; from: number; to: number; phaseDeg: number; bore: number }
 
 /** The frame a sketch on a body's planar face lies in: the face's plane
  *  with its normal outward, the sheet's zero and X by the sketch rule
@@ -1200,6 +1235,7 @@ export function referencesOf(f: Feature): number[] {
     case 'revolve':
       return f.target === undefined ? [f.sketchId] : [f.sketchId, f.target]
     case 'extract':
+    case 'gear':
       return f.target === undefined ? [] : [f.target]
     case 'boolean':
       return [f.body, ...toolsOf(f)]

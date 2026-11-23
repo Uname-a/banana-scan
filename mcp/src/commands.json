@@ -1,6 +1,6 @@
 {
   "app": "0.11.2",
-  "saved": "2026-11-18T01:51:42.873Z",
+  "saved": "2026-11-23T18:07:06.313Z",
   "commands": [
     {
       "name": "align.auto",
@@ -3376,6 +3376,103 @@
       "readOnly": true,
       "returnsFile": false,
       "returnsImage": false
+    },
+    {
+      "name": "scan.gear",
+      "title": "Read the gears round an axis",
+      "description": "The involute gears on the scan about an axis, read off it: needs axis — a cylinder, cone, line or circle element, \"X\", \"Y\", \"Z\", or { origin, dir } (the bore's cylinder is best). Cuts square to the axis along the scan find each band of teeth (a run of cuts with the same count, six or more), or give from and to (mm along the axis) for one; radius keeps the cut to the teeth where another feature shares their height. Returns per gear: from and to (its face width along the axis), axis { origin (moved onto the teeth's own centre), dir, zeroDir } and centreOff (mm), teeth, module (normal), pressureDeg, helixDeg (plus a right hand, minus a left, 0 spur), shift (profile shift, modules), tipDiameter, rootDiameter, baseDiameter, leadMm, phaseDeg (tooth 0's middle at height 0 on the axis, from zeroDir), standard (the module and pressure angle named, or null where the flanks name none, or only one wanting a shift over 1: 20° and the module as measured — the same flanks, not the drawing's numbers), flankRms (mm: the gear named against the scan's flanks), measuredFlankRms (the closest true involutes'), helixRms (degrees: how far the teeth stray from one helix along the face) and broken (each tooth well off the others or short of the tip: index, angleDeg, rms, tipShort). A gear with a flankRms well over the scan's noise is not an involute (a sprocket, a spline, a worn gear). reverse_feature_add { kind: \"gear\" } builds what it reads. Changes nothing.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "axis": {
+            "oneOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "description": "Its id.",
+                    "minimum": 1
+                  },
+                  {
+                    "type": "string",
+                    "description": "Its name — \"Sphere 1\".",
+                    "minLength": 1
+                  }
+                ],
+                "description": "A cylinder, cone, line or circle element, or a coordinate axis \"X\", \"Y\", \"Z\"."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "A point on the axis, mm.",
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "dir": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Its direction, any length.",
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                },
+                "required": [
+                  "origin",
+                  "dir"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "The axis the gear turns on."
+          },
+          "from": {
+            "type": "number",
+            "description": "mm along the axis: where one band of teeth starts. With to; absent, the bands are found."
+          },
+          "to": {
+            "type": "number",
+            "description": "mm along the axis: where it ends."
+          },
+          "radius": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "number",
+                "description": "mm",
+                "minimum": 0
+              },
+              "max": {
+                "type": "number",
+                "description": "mm",
+                "exclusiveMinimum": 0
+              }
+            },
+            "additionalProperties": false,
+            "description": "Only the cut between these distances from the axis."
+          },
+          "teeth": {
+            "type": "integer",
+            "description": "The tooth count, where the cuts cannot count it (a gear with teeth missing).",
+            "minimum": 6,
+            "maximum": 120
+          }
+        },
+        "required": [
+          "axis"
+        ],
+        "additionalProperties": false
+      },
+      "readOnly": true,
+      "returnsFile": false,
+      "returnsImage": false,
+      "long": true
     },
     {
       "name": "scan.heightmap",

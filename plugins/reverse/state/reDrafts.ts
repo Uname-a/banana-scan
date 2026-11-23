@@ -6,6 +6,7 @@
 
 import type { WorldAxis } from '../../../src/core/section/frame'
 import type { Vec3 } from '../../../src/core/types'
+import { gearProblem } from '../../../src/core/geometry/gear'
 import type { DisplayUnits } from '../../../src/core/units'
 import { addScaled, cross, normalize } from '../../../src/core/vec'
 import { PALETTE } from '../../../src/state/palette'
@@ -62,6 +63,8 @@ export function featureDraftReady(d: FeatureDraft): boolean {
       return d.body !== null && d.face !== null && threadProblem(d) === null && (d.fullLength || (d.length > 0 && d.start >= 0))
     case 'extract':
       return d.element !== null || d.section !== null
+    case 'gear':
+      return gearProblem(d) === null && d.to > d.from && (!(d.bore > 0) || d.bore < d.rootDiameter)
     case 'cutPlane':
       return d.body !== null && d.plane !== null
     case 'mirror':
@@ -226,6 +229,29 @@ export function featureOfDraft(d: FeatureDraft, id: number, name: string): Featu
       return { id, kind: 'thread', name, body: d.body!, face: d.face!.fingerprint, standard: d.standard, diameter: d.diameter, pitch: d.pitch, leftHanded: d.leftHanded, length: d.fullLength ? null : d.length, start: d.fullLength ? 0 : d.start, flip: d.flip, offset: d.offset, chamfer: d.chamfer, visible: true }
     case 'extract':
       return { id, kind: 'extract', name, ...(d.section !== null ? { section: d.section } : { element: d.element! }), thickness: d.thickness, op: d.op, visible: true }
+    case 'gear':
+      return {
+        id,
+        kind: 'gear',
+        name,
+        origin: d.origin,
+        dir: d.dir,
+        zeroDir: d.zeroDir,
+        from: d.from,
+        to: d.to,
+        phaseDeg: d.phaseDeg,
+        teeth: d.teeth,
+        module: d.module,
+        pressureDeg: d.pressureDeg,
+        helixDeg: d.helixDeg,
+        shift: d.shift,
+        tipDiameter: d.tipDiameter,
+        rootDiameter: d.rootDiameter,
+        ...(d.bore > 0 ? { bore: d.bore } : {}),
+        op: d.op,
+        ...(d.target !== undefined ? { target: d.target } : {}),
+        visible: true,
+      }
     case 'cutPlane':
       return { id, kind: 'cutPlane', name, body: d.body!, plane: d.plane!, keep: d.keep, visible: true }
     case 'mirror':

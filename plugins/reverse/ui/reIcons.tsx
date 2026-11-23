@@ -68,6 +68,13 @@ const RE_ICONS = {
       <circle className="i-adt" cx="12" cy="12" r="1.4" />
     </>
   ),
+  // A gear: eight teeth round a bore.
+  gear: (
+    <>
+      <path className="i-gf" d="M18.55 9.53L21.31 10.11L21.31 13.89L18.55 14.47L18.38 14.89L19.92 17.25L17.25 19.92L14.89 18.38L14.47 18.55L13.89 21.31L10.11 21.31L9.53 18.55L9.11 18.38L6.75 19.92L4.08 17.25L5.62 14.89L5.45 14.47L2.69 13.89L2.69 10.11L5.45 9.53L5.62 9.11L4.08 6.75L6.75 4.08L9.11 5.62L9.53 5.45L10.11 2.69L13.89 2.69L14.47 5.45L14.89 5.62L17.25 4.08L19.92 6.75L18.38 9.11Z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </>
+  ),
   // A block's round taken off — dashed, it goes — and the two faces run on
   // to the corner it stood in.
   deleteFace: (
