@@ -50,14 +50,18 @@ export function cloneData(d: NetworkData): NetworkData {
     cells: d.cells.map((c) => ({ ...c, seed: [...c.seed] as Vec3, ...(c.centre ? { centre: [...c.centre] as Vec3 } : {}), ...(c.corners ? { corners: [...c.corners] } : {}) })),
     spans: { ...d.spans },
     fit: { ...d.fit },
+    ...(d.region ? { region: { seed: [...d.region.seed] as Vec3, planes: d.region.planes.map((q) => ({ origin: [...q.origin] as Vec3, normal: [...q.normal] as Vec3 })), sink: d.region.sink, ...(d.region.laid ? { laid: { ...d.region.laid } } : {}) } } : {}),
   }
 }
 
-const dataOf = (d: NetworkData): NetworkData => ({ nodes: d.nodes, curves: d.curves, cells: d.cells, spans: d.spans, fit: d.fit })
+const dataOf = (d: NetworkData): NetworkData => ({ nodes: d.nodes, curves: d.curves, cells: d.cells, spans: d.spans, fit: d.fit, ...(d.region ? { region: d.region } : {}) })
 
 /** The draft with `next` for its data, the data before kept for undo. */
 function edited<D extends NetworkDraft>(d: D, next: Partial<NetworkData>, extra: Partial<NetworkDraft> = {}): D {
-  return { ...d, ...next, ...extra, history: [...d.history.slice(-(HISTORY - 1)), dataOf(d)], future: [] }
+  // Drawn on, a network laid out by itself is one drawn from here on.
+  const drawn = d.region?.laid && (next.nodes || next.curves || next.cells) && !('region' in next)
+  const region = drawn ? { region: { seed: d.region!.seed, planes: d.region!.planes, sink: d.region!.sink } } : {}
+  return { ...d, ...next, ...region, ...extra, history: [...d.history.slice(-(HISTORY - 1)), dataOf(d)], future: [] }
 }
 
 /** Several steps made one: `after`, with `before`'s data the one undo
@@ -521,5 +525,5 @@ export function setNetworkFit<D extends NetworkDraft>(d: D, fit: Partial<Network
 
 /** Whether a network draft has anything to build. */
 export function networkReady(d: NetworkData): boolean {
-  return d.curves.length > 0 && d.cells.length > 0
+  return d.region?.laid !== undefined || (d.curves.length > 0 && d.cells.length > 0)
 }
