@@ -523,6 +523,7 @@ export const fitIn = obj(
       ['sigmas'],
       'Take the relations the fitted pieces nearly hold as the design’s, in the same call: each candidate (as reverse.sketch.candidates gives them) within sigmas of holding is added, nearest first, and the sketch solved; one the solve cannot meet with those before it is left (conflict), one they already imply (implied), and one that moves a piece past maxMoveMm (moved, with moves: { piece, mm, limitMm }) — one they imply in part is taken for the rest, its constraints saying which. Tangent, equal radius and angle are offered between neighbouring pieces only (joined, or ends within a few scatters). A fit whose chain crosses itself (fitted[].crosses) is refused accept. The answer’s accept lists accepted (with the constraint ids added — take one out with remove.constraints), left, each with why: sigmas, kind, conflict, implied or moved, and maxMoveMm (the largest limit a trial was held to); moved says how far the pieces went, and note — where every candidate of a kind was left moved — how far they went and the maxMoveMm that takes them, to weigh against T.',
     ),
+    timeLimit: num('Seconds the fit may take, the relations accept takes included; 300 by default. Past it the call is refused (timeout) and nothing is changed — a fit runs on the page’s own thread and cannot be stopped from outside.', { exclusiveMinimum: 0, maximum: 3600 }),
     like: {
       ...featureRef('sketch'),
       description:

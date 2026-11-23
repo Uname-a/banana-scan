@@ -13,6 +13,7 @@ import { findRegions, matchRegions, picksGrew, picksSeen } from '../core/regions
 import { readPieces, rounding } from '../core/intent'
 import { reassignCornerPoints, roundCorner, roundRadiusSigma, roundUnread } from '../core/roundCorner'
 import { cloneSketch, entityOf, removeEntities, type Sketch, type SketchArc, type SketchEntity } from '../core/sketch'
+import { timeKept } from '../core/timeLimit'
 import { trimAt } from '../core/trim'
 import { withoutTarget } from '../state/reFeatureHelpers'
 import { useReverse } from '../state/reStore'
@@ -25,7 +26,7 @@ import { bodiesOut, featureBrief, featureOut, regionsOut, resultOut } from './re
 import { EXAMPLE_NOTES, FEATURE_EXAMPLES, FEATURE_IN, FEATURE_KINDS, featureInBrief, featureOf, featureRef, handOut, partialOf, SHARED_NAMES, sharedPart, sketchAddIn, sketchFieldsNamed } from './reSchemas'
 import { reverseSession } from './reSession'
 import { failedWith, recordRemoved, REMOVED_SAY, usePlan } from './rePlan'
-import { acceptOnDraft, draftOffsetDraft, fitDraftShared, type FitIn, type FittedOut, givenOut, madeOut, movedFar, movedPieces, offPieceOut, piecesSetOut, setPieces, type PreparedFit, prepareFit, projectDraft, type ProjectIn, putLanded, putSketch, renumberClashes, sketchOf } from './reSketchInput'
+import { acceptOnDraft, draftOffsetDraft, fitDraftShared, fitLimitMs, type FitIn, type FittedOut, givenOut, madeOut, movedFar, movedPieces, offPieceOut, piecesSetOut, setPieces, type PreparedFit, prepareFit, projectDraft, type ProjectIn, putLanded, putSketch, renumberClashes, sketchOf } from './reSketchInput'
 
 export const list: Command<{ feature?: Ref; detail?: 'brief' | 'full' }> = {
   name: 'list',
@@ -206,7 +207,7 @@ async function addOne(asked: Json, detail: Detail) {
       if (target !== undefined) setTarget(id, target)
       extra = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined && !(typeof v === 'object' && v !== null && Object.keys(v).length === 0)))
       return id
-    })
+    }, { limitMs: fitLimitMs(prepared) })
   } finally {
     picked = takePickLog()
   }
@@ -1100,6 +1101,7 @@ export const sketchEdit: Command<{ sketch: Ref; add?: Json; remove?: { pieces?: 
         const warning = r.radius === undefined ? roundUnread(points, r.found) : null
         return { arc: r.arc, a: r.a, b: r.b, radius: arc.r, sigma, nominal: nominal.nominal, off: nominal.off, sigmas: nominal.sigmas, ...(read?.residual ? { residual: read.residual } : {}), points, held, ...(warning ? { warning } : {}) }
       })
+      timeKept()
       if (re().commitSketch() === null) throw new CommandError('failed', 'That leaves the sketch with nothing in it — remove the sketch instead.')
       void s
       const after = (allFeatures().find((x) => x.id === f.id) as SketchFeature | undefined)?.sketch
@@ -1127,7 +1129,7 @@ export const sketchEdit: Command<{ sketch: Ref; add?: Json; remove?: { pieces?: 
         ...offPieceOut(after),
         solve,
       }
-    })
+    }, { limitMs: fitLimitMs(prepared) })
     // What the rows of the features on the sketch say after the rebuild — a
     // region picked that took in another's, say (core/regions.ts picksGrew).
     const nowSketch = (allFeatures().find((x) => x.id === f.id) as SketchFeature | undefined)?.sketch

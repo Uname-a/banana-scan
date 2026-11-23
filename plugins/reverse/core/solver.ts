@@ -41,6 +41,7 @@ import {
   type SketchSpline,
 } from './sketch'
 import { isClosed, nearestOnSpline, splineAt, splineCurve, splineDirAt, splineEnd } from './sketchSpline'
+import { checkTime } from './timeLimit'
 
 /** How the hard equations outweigh the soft data, whose weight is 1/σ — a
  *  few tens for a scan. Squared in the normal equations, so the span from
@@ -812,6 +813,7 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
     let current = cost(rs)
 
     for (; it < maxIterations && !converged; it++) {
+      checkTime()
       JtJ.fill(0)
       Jtr.fill(0)
       xt.set(x)
@@ -854,6 +856,7 @@ export function solveSketch(sketch: Sketch, options: SolveOptions = {}): SolveRe
 
       let improved = false
       for (let attempt = 0; attempt < 12; attempt++) {
+        checkTime()
         // Damped normal equations, scaled to unit diagonal: the hard rows put
         // entries a million times the stay-put terms' on the diagonal, and the
         // elimination's pivot test would take the small ones for zeros.
@@ -1148,7 +1151,10 @@ function redundantRows(rows: number[][], cols: number[][], n: number, sketch: Sk
   let redundant = 0
   // An equation on fixed pieces alone says nothing new.
   rows.forEach((_, i) => (groups.of[i] < 0 ? redundant++ : of[groups.of[i]].push(i)))
-  for (const g of of) redundant += redundantInGroup(g.map((i) => rows[i]), g.map((i) => cols[i]), fixed)
+  for (const g of of) {
+    checkTime()
+    redundant += redundantInGroup(g.map((i) => rows[i]), g.map((i) => cols[i]), fixed)
+  }
   return redundant
 }
 
