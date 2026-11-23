@@ -29,6 +29,7 @@ import type { KernelMesh } from '../core/kernelTypes'
 import { pointInPolygon, regionAt } from '../core/regions'
 import { signedArea2 } from '../../../src/core/flat/vec2'
 import { upU } from '../core/resolve'
+import { TimeUp, withinTime } from '../core/timeLimit'
 import { type EdgeFingerprint, type FaceFingerprint, matchEdge, matchFace, matchTolerance, splitEdges, tangentChain } from '../core/topo'
 import { isWhere, SHARP_DEG, type StoredPick, storedWhere, unwrapped, type Where, type WhereAsk, whereIndices as coreWhereIndices } from '../core/where'
 import { type BodyInfo, useReverse } from '../state/reStore'
@@ -194,8 +195,9 @@ const showWorkspace = () => {
  *  committed in one go — shut again if anything in it was refused — and
  *  the part built after: or its build held back, for changes gathered or
  *  run deferred (buildLater), unless `now` — a change whose part the next
- *  step picks on, such as the rollback bar moved for an edit. */
-export async function change<T>(job: (s: ReverseSession) => T, { now = false }: { now?: boolean } = {}): Promise<T> {
+ *  step picks on, such as the rollback bar moved for an edit. A job with a
+ *  fit in it is refused past `limitMs`, leaving the part as it was. */
+export async function change<T>(job: (s: ReverseSession) => T, { now = false, limitMs = Infinity }: { now?: boolean; limitMs?: number } = {}): Promise<T> {
   const s = await ready()
   requireFree()
   showWorkspace()
@@ -203,7 +205,10 @@ export async function change<T>(job: (s: ReverseSession) => T, { now = false }: 
   if (later) s.hold()
   let out: T
   try {
-    out = job(s)
+    out = limitMs === Infinity ? job(s) : withinTime(limitMs, () => job(s))
+  } catch (e) {
+    if (!(e instanceof TimeUp)) throw e
+    throw new CommandError('timeout', `The fit did not finish in ${e.limitMs / 1000} s and was stopped; nothing was changed. A cut along the scan’s own scatter falls into many bits: cut it elsewhere, keep to part of it (fit.chains, fit.within), fit without accept, or give it longer (fit.timeLimit).`)
   } finally {
     closeBoxes()
   }

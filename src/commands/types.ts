@@ -23,7 +23,8 @@ import type { JsonSchema } from './schema'
  *  - `unavailable` — needs what this session lacks, such as the viewport
  *  - `not_implemented` — named in the contract, not built yet
  *  - `timeout` — the command did not finish in its time and was given up
- *    on; it may have changed the session in part
+ *    on; it may have changed the session in part, unless the message says
+ *    that nothing was changed
  *  - `internal` — a fault of the app's own
  *  - `stale_page` — the page could not load a part of the app it needed:
  *    the app was rebuilt since the page loaded (stalePage.ts)

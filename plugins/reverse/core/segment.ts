@@ -38,6 +38,7 @@ import type { FlatArcFit, FlatLineFit, Vec2 } from '../../../src/core/flat/types
 import { len2, sub2 } from '../../../src/core/flat/vec2'
 import { addEntity, unwindAngle, type AnchorAt, type Sketch, type SketchArc, type SketchLine } from './sketch'
 import { viewChain } from '../../../src/core/flat/grow'
+import { checkTime } from './timeLimit'
 
 /** One piece of the chain, over the run of chain points [lo, hi]. */
 export interface ChainSegment {
@@ -631,6 +632,7 @@ export function kindsOfChain(chain: readonly Vec2[], kinds: readonly ('line' | '
  * cut at all.
  */
 export function segmentChain(chain: readonly Vec2[], opts: SegmentOptions = {}): SegmentedChain {
+  checkTime()
   const { spacing, scatter, closed, points } = chainStatistics(chain)
   const n = points.length
   if (n < 4) throw new FitError('The chain has too few points to fit anything to.')
@@ -722,6 +724,7 @@ export function segmentChain(chain: readonly Vec2[], opts: SegmentOptions = {}):
   const mergeAll = (): void => {
     let merged = true
     while (merged && runs.length > 1) {
+      checkTime()
       merged = false
       // Best-first: the pair whose union sits best within what it is allowed
       // merges, so a fillet's chords gather into their arc before a side
@@ -832,6 +835,7 @@ export function segmentChain(chain: readonly Vec2[], opts: SegmentOptions = {}):
     return length < minLength
   }
   for (let guard = 0; guard < 4 * n && runs.length > 1; guard++) {
+    checkTime()
     const count = runs.length
     const short = runs.map(isShort)
     if (!short.some(Boolean)) break

@@ -24,6 +24,7 @@ import { fitPointsAlong } from '../core/sketchSpline'
 import { addConstraint, addEntity, type Anchor, type AnchorAt, anchorPoint, anchorsOf, cloneSketch, distanceAlong, endsOf, type ConstraintInput, emptySketch, type EntityInput, entityOf, isDimension, nearestOnEntity, removeConstraint, type Sketch, type SketchEntity, splineAnchor } from '../core/sketch'
 import type { SnapHold } from '../core/snap'
 import { type Pull, type SolveReport, solveSketch } from '../core/solver'
+import { TimeUp } from '../core/timeLimit'
 import type { ExtrudeDraft, SketchDraft } from './reTypes'
 
 export const MAX_HISTORY = 40
@@ -198,6 +199,7 @@ export function settle(d: SketchDraft, before?: Sketch, pull?: readonly Pull[], 
   try {
     report = solveSketch(d.sketch, { ...(pull ? { pull } : {}), quick, datums: datumTraces(d.frame) })
   } catch (e) {
+    if (e instanceof TimeUp) throw e
     return { ...d, history, error: e instanceof Error ? e.message : String(e) }
   }
   const found = quick ? d.found : findRegions(d.sketch)

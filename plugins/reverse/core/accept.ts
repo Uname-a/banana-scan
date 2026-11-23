@@ -30,6 +30,7 @@ import type { DatumTrace } from './datums'
 import { retakeMoved } from './project'
 import { addConstraint, cloneSketch, type Sketch, type SketchEntity } from './sketch'
 import { solveSketch } from './solver'
+import { checkTime } from './timeLimit'
 import { round4 } from '../../../src/core/round'
 
 export interface AcceptRule {
@@ -168,6 +169,7 @@ export function acceptCandidates(sketch: Sketch, datums: readonly DatumTrace[], 
     return far && far.mm > limit ? { piece: far.piece, mm: round4(far.mm), limitMm: round4(limit) } : null
   }
   for (const c of candidates) {
+    checkTime()
     if (rule.kinds && !rule.kinds.includes(c.kind)) {
       left.push({ ...brief(c), why: 'kind' })
       continue

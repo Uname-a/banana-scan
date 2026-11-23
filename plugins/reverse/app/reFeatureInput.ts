@@ -23,6 +23,7 @@ import { INSERT_SIZES, insertHole, insertSize } from '../core/inserts'
 import { applySlots, type ExprMap, exprsFollowingEdges, exprsFromCommand, slotAt, slotsOf, unlinkSlot } from '../core/parameters'
 import { shadowSketch } from '../core/shadowPieces'
 import { DEFAULT_SURFACE_FIT, NET_MAX } from '../core/surfaceFit'
+import { timeKept } from '../core/timeLimit'
 import { sizeOf, threadFaceReading, threadProblem, threadSizes, type ThreadStandard } from '../core/thread'
 import { gearProblem } from '../../../src/core/geometry/gear'
 import { bodiesOfFeature } from '../state/reFeatureHelpers'
@@ -739,6 +740,7 @@ export function addFeature(s: ReverseSession, input: Json, prepared?: PreparedFi
       // Last, the whole profile moved in.
       const insetOut = inset ? insetDraft(inset as InsetIn) : undefined
       const solve = insetOut?.solve ?? offset.solve ?? accepted.solve ?? first
+      timeKept()
       const id = re().commitSketch()
       if (id === null) throw new CommandError('failed', 'The sketch could not be made.')
       const after = (re().features.find((x) => x.id === id) as SketchFeature | undefined)?.sketch

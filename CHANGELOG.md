@@ -10,6 +10,15 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A sketch's fit has a time limit** (Reverse engineer, 2026-11-23). A fit
+  runs on the page's own thread and nothing outside could stop it: a cut
+  along a scan's scatter, hundreds of bits of outline, held a session for
+  minutes, the build's limit and `reverse.build.stop` waiting behind it. The
+  loops a fit spends its time in now look at the clock, and past
+  `fit.timeLimit` seconds (300 by default, the relations it accepts
+  included) the call is refused as `timeout` with nothing changed. Fitting
+  in the panel is not limited.
+
 - **A sketch piece moved by hand stays where it was put** (Reverse engineer,
   2026-11-23). A piece with no slice points behind it crept on at every later
   solve, whatever the edit, where the fitted pieces beside it lean against

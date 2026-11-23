@@ -39,6 +39,7 @@ import { fitPointsChain } from '../state/reSketchDraft'
 import { addConstraint, addEntity, addPolygon, anchorPoint, arcPoint, arcThrough, addRectangle, addRectangleCentre, addTurnedRectangle, type AnchorAt, anchorsOf, cloneSketch, type Constraint, constraintEntities, type ConstraintInput, type ConstraintKind, DIMENSION_KINDS, emptySketch, endsOf, type EntityInput, entityOf, inferRelations, patternPieces, POLYGON_MAX_SIDES, type PolygonFit, QUADRANTS, relationTakes, renumbered, type Sketch, type SketchArc, type SketchEntity, type SketchPatternSpec, type SketchSpline, splineJoint, splinePointIndex, TOUCH_MM } from '../core/sketch'
 import { insetChains, insetKeeps, likeStation, runFactsWords, STATION_FOLD_HELP, stationFaults, type StationLoop, stationLoop } from '../core/stations'
 import { measureDimension, type Pull } from '../core/solver'
+import { checkTime, TimeUp } from '../core/timeLimit'
 import { bodyNamed, type EdgePickIn, edgesPicked, facePicked, type FacePickIn, type Json, re, type Ref, sketchNamed, topologyOf } from './reCommandCore'
 import type { ReverseSession } from './reSession'
 import { throughBand, type ThroughIn, throughOn, type ThroughOut } from './reThrough'
@@ -786,6 +787,9 @@ export interface FitIn {
   /** mm: slice points this near a piece already there are that piece's
    *  (core/shareFit.ts); SHARE_MM by default, 0 for none. */
   share?: number
+  /** Seconds the fit may take, the relations it accepts included;
+   *  FIT_LIMIT_S by default. */
+  timeLimit?: number
   /** The taper the extrude from this sketch will have, degrees, signed as
    *  its draftDeg: the chains are moved for it (draftOffsetDraft). */
   draftDeg?: number
@@ -793,6 +797,13 @@ export interface FitIn {
    *  about it, in place of the scan cut there (reThrough.ts). */
   through?: ThroughIn
 }
+
+/** How long a fit may take when it does not say, seconds — as long as a
+ *  build's step (BUILD_LIMIT_MS). */
+const FIT_LIMIT_S = 300
+
+/** The time a change with this fit in it may take, ms; none without one. */
+export const fitLimitMs = (fit: PreparedFit | undefined): number => (fit ? (fit.fit.timeLimit ?? FIT_LIMIT_S) * 1000 : Infinity)
 
 /** The fit as asked for, and the chains it runs on — cut before the box
  *  is opened, the cut being the worker's. */
@@ -1483,6 +1494,7 @@ export function draftOffsetDraft(fit: FitIn | undefined, out: FitDraftOut | unde
  *  folded back on itself — their areas largest first. Null for a chain
  *  that closes one region or none. */
 function crossing(sketch: Sketch, order: readonly { id: number }[]): number[] | null {
+  checkTime()
   const ids = new Set(order.map((o) => o.id))
   const regions = findRegions({ entities: sketch.entities.filter((e) => ids.has(e.id)) })
   return regions.length > 1 ? regions.map((r) => round4(r.area)) : null
@@ -1513,6 +1525,7 @@ function whyNot(chain: readonly Vec2[], tolerance: number | null, options: FitOp
     else segmentChain(chain, { detail: options.detail, ...tol })
     return 'It did not fit.'
   } catch (e) {
+    if (e instanceof TimeUp) throw e
     return errorMessage(e)
   }
 }
