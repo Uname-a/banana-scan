@@ -14,7 +14,8 @@ the same number as `appVersion`. How a release is cut is in
   2026-11-23). `reverse.body.fillet_read`, and a fillet's `radius: "fit"`,
   read a straight edge between two flats as an outside corner whichever it
   was, so the fillet at a wall's foot read as a sharp edge. Which it is now
-  comes off the body, as it does for a curved edge. The fillet box's own
+  comes off the body, as it does for a curved edge, and the answer says so
+  (`inside: true`): a leaning wall's foot reads as a bevel there. The fillet box's own
   estimate still reads outside corners only.
 
 - **A sketch's fit has a time limit** (Reverse engineer, 2026-11-23). A fit
