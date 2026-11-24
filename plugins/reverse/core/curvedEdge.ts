@@ -899,6 +899,29 @@ function faceAt(st: Station, i: number, face: FaceTriangles, reach: number): { n
   return read
 }
 
+/**
+ * Whether the part fills the corner of an edge from inside — a wall's foot,
+ * where a fillet adds material — at a station, as readFreeCut tells it: the
+ * second face runs the way the first one faces. Null where the body's cut
+ * does not say. A fingerprint cannot: it has the faces' normals, which are
+ * the same on a convex edge and a concave one.
+ */
+export function freeConcave(edge: FreeEdge, st: Station, reach: number): boolean | null {
+  for (const r of retried(reach)) {
+    const traces: Trace2[] = []
+    for (const [i, face] of edge.faces.entries()) {
+      const { normal, cut } = faceAt(st, i, face, r)
+      const m = normal ? unit2([dot(normal, st.x), dot(normal, st.y)]) : null
+      const tr = m ? traceFromCut(cut.filter((c) => Math.hypot(c.p[0], c.p[1]) <= r), m, r) : null
+      if (tr) traces.push(tr)
+    }
+    if (traces.length < 2) continue
+    const s = dot2(traces[0].m, traces[1].d)
+    return Math.abs(s) < SIN_TANGENT ? null : s > 0
+  }
+  return null
+}
+
 function readFreeAt(edge: FreeEdge, st: Station, chains: Vec2[][], reach: number, shape: 'round' | 'chamfer', miss: Miss, capped = false): CurvedRead | null {
   const none = (why: string) => {
     miss.why = why
