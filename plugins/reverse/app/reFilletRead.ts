@@ -11,7 +11,7 @@ import type { Vec3 } from '../../../src/core/types'
 import { type Command, CommandError } from '../../../src/plugins/api'
 import { useStore } from '../../../src/state/store'
 import type { EdgeInfo, FaceInfo } from '../core/buildTypes'
-import { type CurvedEdge, type CurvedRead, curvedStations, curvedUnreadable, type FacedMesh, type FreeEdge, freeEdgeOf, freeStations, freeUnreadable, isCurvedEdge, readCurvedCut, readFreeCut } from '../core/curvedEdge'
+import { type CurvedEdge, type CurvedRead, curvedStations, curvedUnreadable, type FacedMesh, type FreeEdge, freeEdgeOf, freeConcave, freeStations, freeUnreadable, isCurvedEdge, readCurvedCut, readFreeCut } from '../core/curvedEdge'
 import { combineReadings, cornerUnreadable, type FilletReading, type Miss, readCornerCut, readCornerSetbacks, type ScanCut } from '../core/filletEstimate'
 import { rounding } from '../core/intent'
 import { bodyNamed, type EdgePickIn, edgesPicked, meshOf, ready, type Ref, topologyOf } from './reCommandCore'
@@ -79,6 +79,15 @@ export function readEdgeOf(edge: EdgeInfo, topology: { faces: readonly FaceInfo[
 
 /** The edge as one of any shape, where the body's mesh came with it. */
 const freeOf = (edge: ReadEdge): FreeEdge | null => (edge.polyline && edge.faceHashes && edge.mesh ? freeEdgeOf(edge.polyline, edge.faceHashes, edge.mesh) : null)
+
+/** Whether a straight edge is an inside corner, off the body's mesh at the
+ *  middle of it and beside; false where the body does not say. */
+function insideCorner(edge: ReadEdge, reach: number): boolean {
+  const free = freeOf(edge)
+  const at = free ? freeStations(free, 3, MIDDLE_SHARE) : null
+  const said = (at ?? []).map((st) => freeConcave(free!, st, reach)).filter((x): x is boolean => x !== null)
+  return said.filter(Boolean).length * 2 > said.length
+}
 
 /** A shape read where the scan has the other one: a straight cut fits a
  *  round's points too, loosely, and a big round a chamfer's — the other
@@ -166,6 +175,9 @@ export async function readEdgeRound(
       })
     }
   } else {
+    // An inside corner is read as the outside one its faces' normals turned
+    // round make: the round between them lies on their other side.
+    const corner = insideCorner(edge, reach) ? { ...fp, faces: fp.faces.map((f) => ({ ...f, dir: [-f.dir[0], -f.dir[1], -f.dir[2]] as Vec3 })) } : fp
     // A fingerprint alone (a stored pick) has its middle, direction and
     // length: the ends lie half the length either side.
     const half = fp.length / 2
@@ -181,10 +193,10 @@ export async function readEdgeRound(
       const cut = await section(p, fp.dir, 0)
       places.push((reach) => {
         const miss: Miss = {}
-        const reading = readCornerCut(fp, p, cut, reach, shape, miss)
+        const reading = readCornerCut(corner, p, cut, reach, shape, miss)
         if (!reading) return miss.why ?? 'sharp'
-        if (otherFitsBetter(reading, readCornerCut(fp, p, cut, reach, otherShape(shape)))) return better
-        const setbacks = shape === 'chamfer' ? readCornerSetbacks(fp, p, cut, reach) : null
+        if (otherFitsBetter(reading, readCornerCut(corner, p, cut, reach, otherShape(shape)))) return better
+        const setbacks = shape === 'chamfer' ? readCornerSetbacks(corner, p, cut, reach) : null
         return { reading, ...(setbacks ? { setbacks } : {}) }
       })
     }

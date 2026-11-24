@@ -154,6 +154,52 @@ describe('reverse.body.fillet_read', () => {
   })
 })
 
+describe('an inside corner', () => {
+  /** The scan of an L, 40 long along Y, about the origin in its corner's
+   *  material: its foot rounded `r`, its top outside edge R1.5, the rest sharp. */
+  const ell = (r: number): P2[] => {
+    const rand = mulberry32(11)
+    const gauss = () => Math.sqrt(-2 * Math.log(Math.max(rand(), 1e-12))) * Math.cos(2 * Math.PI * rand())
+    const out: P2[] = []
+    const line = (a: P2, b: P2) => {
+      const k = Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.4)
+      for (let i = 0; i < k; i++) out.push([a[0] + ((b[0] - a[0]) * i) / k, a[1] + ((b[1] - a[1]) * i) / k])
+    }
+    const arc = (c: P2, q: number, from: number, to: number) => {
+      for (let i = 0; i < 24; i++) out.push([c[0] + q * Math.cos(from + ((to - from) * i) / 24), c[1] + q * Math.sin(from + ((to - from) * i) / 24)])
+    }
+    line([-5, -5], [35, -5])
+    line([35, -5], [35, 5])
+    line([35, 5], [5 + r, 5])
+    arc([5 + r, 5 + r], r, -Math.PI / 2, -Math.PI)
+    line([5, 5 + r], [5, 35 - 1.5])
+    arc([5 - 1.5, 35 - 1.5], 1.5, 0, Math.PI / 2)
+    line([5 - 1.5, 35], [-5, 35])
+    line([-5, 35], [-5, -5])
+    return out.map(([x, z]) => [x + 0.01 * gauss(), z + 0.01 * gauss()])
+  }
+
+  it('is read as a round, as an outside one is', async () => {
+    await run('scan.open', { bytes: stlBytes(extruded(ell(4))), name: 'ell.stl', discard: true })
+    try {
+      await run('reverse.feature.add', {
+        feature: { kind: 'sketch', name: 'Ell', plane: { kind: 'world', axis: 'y', offset: 0 }, sketch: { shapes: [{ kind: 'polyline', closed: true, world: true, points: [[-5, 0, -5], [35, 0, -5], [35, 0, 5], [5, 0, 5], [5, 0, 35], [-5, 0, 35]] }] } },
+      })
+      const made = await run<{ bodies: { changed: { id: number }[] } }>('reverse.feature.add', { feature: { kind: 'extrude', name: 'Ell body', sketchId: 'Ell', regions: 'all', extent: { kind: 'symmetric', total: 40 }, op: 'new' } })
+      const body = made.bodies.changed[0].id
+      const read = await run<Read>('reverse.body.fillet_read', { body, edges: [{ through: { at: [5, 0, 5] } }, { through: { at: [5, 0, 35] } }, { through: { at: [35, 0, 5] } }] })
+      const [foot, top] = read.edges
+      expect(foot.round).toBe(true)
+      expect(Math.abs(foot.radius! - 4)).toBeLessThan(0.05)
+      expect(foot.nominal).toBe(4)
+      expect(Math.abs(top.radius! - 1.5)).toBeLessThan(0.05)
+      expect(read.sharp!.edges).toHaveLength(1)
+    } finally {
+      await run('scan.open', { bytes: stlBytes(extruded(profile(2.5, 0.4, 24, 0.02))), name: 'rounded.stl', discard: true })
+    }
+  })
+})
+
 describe('reverse.sketch.edit rounds', () => {
   type Entity = { id: number; kind: string; a?: [number, number]; b?: [number, number]; c?: [number, number]; r?: number }
   type Listed = { sketch: { entities: Entity[] } }
