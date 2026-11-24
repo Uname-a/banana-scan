@@ -24,6 +24,7 @@ import { bodyMaker, farReach, frameMap, ISLAND_IDS, islandId, liftPoint, liftReg
 import { grazingJoinsWords, lostPickWords, mendNearTangent, mendPoles, mendWords, type NearTangentJoin, openEndsWords, poleWords, profileAcrossAxis } from './profiles'
 import { foldWords, loftFoldRefusal, sectionsNormal } from './loftFold'
 import { composeHistory, rectangleLoop, type FaceHistory, type KernelMesh, type LoopPiece, type ReKernel, type Shape, type StepCheck, type StepLabel, type StepMend, type StepPart, type Tracked } from './kernel'
+import type { StepSchema } from './occtTypes'
 import { mergeMeshes, movedMesh } from './move'
 import { cloneSketch, type ProjectionSource, type Sketch } from './sketch'
 import { datumTraces } from './datums'
@@ -4907,20 +4908,21 @@ export class Builder {
    *  sheet, a part's skin; any other sheet is a cutter, not a part, and
    *  stays out. With labels, one per id, each body is a part under its name
    *  and in its colour. */
-  exportStep(ids: readonly number[], labels?: readonly StepLabel[]): string {
-    return this.exportStepMended(ids, labels).text
+  exportStep(ids: readonly number[], labels?: readonly StepLabel[], schema?: StepSchema): string {
+    return this.exportStepMended(ids, labels, schema).text
   }
 
   /** The same, and what was mended in it: a part that read back open by
    *  hairs, its curves made to end on their corners
    *  (ReKernel.exportStepMended). */
-  exportStepMended(ids: readonly number[], labels?: readonly StepLabel[]): { text: string; mended: StepMend[]; check?: StepCheck } {
+  exportStepMended(ids: readonly number[], labels?: readonly StepLabel[], schema?: StepSchema): { text: string; mended: StepMend[]; check?: StepCheck } {
     const kept = this.stepBodies(ids, labels)
     const bodies = kept.map((x) => x.body)
     const out = this.kernel.exportStepMended(
       bodies.map((b) => b.shape),
       labels ? kept.map((x) => x.label ?? { name: x.body.name }) : undefined,
       bodies.map((b) => b.surface === true && b.patches !== undefined),
+      schema,
     )
     return out.check ? { ...out, check: this.withMakers(out.check, bodies) } : out
   }

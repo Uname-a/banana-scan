@@ -957,7 +957,7 @@ function repairFor(f: Finding, faces: readonly { index: number; kind: string; ma
   }
 }
 
-export const step: Command<{ bodies?: Ref[]; verify?: boolean }> = {
+export const step: Command<{ bodies?: Ref[]; verify?: boolean; schema?: 'AP214' | 'AP242' }> = {
   name: 'step',
   title: 'Export the bodies as STEP',
   description:
@@ -965,16 +965,17 @@ export const step: Command<{ bodies?: Ref[]; verify?: boolean }> = {
   input: obj({
     bodies: arr(bodyRef, 'The bodies; the visible ones by default.', { minItems: 1 }),
     verify: bool('Read the file back and check it against the bodies (off by default).'),
+    schema: enumOf(['AP214', 'AP242'], 'The application protocol written: AP214, the default, or AP242, which newer CAD systems ask for. The solids, names and colours are the same.'),
   }),
   readOnly: true,
   long: true,
   returnsFile: true,
   timeoutMs: 600_000,
-  run: async ({ bodies, verify = false }) => {
+  run: async ({ bodies, verify = false, schema }) => {
     const s = await ready()
     const picked = bodies ? bodies.map(bodyNamed) : re().bodies.filter((b) => b.visible)
     if (picked.length === 0) throw new CommandError('invalid_state', 'There is no visible body to export — build one first.')
-    const { name, text, check, mended } = await s.stepFile(picked.map((b) => b.id), verify).catch((e) => {
+    const { name, text, check, mended } = await s.stepFile(picked.map((b) => b.id), verify, schema).catch((e) => {
       throw new CommandError('failed', `STEP export failed: ${errorMessage(e)}`)
     })
     // The check's bodies are the solids among those picked, in order, and a

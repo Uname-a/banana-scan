@@ -80,6 +80,15 @@ describe('a STEP file of named, coloured parts', () => {
     expect(colours).toEqual(expect.arrayContaining(['#1d3f7a', '#1e1f22']))
     // Without labels: one compound, as before.
     expect(kernel.readStepNames(builder.exportStep([2, 4]))).toHaveLength(1)
+    // AP242, as asked: the same parts, names and colours, the header saying so; AP214 otherwise.
+    const schemaOf = (file: string) => /FILE_SCHEMA\s*\(\(\s*'([A-Z0-9_]+)/.exec(file)?.[1]
+    expect(schemaOf(text)).toBe('AUTOMOTIVE_DESIGN')
+    const labels = [{ name: 'PCB', color: '#1d3f7a' }, { name: 'Header J1', color: '#1e1f22' }]
+    const newer = builder.exportStepMended([2, 4], labels, 'AP242')
+    expect(schemaOf(newer.text)).toBe('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF')
+    expect(kernel.readStepNames(newer.text)).toEqual(['PCB', 'Header J1'])
+    expect(builder.verifyStep([2, 4], newer.text).problems).toEqual([])
+    expect(schemaOf(builder.exportStep([2, 4], undefined, 'AP242'))).toBe('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF')
     builder.dispose()
   })
 })

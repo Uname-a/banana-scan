@@ -10,6 +10,11 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **STEP under AP242** (Reverse engineer, 2026-11-24). `reverse.export.step`
+  takes `schema: "AP242"`, which newer CAD systems ask for: the same solids,
+  names and colours, read back and mended as ever. AP214 stays the default,
+  and what the panel's Export STEP writes.
+
 - **Inside corners are read for their rounds** (Reverse engineer,
   2026-11-23). `reverse.body.fillet_read`, and a fillet's `radius: "fit"`,
   read a straight edge between two flats as an outside corner whichever it
