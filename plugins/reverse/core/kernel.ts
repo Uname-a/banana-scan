@@ -26,7 +26,7 @@ import { canonicalDir } from './topo'
 import { patternPitch } from './features'
 import type { ThreadCut } from './thread'
 import { type FaceHistory, type KernelBounds, type KernelMesh, type LoopPiece, type Profile, type RawEdge, type RawFace, type Shape, type StepLabel, type StepPart, type Tracked, type WasmSource } from './kernelTypes'
-import { type OcctLike, type XcafReader, type XYZ } from './occtTypes'
+import { type OcctLike, type StepSchema, type XcafReader, type XYZ } from './occtTypes'
 import { circleThrough, edgeKindOf, faceKindOf, parseHistory, partName, stepColor, vec, xyz } from './kernelMath'
 import { loopMiddle, rectangleLoop } from './loops'
 import { draftFaces, moveFace, offsetFacesTracked } from './kernelFaces'
@@ -1824,10 +1824,11 @@ export class ReKernel {
    *  a CAD system lists them; without, one compound. A body with a round
    *  on a left-handed torus, whose loop the writer can get wrong, has the
    *  file mended after it (mendTorusLoops); an edge on a conic too small
-   *  for a part that runs straight is written as a line (straightConics). */
-  exportStep(shapes: readonly Shape[], labels?: readonly StepLabel[]): string {
+   *  for a part that runs straight is written as a line (straightConics).
+   *  schema: the application protocol, AP214 when none is named. */
+  exportStep(shapes: readonly Shape[], labels?: readonly StepLabel[], schema?: StepSchema): string {
     return run('Writing STEP', () => {
-      const text = this.writeStep(shapes, labels)
+      const text = this.writeStep(shapes, labels, schema)
       return straightConics(shapes.some((shape) => hasLeftHandedTorus(this.occt, shape)) ? mendTorusLoops(text) : text).text
     })
   }
@@ -1846,8 +1847,8 @@ export class ReKernel {
    * checked once, and `check` is that check, for whoever asks next
    * (reService). `sheets` as verifyStep takes it.
    */
-  exportStepMended(shapes: readonly Shape[], labels?: readonly StepLabel[], sheets?: readonly boolean[]): { text: string; mended: StepMend[]; check?: StepCheck } {
-    const text = this.exportStep(shapes, labels)
+  exportStepMended(shapes: readonly Shape[], labels?: readonly StepLabel[], sheets?: readonly boolean[], schema?: StepSchema): { text: string; mended: StepMend[]; check?: StepCheck } {
+    const text = this.exportStep(shapes, labels, schema)
     const open = this.readBackEdges(text, shapes)
     const hairs = open.map((edges) => (edges.length > 0 && edges.every((e) => e.kind === 'free' && e.length < SHORT_FREE_MM) ? edges.map((e) => e.at) : []))
     if (hairs.every((at) => at.length === 0)) return { text, mended: [] }
@@ -1900,7 +1901,8 @@ export class ReKernel {
     })
   }
 
-  private writeStep(shapes: readonly Shape[], labels?: readonly StepLabel[]): string {
+  private writeStep(shapes: readonly Shape[], labels?: readonly StepLabel[], schema?: StepSchema): string {
+    const options = schema ? { schema } : undefined
     if (shapes.length === 0) throw new KernelError('there is no body to write.')
     if (labels) {
       if (labels.length !== shapes.length) throw new KernelError('a name for every body is needed.')
@@ -1910,14 +1912,14 @@ export class ReKernel {
           const color = stepColor(labels[i].color)
           doc.addShape(shape, { name: labels[i].name, ...(color ? { color } : {}) })
         })
-        return doc.exportSTEP()
+        return doc.exportSTEP(options)
       } finally {
         doc.close()
       }
     }
-    if (shapes.length === 1) return this.occt.exportStep(shapes[0])
+    if (shapes.length === 1) return this.occt.exportStep(shapes[0], options)
     const compound = this.occt.makeCompound([...shapes])
-    const text = this.occt.exportStep(compound)
+    const text = this.occt.exportStep(compound, options)
     this.occt.release(compound)
     return text
   }

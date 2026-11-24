@@ -12,6 +12,7 @@ import type { Rigid } from '../../../src/core/deviation/rigid'
 import type { NominalSurface } from '../../../src/core/deviation/surface'
 import { computeVertexNormals } from '../../../src/core/geometry/normals'
 import type { KernelMesh, ReKernel, StepCheck, StepLabel, StepMend } from './kernel'
+import type { StepSchema } from './occtTypes'
 import type { ManifoldToplevel } from 'manifold-3d'
 import { isTrap } from './kernelOps'
 import type { BodyProbe, CutPiece } from './kernelProbe'
@@ -49,7 +50,7 @@ export type ReWorkerRequest =
    *  and topology, for editing that feature on the body it was made on. */
   | { type: 'stage'; requestId: number; stepId: number; bodyId: number }
   /** One STEP file of the given bodies from the last build. */
-  | { type: 'export-step'; requestId: number; bodyIds: number[]; labels?: StepLabel[]; verify?: boolean }
+  | { type: 'export-step'; requestId: number; bodyIds: number[]; labels?: StepLabel[]; verify?: boolean; schema?: StepSchema }
   | { type: 'section-cut'; requestId: number; bodyIds: number[]; origin: Vec3; normal: Vec3; deflection: number }
   | { type: 'clearance'; requestId: number; a: number; b: number }
   /** The given bodies of the last build cut by a plane, as the kernel's
@@ -415,7 +416,7 @@ export function createReService(loadKernel: () => Promise<ReKernel>, loadManifol
         return answer({ type: 'section-cut-ok', requestId: msg.requestId, bodies }, bodies.flatMap((x) => x.polylines.map((p) => p.buffer)))
       }
       // A file mended has been checked: that check stands.
-      const { text, mended, check } = b.exportStepMended(msg.bodyIds, msg.labels)
+      const { text, mended, check } = b.exportStepMended(msg.bodyIds, msg.labels, msg.schema)
       return answer({ type: 'step-ok', requestId: msg.requestId, text, ...(msg.verify ? { check: check ?? b.verifyStep(msg.bodyIds, text) } : {}), ...(mended.length > 0 ? { mended } : {}) })
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)

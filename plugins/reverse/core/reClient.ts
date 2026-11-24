@@ -12,6 +12,7 @@ import type { Vec3 } from '../../../src/core/types'
 import { WorkerRpc } from '../../../src/core/workerRpc'
 import type { Rigid } from '../../../src/core/deviation/rigid'
 import type { KernelMesh, StepCheck, StepLabel, StepMend } from './kernel'
+import type { StepSchema } from './occtTypes'
 import type { BodyCheck, BuiltBody, DrawnBody, EdgeInfo, FaceInfo, FeatureResult, FilletTries, Overlap, PreviewResult, PreviewStep } from './build'
 import type { CompareDetail, PatchRequest } from './compareDetail'
 import type { BodyProbe, CutPiece } from './kernelProbe'
@@ -405,7 +406,7 @@ export class ReClient {
   /** The same file, and with `verify` read back and held against the
    *  bodies (ReKernel.verifyStep); `mended`, the parts that read back open
    *  by hairs and were mended (ReKernel.exportStepMended). */
-  async exportStepChecked(bodyIds: number[], labels: StepLabel[] | undefined, verify: boolean): Promise<{ text: string; check?: StepCheck; mended?: StepMend[] }> {
+  async exportStepChecked(bodyIds: number[], labels: StepLabel[] | undefined, verify: boolean, schema?: StepSchema): Promise<{ text: string; check?: StepCheck; mended?: StepMend[] }> {
     const requestId = this.nextId++
     const res = await this.request<Extract<ReWorkerResponse, { type: 'step-ok' }>>({
       type: 'export-step',
@@ -413,6 +414,7 @@ export class ReClient {
       bodyIds,
       ...(labels ? { labels } : {}),
       ...(verify ? { verify } : {}),
+      ...(schema ? { schema } : {}),
     }, [], HEAVY_MS)
     return { text: res.text, ...(res.check ? { check: res.check } : {}), ...(res.mended ? { mended: res.mended } : {}) }
   }

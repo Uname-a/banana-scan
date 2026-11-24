@@ -170,6 +170,12 @@ describe('an M3 pin modelled through the commands', () => {
     expect(checked.verify.bodies[0].gap.max).toBeLessThan(1e-3)
     expect(checked.verify.loops.wrong).toBeUndefined()
     expect(checked.status).toMatch(/Read back and checked: it holds\.$/)
+
+    // Under AP242, where asked; nothing else is a schema.
+    const newer = await run<Verified & { file: { bytes: Uint8Array } }>('reverse.export.step', { verify: true, schema: 'AP242' })
+    expect(newer.verify.ok).toBe(true)
+    expect(new TextDecoder().decode(newer.file.bytes.subarray(0, 4000))).toContain('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING')
+    await expect(run('reverse.export.step', { schema: 'AP999' })).rejects.toThrow()
   })
 })
 

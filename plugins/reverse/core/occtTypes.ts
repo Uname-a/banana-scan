@@ -125,17 +125,20 @@ export interface OcctLike {
     shape: number,
     options?: { linearDeflection?: number; angularDeflection?: number },
   ): { positions: Float32Array; normals: Float32Array; indices: Uint32Array; faceGroups?: Int32Array }
-  exportStep(shape: number): string
+  exportStep(shape: number, options?: { schema?: StepSchema }): string
   importStep(data: string | ArrayBuffer): number
   createXCAFDocument(): XcafLike
   release(shape: number): void
 }
 
+/** The application protocol a STEP file is written under. */
+export type StepSchema = 'AP203' | 'AP214' | 'AP242'
+
 /** An OCCT document of named, coloured shapes — what a STEP file keeps a
  *  body's name and colour in. */
 interface XcafLike {
   addShape(shape: number, options?: { name?: string; color?: [number, number, number] }): number
-  exportSTEP(): string
+  exportSTEP(options?: { schema?: StepSchema }): string
   close(): void
 }
 
