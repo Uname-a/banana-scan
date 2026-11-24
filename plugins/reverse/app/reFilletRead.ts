@@ -124,7 +124,7 @@ export async function readEdgeRound(
   section: (origin: Vec3, normal: Vec3, minLength: number) => Promise<ScanCut>,
   edge: ReadEdge,
   { stations: asked, reach, shape = 'round', widen = false }: { stations?: number; reach: number; shape?: 'round' | 'chamfer'; widen?: boolean },
-): Promise<{ round: EdgeRound | null; why?: string; radii: (number | null)[]; places?: string[]; reach?: number; stations?: EdgeStation[]; linear?: LinearLaw }> {
+): Promise<{ round: EdgeRound | null; why?: string; radii: (number | null)[]; places?: string[]; reach?: number; stations?: EdgeStation[]; linear?: LinearLaw; inside?: true }> {
   const fp = edge.fingerprint
   const curved = isCurvedEdge(fp)
   const unreadable = curved ? curvedUnreadable(edge) : cornerUnreadable(fp)
@@ -142,6 +142,7 @@ export async function readEdgeRound(
   // itself — a full circle, a loop — which has no first end to run from.
   const where: { t: number; at: Vec3 }[] = []
   let closed = false
+  let inside = false
   // The other shape fitting markedly closer is a verdict of its own.
   const better = `${otherShape(shape)} better`
   if (free) {
@@ -177,7 +178,8 @@ export async function readEdgeRound(
   } else {
     // An inside corner is read as the outside one its faces' normals turned
     // round make: the round between them lies on their other side.
-    const corner = insideCorner(edge, reach) ? { ...fp, faces: fp.faces.map((f) => ({ ...f, dir: [-f.dir[0], -f.dir[1], -f.dir[2]] as Vec3 })) } : fp
+    inside = insideCorner(edge, reach)
+    const corner = inside ? { ...fp, faces: fp.faces.map((f) => ({ ...f, dir: [-f.dir[0], -f.dir[1], -f.dir[2]] as Vec3 })) } : fp
     // A fingerprint alone (a stored pick) has its middle, direction and
     // length: the ends lie half the length either side.
     const half = fp.length / 2
@@ -232,7 +234,7 @@ export async function readEdgeRound(
     return { t: round4(w.t), at: w.at.map(round4) as Vec3, radius: typeof r === 'string' ? null : r.reading.radius, sigma: typeof r === 'string' ? null : r.reading.sigma }
   })
   const law = closed ? null : linearLaw(along)
-  const placed = { stations: along, ...(law ? { linear: law } : {}) }
+  const placed = { stations: along, ...(law ? { linear: law } : {}), ...(inside ? { inside: true as const } : {}) }
   const verdicts = readings.map((r) => verdict(r, shape))
   // The verdicts, where a place read none for more than a sharp corner: an
   // edge sharp at every place it missed says so once, as before.
@@ -333,7 +335,7 @@ export const filletRead: Command<{ body: Ref; edges: EdgePickIn[]; shape?: 'roun
   title: 'Read rounds off the scan',
   description:
     // units-ok: the command's description, for the agent — in millimetres always.
-    'The round (or chamfer) the scan has along each of a body’s sharp edges — what a fillet or chamfer there should be — read in cuts of the scan square to the edge at several stations along it, the round fitted between the two faces’ traces (by their surfaces where they are flat, cylindrical, conical or spherical, else off the body’s own faces cut at each station). Edges are picked as a fillet picks them. Each edge answers round: true with radius (the median), sigma, nominal, off, sigmas, residual, radii, stations and linear (radius [first end, other], rms, medianRms — a variable fillet’s law where rms is well under medianRms); round: false with why where only some stations read one (places gives a verdict a station); round: null for an edge it cannot read. Edges where no station reads a round are gathered into sharp: { edges, why }. shape: "chamfer" answers chamfer, distance, setbacks, setbackSigma and on a hole’s mouth countersink. Then median and spread over the edges read. reach caps the radius read: left out, a round at the top of the search is read again at 2× and 4×; an empty read says "no round within N mm" — give a larger one. Needs a scan. Changes nothing.',
+    'The round (or chamfer) the scan has along each of a body’s sharp edges — what a fillet or chamfer there should be — read in cuts of the scan square to the edge at several stations along it, the round fitted between the two faces’ traces (by their surfaces where they are flat, cylindrical, conical or spherical, else off the body’s own faces cut at each station). Edges are picked as a fillet picks them. Each edge answers round: true with radius (the median), sigma, nominal, off, sigmas, residual, radii, stations and linear (radius [first end, other], rms, medianRms — a variable fillet’s law where rms is well under medianRms); round: false with why where only some stations read one (places gives a verdict a station); round: null for an edge it cannot read. inside: true where a straight edge between two flats is an inside corner, a wall’s foot. Edges where no station reads a round are gathered into sharp: { edges, why }. shape: "chamfer" answers chamfer, distance, setbacks, setbackSigma and on a hole’s mouth countersink. Then median and spread over the edges read. reach caps the radius read: left out, a round at the top of the search is read again at 2× and 4×; an empty read says "no round within N mm" — give a larger one. Needs a scan. Changes nothing.',
   input: obj(
     {
       body: bodyRef,
@@ -370,7 +372,7 @@ export const filletRead: Command<{ body: Ref; edges: EdgePickIn[]; shape?: 'roun
       const found = read.round ? true : read.radii.length > 0 ? false : null
       const wider = read.reach !== undefined ? { reach: read.reach } : {}
       // Where along the edge each place lies, for the radii beside them.
-      const placed = read.stations ? { stations: read.stations.map(({ t, at }) => ({ t, at })) } : {}
+      const placed = { ...(read.stations ? { stations: read.stations.map(({ t, at }) => ({ t, at })) } : {}), ...(read.inside ? { inside: true } : {}) }
       if (read.round) {
         radii.push(read.round.radius)
         const { radius, ...rest } = read.round

@@ -190,6 +190,8 @@ describe('an inside corner', () => {
       const read = await run<Read>('reverse.body.fillet_read', { body, edges: [{ through: { at: [5, 0, 5] } }, { through: { at: [5, 0, 35] } }, { through: { at: [35, 0, 5] } }] })
       const [foot, top] = read.edges
       expect(foot.round).toBe(true)
+      expect(foot).toMatchObject({ inside: true })
+      expect(top).not.toHaveProperty('inside')
       expect(Math.abs(foot.radius! - 4)).toBeLessThan(0.05)
       expect(foot.nominal).toBe(4)
       expect(Math.abs(top.radius! - 1.5)).toBeLessThan(0.05)
