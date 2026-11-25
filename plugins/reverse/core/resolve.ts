@@ -290,7 +290,7 @@ export function resolveFeatures(
           ? 'A thread is cut on a round face — the face picked is not one.'
           : (threadProblem(f) ?? (f.length !== null && !(f.length > 0) ? 'The thread needs a length.' : f.length !== null && !(f.start >= 0) ? 'The thread has to start on the face — zero or more in from its end.' : null))
       if (why) failed(f, why)
-      else steps.push({ kind: 'thread', id: f.id, name: f.name, body: f.body, face: f.face, standard: f.standard, diameter: f.diameter, pitch: f.pitch, leftHanded: f.leftHanded, length: f.length, start: f.start, flip: f.flip, offset: f.offset, chamfer: f.chamfer ?? false })
+      else steps.push({ kind: 'thread', id: f.id, name: f.name, body: f.body, face: f.face, standard: f.standard, diameter: f.diameter, pitch: f.pitch, leftHanded: f.leftHanded, length: f.length, start: f.start, flip: f.flip, offset: f.offset, chamfer: f.chamfer ?? false, ...(f.phase !== undefined ? { phase: f.phase } : {}) })
       continue
     }
     if (f.kind === 'extract') {

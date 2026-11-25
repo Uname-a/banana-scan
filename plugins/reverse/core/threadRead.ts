@@ -24,7 +24,7 @@
 
 import type { Vec3 } from '../../../src/core/types'
 import { cross, dot, normalize, scale, sub } from '../../../src/core/vec'
-import { minorDiameter, THREAD_STANDARDS, threadDepth, threadDesignation, threadSizes, type ThreadStandard } from './thread'
+import { minorDiameter, THREAD_STANDARDS, threadDepth, threadDesignation, threadSizes, type ThreadStandard, threadZero } from './thread'
 import { round3, round4 } from '../../../src/core/round'
 
 export interface ThreadReadInput {
@@ -156,6 +156,52 @@ const PROFILE_OUT = 200
 /** How far off a size a reading may be and still be suggested. */
 const SUGGEST_PITCH = 0.12
 const SUGGEST_DIAMETER = 0.08
+
+/** How far in from the threaded stretch's ends the phase is read, in
+ *  pitches: a run-out, a chamfer is no part of it. */
+const PHASE_IN = 1
+/** The share of points taken for the crests, and for the roots. */
+const PHASE_SHARE = 0.15
+
+/** Where a thread's helix lies: mm along the axis from the origin, within a
+ *  pitch, to the middle of a tooth — a bolt's crest, a nut's — on the half
+ *  plane threadZero names; `agree`, how well the crests and the roots put it
+ *  there, 0 to 1. At the pitch given (a standard's, not the reading's: over
+ *  twenty turns a hair off it is half a tooth). Null with too few points. */
+export function threadPhase(input: ThreadReadInput, threaded: readonly [number, number], pitch: number, leftHanded: boolean, internal: boolean): { phase: number; agree: number } | null {
+  const d = normalize(input.dir)
+  if (!d || !(pitch > 0)) return null
+  const u = threadZero(d)
+  const v = cross(d, u)
+  const on: { r: number; turn: number }[] = []
+  for (let i = 0; i + 2 < input.points.length; i += 3) {
+    const q = sub([input.points[i], input.points[i + 1], input.points[i + 2]], input.origin)
+    const z = dot(q, d)
+    if (z < threaded[0] + PHASE_IN * pitch || z > threaded[1] - PHASE_IN * pitch) continue
+    const x = dot(q, u)
+    const y = dot(q, v)
+    const r = Math.hypot(x, y)
+    if (Math.abs(r - input.radius) > input.band) continue
+    on.push({ r, turn: (z - ((leftHanded ? -1 : 1) * pitch * Math.atan2(y, x)) / (2 * Math.PI)) / pitch })
+  }
+  if (on.length < 100) return null
+  const rs = on.map((p) => p.r).sort((a, b) => a - b)
+  const low = rs[Math.floor(PHASE_SHARE * rs.length)]
+  const high = rs[Math.floor((1 - PHASE_SHARE) * rs.length)]
+  let c = 0, s = 0, n = 0
+  for (const p of on) {
+    const crest = internal ? p.r <= low : p.r >= high
+    const root = internal ? p.r >= high : p.r <= low
+    if (!crest && !root) continue
+    const a = 2 * Math.PI * (p.turn + (root ? 0.5 : 0))
+    c += Math.cos(a)
+    s += Math.sin(a)
+    n++
+  }
+  if (n === 0) return null
+  const turn = Math.atan2(s, c) / (2 * Math.PI)
+  return { phase: pitch * (turn - Math.floor(turn)), agree: Math.hypot(c, s) / n }
+}
 
 /** The thread in a shell of points about an axis. */
 export function readThread(input: ThreadReadInput): ThreadReading | null {

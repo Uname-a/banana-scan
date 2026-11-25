@@ -12,7 +12,7 @@ import { type Command, CommandError } from '../../../src/plugins/api'
 import { useStore } from '../../../src/state/store'
 import type { FaceInfo } from '../core/build'
 import { threadSizes, type ThreadStandard } from '../core/thread'
-import { ALL_STANDARDS, basicDepth, isThread, matchThread, readThread, type ThreadReading } from '../core/threadRead'
+import { ALL_STANDARDS, basicDepth, isThread, matchThread, readThread, threadPhase, type ThreadReading } from '../core/threadRead'
 import { facePasses } from '../core/where'
 import { roundFaceLength } from '../state/reStore'
 import { bodyNamed, facePicked, facePickIn, type FacePickIn, type Json, ready, type Ref, type Topology, topologyOf } from './reCommandCore'
@@ -30,6 +30,13 @@ const THREAD_BAND_SHARE = 0.2
 /** How sure a left hand must read for the feature to take it: right is
  *  every thread but a few, and an axis a little aslant blurs the hand. */
 const LEFT_SURE = 0.2
+
+/** How well the crests and the roots must agree on the phase for the
+ *  feature to take it. */
+const PHASE_SURE = 0.5
+/** How near the face's length the run's must be for the face's middle to be
+ *  where the reading counts from, mm. */
+const SAME_LENGTH = 0.01
 
 /** The faces a round face runs on into along its axis, each reached from
  *  it across an edge: the round faces on the same axis — a hole's wall in
@@ -90,7 +97,7 @@ export const threadRead: Command<{ axis: Json; standard?: ThreadStandard | 'any'
   name: 'read',
   title: 'Read a thread off the scan',
   description:
-    'Whether a bore or a boss of the scan carries a thread, and which: the scan’s points in a thin shell about the axis are read for their radius along it, and in that profile the pitch, the crest and root diameters (minor, major), the hand (leftHanded, handConfidence) and whether it is a bore (internal) or a boss. The reading is set against the standard sizes — candidates (the nearest three, with how far off in pitch and diameter) and suggested, the one near enough, with the size string the thread feature takes — and, where axis was a face of a body, feature is the thread ready to add (reverse.feature.add). thread says whether it is one: a pitch found (strength) with teeth (contrast) at least three times the wall’s noise — a plain bore’s own ripple can repeat and reads thread: false. The pitch is read in windows along the axis (windows, agree); threaded is where they lie, and minor and major are read there. axis is a cylinder element, a round face of a body (read along its coaxial run) or an axis given outright with its radius and length. Run it on every small hole: a thread is easy to miss on a scan. Changes nothing.',
+    'Whether a bore or a boss of the scan carries a thread, and which: the scan’s points in a thin shell about the axis are read for their radius along it, and in that profile the pitch, the crest and root diameters (minor, major), the hand (leftHanded, handConfidence) and whether it is a bore (internal) or a boss. The reading is set against the standard sizes — candidates (the nearest three, with how far off in pitch and diameter) and suggested, the one near enough, with the size string the thread feature takes — and, where axis was a face of a body, feature is the thread ready to add (reverse.feature.add). thread says whether it is one: a pitch found (strength) with teeth (contrast) at least three times the wall’s noise — a plain bore’s own ripple can repeat and reads thread: false. The pitch is read in windows along the axis (windows, agree); threaded is where they lie, and minor and major are read there. phase is where the helix lies at the suggested pitch — mm along the axis from the origin to a tooth’s middle — and phaseAgree (0 to 1) how well the points put it there; the feature takes it, so the thread stands in step with the scan’s. axis is a cylinder element, a round face of a body (read along its coaxial run) or an axis given outright with its radius and length. Run it on every small hole: a thread is easy to miss on a scan. Changes nothing.',
   input: obj(
     {
       axis: oneOf(
@@ -166,6 +173,12 @@ export const threadRead: Command<{ axis: Json; standard?: ThreadStandard | 'any'
     const { profile: radii, ...read } = reading
     // A repeat that stands within the scan's noise suggests no size.
     const { candidates, suggested } = thread ? matchThread(reading, standards) : { candidates: [], suggested: null }
+    const hand = reading.leftHanded === true && reading.handConfidence >= LEFT_SURE
+    const phase = suggested && reading.threaded && reading.internal !== null ? threadPhase({ points: q.positions, normals: q.normals, origin, dir: d!, radius, band: used, halfLength }, reading.threaded, suggested.pitch, hand, reading.internal) : null
+    // The feature's phase counts from its face's middle, the reading's from
+    // the run's: one and the same where the face is the whole run.
+    const faceLength = (on.face as { length?: number } | undefined)?.length
+    const whole = faceLength !== undefined && Math.abs(faceLength - span) <= SAME_LENGTH
     const feature =
       suggested && axis.kind === 'face'
         ? {
@@ -175,7 +188,8 @@ export const threadRead: Command<{ axis: Json; standard?: ThreadStandard | 'any'
             standard: suggested.standard,
             size: suggested.size,
             ...(suggested.pitch !== threadSizes(suggested.standard).find((z) => z.label === suggested.size)?.pitches[0] ? { pitch: suggested.pitch } : {}),
-            ...(reading.leftHanded && reading.handConfidence >= LEFT_SURE ? { leftHanded: true } : {}),
+            ...(hand ? { leftHanded: true } : {}),
+            ...(phase && phase.agree >= PHASE_SURE && whole ? { phase: round4(phase.phase) } : {}),
             chamfer: true,
           }
         : undefined
@@ -192,6 +206,7 @@ export const threadRead: Command<{ axis: Json; standard?: ThreadStandard | 'any'
       standards,
       candidates,
       suggested,
+      ...(phase ? { phase: round4(phase.phase), phaseAgree: round3(phase.agree) } : {}),
       ...(feature ? { feature } : {}),
       ...(profile ? { profile: radii } : {}),
       note: thread

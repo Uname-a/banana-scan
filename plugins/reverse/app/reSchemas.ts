@@ -733,6 +733,7 @@ export const FEATURE_IN: Record<string, JsonSchema> = {
       flip: bool('Count the start from the face’s other end.'),
       offset: num('A clearance for printing, mm: every face of the thread moved into the material.'),
       chamfer: bool('A 45° chamfer where the thread runs out of the body.'),
+      phase: nullable(num(''), 'Where the helix lies: mm along the axis from the face’s middle to a tooth’s middle (on the half plane the helix starts in), as reverse.thread.read gives it, so a thread stands in step with the scan’s. Null or left out, it is wound from where it starts.'),
       exprs: exprsIn('diameter, pitch, length, start, offset'),
     },
     ['kind', 'body', 'face'],

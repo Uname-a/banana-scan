@@ -221,7 +221,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
           draft = { kind: 'hole', ...head, body: f.body, axis: f.axis, radius: f.radius, depth: f.depth, insert: f.insert ?? null }
           break
         case 'thread':
-          draft = { kind: 'thread', ...head, body: f.body, face: { hash: -1, fingerprint: f.face }, internal: null, standard: f.standard, diameter: f.diameter, pitch: f.pitch, leftHanded: f.leftHanded, fullLength: f.length === null, length: f.length ?? roundFaceLength(f.face), start: f.start, flip: f.flip, offset: f.offset, chamfer: f.chamfer ?? false, sized: true }
+          draft = { kind: 'thread', ...head, body: f.body, face: { hash: -1, fingerprint: f.face }, internal: null, standard: f.standard, diameter: f.diameter, pitch: f.pitch, leftHanded: f.leftHanded, fullLength: f.length === null, length: f.length ?? roundFaceLength(f.face), start: f.start, flip: f.flip, offset: f.offset, chamfer: f.chamfer ?? false, ...(f.phase !== undefined ? { phase: f.phase } : {}), sized: true }
           break
         case 'extract':
           draft = { kind: 'extract', ...head, element: f.element ?? null, section: f.section ?? null, thickness: f.thickness, op: f.op }

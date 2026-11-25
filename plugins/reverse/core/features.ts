@@ -514,6 +514,10 @@ export interface ThreadFeature extends FeatureFlags {
   /** A 45° chamfer where the thread runs out of the body — a bolt's tip, a
    *  bore's mouth — from just past the root. Absent is none. */
   chamfer?: boolean
+  /** Where the helix lies: millimetres along the axis from the middle of the
+   *  face to a tooth's middle, on the half plane threadZero names. Absent,
+   *  the thread is wound from where it starts. */
+  phase?: number
   /** The expressions driving the numbers above, by the field as the box
    *  shows it — see parameters.ts; the numbers hold what they last came
    *  to. Absent when every number was typed as one. */

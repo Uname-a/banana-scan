@@ -10,6 +10,13 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **A thread in step with the scan's** (Reverse engineer, 2026-11-24). A
+  thread was wound from wherever it starts, so its teeth lay over a scan's by
+  luck. The Thread feature takes a `phase`: where along the axis, from the
+  middle of its face, a tooth's middle lies. `reverse.thread.read` reads it off
+  the scan (`phase`, and `phaseAgree`, how well the points put it there) and
+  the feature it hands back carries it. Left out, a thread is wound as before.
+
 - **STEP under AP242** (Reverse engineer, 2026-11-24). `reverse.export.step`
   takes `schema: "AP242"`, which newer CAD systems ask for: the same solids,
   names and colours, read back and mended as ever. AP214 stays the default,

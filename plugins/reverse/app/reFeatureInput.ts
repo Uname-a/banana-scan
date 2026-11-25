@@ -227,6 +227,7 @@ function boxFields(s: ReverseSession, kind: FeatureDraftKind, input: Json, box: 
       if (has('leftHanded')) out.leftHanded = input.leftHanded
       if (has('length')) Object.assign(out, input.length === null ? { fullLength: true } : { fullLength: false, length: input.length })
       for (const k of ['start', 'flip', 'offset', 'chamfer']) if (has(k)) out[k] = input[k]
+      if (has('phase')) out.phase = input.phase ?? undefined
       break
     }
     case 'extract': {
