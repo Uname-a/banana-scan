@@ -30,7 +30,9 @@
 // offset has used up its flat; the 45° form's flats are wide enough that it
 // never does.
 
+import type { Vec3 } from '../../../src/core/types'
 import { type DisplayUnits, lengthDecimals, toDisplay, unitWord } from '../../../src/core/units'
+import { cross, normalize } from '../../../src/core/vec'
 
 /** The standard a thread's sizes come from, and with them its form: the
  *  60° one of the metric and Unified tables, or the 45° one for printing. */
@@ -324,6 +326,16 @@ export interface ThreadCut extends ThreadSpec {
   flip: boolean
   /** A 45° chamfer at each end the thread runs out of the body free. */
   chamfer?: boolean
+  /** Where the helix lies: millimetres along the axis from the middle of the
+   *  face to a tooth's middle, on the half plane threadZero names. Absent,
+   *  the thread is wound from where it starts. */
+  phase?: number
+}
+
+/** The direction out from a thread's axis its helix is started in, and its
+ *  phase is told on: square to the axis, the same for every thread along it. */
+export function threadZero(axis: Vec3): Vec3 {
+  return normalize(cross(axis, Math.abs(axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0])) ?? [1, 0, 0]
 }
 
 /** Why a thread cannot be cut, read off its numbers alone — or null. The

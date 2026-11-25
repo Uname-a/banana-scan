@@ -397,7 +397,7 @@ export type FeatureDraft = { exprs?: ExprMap } & (
    *  the size from a standard's table, taken for the face as it is clicked
    *  until a size is chosen or typed (`sized`). `length` and `start` stand
    *  while `fullLength` is off. */
-  | { kind: 'thread'; featureId?: number; name?: string; body: number | null; face: DraftFace | null; internal: boolean | null; standard: ThreadStandard; diameter: number; pitch: number; leftHanded: boolean; fullLength: boolean; length: number; start: number; flip: boolean; offset: number; chamfer: boolean; sized: boolean }
+  | { kind: 'thread'; featureId?: number; name?: string; body: number | null; face: DraftFace | null; internal: boolean | null; standard: ThreadStandard; diameter: number; pitch: number; leftHanded: boolean; fullLength: boolean; length: number; start: number; flip: boolean; offset: number; chamfer: boolean; phase?: number; sized: boolean }
   /** `element` or `section`: a measured element, or a shadow section. */
   | { kind: 'extract'; featureId?: number; name?: string; element: number | null; section: number | null; thickness: number; op: BodyOp }
   /** An involute gear (GearFeature): its numbers as typed or read off the

@@ -2,14 +2,14 @@
 // A thread cut into a cylindrical face: ReKernel's threadTracked (kernel.ts).
 
 import type { Vec3 } from '../../../src/core/types'
-import { addScaled, cross, normalize } from '../../../src/core/vec'
+import { addScaled, cross } from '../../../src/core/vec'
 import type { ReKernel } from './kernel'
 import { composeHistory } from './kernelMath'
 import { KernelError, loneSolid, readFace, readRound, run, withSubShapes } from './kernelOps'
 import type { FaceHistory, LoopPiece, Shape, Tracked } from './kernelTypes'
 import { polygonLoop } from './loops'
 import type { OcctLike } from './occtTypes'
-import { chamferRadius, faceAgainstThread, fillRadius, minorDiameter, type ThreadCut, threadSpan, toothOutline } from './thread'
+import { chamferRadius, faceAgainstThread, fillRadius, minorDiameter, type ThreadCut, threadSpan, threadZero, toothOutline } from './thread'
 
 /** The most turns a thread is cut with: every turn is a face a side of the
  *  tooth, and a long fine thread a long boolean. */
@@ -92,7 +92,7 @@ export function threadTracked(occt: OcctLike, kernel: ReKernel, solid: Shape, fa
       // And along the axis: on past an end of the thread that nothing
       // stands beyond, within the band's reach.
       const run = P / 2
-      const radial = normalize(cross(axis, Math.abs(axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0])) ?? [1, 0, 0]
+      const radial = threadZero(axis)
       const across = cross(axis, radial)
       const circle = (r: number): LoopPiece => ({ kind: 'circle', center, normal: axis, radius: r })
       let sleeve: Shape | null = null
@@ -187,9 +187,12 @@ export function threadTracked(occt: OcctLike, kernel: ReKernel, solid: Shape, fa
           }
         }
         // Whole turns, so each of the sweep's faces is a turn of it.
-        const turns = Math.ceil((to - from) / P - 1e-9) + 2
+        // A phase asked for moves the helix along by less than a pitch, for
+        // a tooth's middle to lie where it says; a turn more covers it.
+        const shift = t.phase === undefined ? 0 : ((((lo + hi) / 2 + t.phase - from) % P) + P) % P
+        const turns = Math.ceil((to - from) / P - 1e-9) + 2 + (shift > 0 ? 1 : 0)
         if (turns > MAX_THREAD_TURNS) throw new KernelError(`the thread would take ${Math.round(turns)} turns — at most ${MAX_THREAD_TURNS}; give it a coarser pitch or a shorter length.`)
-        const lift = (q: readonly [number, number]): Vec3 => addScaled(addScaled(center, axis, from - P + q[1]), radial, q[0])
+        const lift = (q: readonly [number, number]): Vec3 => addScaled(addScaled(center, axis, from - P + shift + q[1] - (shift > 0 ? P : 0)), radial, q[0])
         ring = kernel.face({ outer: [circle(outer)], holes: inner > 1e-3 ? [[circle(inner)]] : [] })
         band = kernel.extrude(ring, axis, from, to)
         screwed = kernel.screw({ outer: polygonLoop(tooth.points.map(lift)), holes: [] }, center, axis, 2 * Math.PI * turns, P, t.leftHanded, true)

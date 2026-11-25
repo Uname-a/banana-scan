@@ -109,7 +109,7 @@ export type BuildStep =
    *  ChamferFeature. */
   | { kind: 'chamfer'; id: number; name: string; body: number; edges: EdgeRef[]; edgesWhere?: StoredPick<EdgeRef>[]; distance: number; chain: boolean; skipFailing?: boolean; mode?: Exclude<ChamferMode, 'equal'>; distance2?: number; angleDeg?: number; flip?: boolean }
   | { kind: 'hole'; id: number; name: string; body: number; origin: Vec3; dir: Vec3; radius: number; depth: number | null; oneWay?: boolean }
-  | { kind: 'thread'; id: number; name: string; body: number; face: FaceRef; standard: ThreadStandard; diameter: number; pitch: number; leftHanded: boolean; length: number | null; start: number; flip: boolean; offset: number; chamfer: boolean }
+  | { kind: 'thread'; id: number; name: string; body: number; face: FaceRef; standard: ThreadStandard; diameter: number; pitch: number; leftHanded: boolean; length: number | null; start: number; flip: boolean; offset: number; chamfer: boolean; phase?: number }
   | { kind: 'extract'; id: number; name: string; primitive: Primitive; op: BodyOp; target?: number }
   | { kind: 'cutPlane'; id: number; name: string; body: number; plane: PlaneGeometry; keep: 1 | -1 }
   | { kind: 'mirror'; id: number; name: string; body: number; plane: PlaneGeometry | { face: FaceRef }; join: boolean }

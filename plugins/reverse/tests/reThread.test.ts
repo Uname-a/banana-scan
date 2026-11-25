@@ -501,6 +501,29 @@ describe('a thread cut in the kernel', () => {
     k.release(body, top.shape, flipped.shape)
   })
 
+  it('winds its helix where a phase says, whatever it starts at, and is the same thread', async () => {
+    const { k, body } = await bar(8, 30)
+    const face = roundFace(k, body, 8)
+    const plain = k.threadTracked(body, face, cut(16, 2))
+    const r = 8 - 0.2
+    // The half plane a phase is told on is +Y for an axis along +Z; from the
+    // face's middle, z 15: a tooth's middle at the phase, a gap's a half
+    // pitch on, all the way along.
+    for (const extra of [{ phase: 0 }, { phase: 0.7 }, { phase: 1.9 }, { phase: -3.4 }, { phase: 0.7, leftHanded: true }, { phase: 1.2, length: 17.3, start: 4.1 }, { phase: 1.2, length: 17.3, start: 4.1, flip: true }]) {
+      const t = k.threadTracked(body, face, cut(16, 2, extra))
+      expect(k.isClosedSolid(t.shape), JSON.stringify(extra)).toBe(true)
+      for (const turn of [-2, 0, 2]) {
+        const z = 15 + extra.phase + 2 * turn
+        if ('length' in extra && (z < 10 || z > 20)) continue
+        expect(k.containsPoint(t.shape, [0, r, z]), `${JSON.stringify(extra)} tooth ${turn}`).toBe(true)
+        expect(k.containsPoint(t.shape, [0, r, z + 1]), `${JSON.stringify(extra)} gap ${turn}`).toBe(false)
+      }
+      if (!('length' in extra)) expect(Math.abs(k.volume(t.shape) - k.volume(plain.shape)) / k.volume(plain.shape)).toBeLessThan(2e-3)
+      k.release(t.shape)
+    }
+    k.release(body, plain.shape)
+  })
+
   it('stops at a shoulder, leaving it whole', async () => {
     const k = await kernelPromise
     const pin = await bar(8, 20)

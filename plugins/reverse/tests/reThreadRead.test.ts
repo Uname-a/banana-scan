@@ -4,7 +4,8 @@
 // helix, and the standard size nearest.
 import { describe, expect, it } from 'vitest'
 import type { Vec3 } from '../../../src/core/types'
-import { isThread, matchThread, readThread } from '../core/threadRead'
+import { isThread, matchThread, readThread, threadPhase } from '../core/threadRead'
+import { threadZero } from '../core/thread'
 
 /** Points on a threaded wall about the z axis: the radius a triangle wave
  *  of the helix's phase between `rLow` and `rHigh`, `angles` round by `rows`
@@ -177,5 +178,37 @@ describe('a thread read off the scan', () => {
     expect(Math.abs(r.pitch! - 0.5)).toBeLessThan(0.03)
     expect(matchThread(r, ['metric']).suggested?.designation).toBe('M3×0.5')
     expect(readThread({ points: pts.slice(0, 30), normals: nrm.slice(0, 30), origin: [10, 20, 30], dir: [0, -s, c], radius: 1.35, band: 0.4, halfLength: 4 })).toBeNull()
+  })
+})
+
+describe('a thread’s phase', () => {
+  /** A wall whose teeth stand `at` mm along the axis on the half plane a phase is told on. */
+  const wall = (dir: Vec3, at: number, hand: 1 | -1, internal: boolean, pitch = 1.5) => {
+    const u = threadZero(dir)
+    const v: Vec3 = [dir[1] * u[2] - dir[2] * u[1], dir[2] * u[0] - dir[0] * u[2], dir[0] * u[1] - dir[1] * u[0]]
+    const points: number[] = []
+    for (let z = -6; z <= 6; z += 0.1) {
+      for (let deg = 0; deg < 360; deg += 7) {
+        const th = (deg * Math.PI) / 180
+        const r = 4.6 + (internal ? -0.4 : 0.4) * Math.cos((2 * Math.PI * (z - at - (hand * pitch * th) / (2 * Math.PI))) / pitch)
+        for (let k = 0; k < 3; k++) points.push([3, -2, 7][k] + dir[k] * z + r * (Math.cos(th) * u[k] + Math.sin(th) * v[k]))
+      }
+    }
+    return { points: Float32Array.from(points), normals: new Float32Array(0), origin: [3, -2, 7] as Vec3, dir, radius: 4.6, band: 1, halfLength: 6 }
+  }
+
+  it('is read on either hand, a bolt’s and a nut’s, along any axis', () => {
+    for (const dir of [[0, 0, 1], [1, 0, 0], [0.6, 0, -0.8]] as Vec3[]) {
+      for (const [hand, internal, at] of [[1, false, 0.3], [-1, false, 1.1], [1, true, 0.7]] as const) {
+        const got = threadPhase(wall(dir, at, hand, internal), [-6, 6], 1.5, hand < 0, internal)!
+        expect(Math.abs(got.phase - at)).toBeLessThan(0.02)
+        expect(got.agree).toBeGreaterThan(0.8)
+      }
+    }
+  })
+
+  it('agrees with nothing on the other hand, and is null with too few points', () => {
+    expect(threadPhase(wall([0, 0, 1], 0.3, 1, false), [-6, 6], 1.5, true, false)!.agree).toBeLessThan(0.2)
+    expect(threadPhase({ ...wall([0, 0, 1], 0.3, 1, false), points: new Float32Array(30) }, [-6, 6], 1.5, false, false)).toBeNull()
   })
 })

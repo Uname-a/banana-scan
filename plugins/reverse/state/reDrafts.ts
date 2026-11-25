@@ -226,7 +226,7 @@ export function featureOfDraft(d: FeatureDraft, id: number, name: string): Featu
     case 'hole':
       return { id, kind: 'hole', name, body: d.body!, axis: d.axis!, radius: d.radius, depth: d.depth, ...(d.insert ? { insert: d.insert } : {}), visible: true }
     case 'thread':
-      return { id, kind: 'thread', name, body: d.body!, face: d.face!.fingerprint, standard: d.standard, diameter: d.diameter, pitch: d.pitch, leftHanded: d.leftHanded, length: d.fullLength ? null : d.length, start: d.fullLength ? 0 : d.start, flip: d.flip, offset: d.offset, chamfer: d.chamfer, visible: true }
+      return { id, kind: 'thread', name, body: d.body!, face: d.face!.fingerprint, standard: d.standard, diameter: d.diameter, pitch: d.pitch, leftHanded: d.leftHanded, length: d.fullLength ? null : d.length, start: d.fullLength ? 0 : d.start, flip: d.flip, offset: d.offset, chamfer: d.chamfer, ...(d.phase !== undefined ? { phase: d.phase } : {}), visible: true }
     case 'extract':
       return { id, kind: 'extract', name, ...(d.section !== null ? { section: d.section } : { element: d.element! }), thickness: d.thickness, op: d.op, visible: true }
     case 'gear':
