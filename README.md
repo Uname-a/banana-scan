@@ -233,6 +233,10 @@ is processed by the agent and goes to its model's provider, unless the model
 runs on your computer. Setup per agent, troubleshooting and every option are in
 [mcp/README.md](mcp/README.md).
 
+The API itself — every command with its fields, how calls are queued and
+answered, the error codes, the WebSocket the tab speaks and the headless
+engine — is in [docs/api/](docs/api/README.md).
+
 ## Automatic reverse engineering
 
 An AI agent can drive Reverse engineer from start to finish: give it a scan

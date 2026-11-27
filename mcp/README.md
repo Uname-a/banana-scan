@@ -296,6 +296,10 @@ moves the config folder.
 
 ## Tools
 
+Every command, with every field, is in the API reference,
+[docs/api/commands](../docs/api/commands/README.md); how calls are queued and
+answered, and the page link's messages, in [docs/api](../docs/api/README.md).
+
 Every command the Banana Scan tab offers is a tool, its name with dots turned
 into underscores — `scan_open`, `element_fit`, `dimension_add`,
 `report_get`, `history_undo` and the rest; their descriptions say what each
