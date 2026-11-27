@@ -10,6 +10,13 @@ the same number as `appVersion`. How a release is cut is in
 
 ## Unreleased
 
+- **An API reference** (docs, 2026-11-27). `docs/api/README.md` says how a
+  command is named, called, queued and answered, the error codes, what the
+  MCP server adds, the WebSocket the tab speaks and the headless engine.
+  `docs/api/commands/` lists every command of the app and its plugins with
+  every field, written from the registry by `tests/apiDoc.test.ts`
+  (`UPDATE_API_DOC=1` writes it, `CHECK_API_DOC=1` checks it).
+
 - **A thread in step with the scan's** (Reverse engineer, 2026-11-24). A
   thread was wound from wherever it starts, so its teeth lay over a scan's by
   luck. The Thread feature takes a `phase`: where along the axis, from the
