@@ -234,6 +234,7 @@ describe.runIf(process.env.UPDATE_API_DOC || process.env.CHECK_API_DOC)('the com
       }
     })()
     expect(kept, hint).toEqual([...files.keys()].sort())
-    for (const [name, text] of files) expect(readFileSync(new URL(name, DIR), 'utf8'), `${hint} (${name})`).toBe(text)
+    // A checkout may have given the files Windows line ends.
+    for (const [name, text] of files) expect(readFileSync(new URL(name, DIR), 'utf8').replace(/\r\n/g, '\n'), `${hint} (${name})`).toBe(text)
   })
 })
