@@ -248,6 +248,7 @@ export function featureOfDraft(d: FeatureDraft, id: number, name: string): Featu
         tipDiameter: d.tipDiameter,
         rootDiameter: d.rootDiameter,
         ...(d.bore > 0 ? { bore: d.bore } : {}),
+        ...(d.rootFillet > 0 ? { rootFillet: d.rootFillet } : {}),
         op: d.op,
         ...(d.target !== undefined ? { target: d.target } : {}),
         visible: true,

@@ -108,6 +108,7 @@ export function validateFeatureJson(e: Record<string, unknown>): void {
   if (e.kind === 'surface') indices(e.region, 'surface.region')
   if (e.kind === 'gear') {
     fields(e, 'teeth module pressureDeg helixDeg shift tipDiameter rootDiameter from to phaseDeg', 'number', 'gear')
+    if (e.rootFillet !== undefined && (typeof e.rootFillet !== 'number' || !Number.isFinite(e.rootFillet))) throw new Error('gear.rootFillet must be a number.')
     for (const key of ['origin', 'dir', 'zeroDir']) {
       const v = array(e[key], `gear.${key}`)
       if (v.length !== 3 || v.some((x) => typeof x !== 'number' || !Number.isFinite(x))) throw new Error(`gear.${key} must be three numbers.`)

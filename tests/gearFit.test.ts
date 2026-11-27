@@ -8,9 +8,9 @@
 // not name.
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../src/core/fit/ransac'
-import { gearGeometry, gearOutline, gearProblem, halfToothAt, inv, type GearPiece, type GearSpec, type Vec2 } from '../src/core/geometry/gear'
+import { gearGeometry, gearOutline, gearProblem, halfToothAt, inv, rootCorner, type GearPiece, type GearSpec, type Vec2 } from '../src/core/geometry/gear'
 import { fitGear, flankRmsOf, type GearCut } from '../src/core/geometry/gearFit'
-import { sampleOutline } from './gearKit'
+import { circumcentre, sampleOutline } from './gearKit'
 
 const deg = Math.PI / 180
 
@@ -92,6 +92,51 @@ describe('an involute gear’s geometry', () => {
     expect(gearProblem({ ...standard(20, 2), tipDiameter: 37 })).toMatch(/inside the base circle/)
     expect(gearProblem({ ...standard(20, 2), tipDiameter: 60 })).toMatch(/come to a point/)
     expect(inv(20 * deg)).toBeCloseTo(0.014904, 6)
+  })
+
+  it('rounds the root with a fillet tangent to the root circle and the flank, or the foot where the base circle lies above the root', () => {
+    const ends = (p: GearPiece): [Vec2, Vec2] => (p.kind === 'spline' ? [p.poles[0], p.poles[p.poles.length - 1]] : [p.a, p.b])
+    // A helical gear whose involute meets the root (the Artec gear's numbers), and a spur gear with a radial foot.
+    const helical: GearSpec = { teeth: 34, module: 2.3004, pressureDeg: 20, helixDeg: 30.04, shift: 0.496, tipDiameter: 97.4266, rootDiameter: 84.4083 }
+    const spur = standard(20, 2)
+    for (const [g, alongFoot] of [[helical, false], [spur, true]] as const) {
+      const geo = gearGeometry(g)
+      const rho = 0.25 * g.module
+      const sharp = gearOutline(g, 0.2)
+      const pieces = gearOutline({ ...g, rootFillet: rho }, 0.2)
+      expect(pieces.length).toBe(g.teeth * (alongFoot ? 8 : 6))
+      // Closed, piece to piece.
+      for (let i = 0; i < pieces.length; i++) {
+        const [, b] = ends(pieces[i])
+        const [a] = ends(pieces[(i + 1) % pieces.length])
+        expect(Math.hypot(a[0] - b[0], a[1] - b[1])).toBeLessThan(1e-9)
+      }
+      const corner = rootCorner(geo, g.teeth, rho)
+      expect(corner?.alongFoot).toBe(alongFoot)
+      // Each fillet: its centre rho off the root circle, outside it, and rho off the flank or foot it meets, never nearer.
+      const fillet = pieces[0]
+      if (fillet.kind !== 'arc') throw new Error('the first piece is the fillet')
+      const c = circumcentre(fillet.a, fillet.m, fillet.b)
+      expect(Math.hypot(fillet.a[0] - c[0], fillet.a[1] - c[1])).toBeCloseTo(rho, 9)
+      expect(Math.hypot(c[0], c[1])).toBeCloseTo(geo.rootRadius + rho, 9)
+      const side = sampleOutline(pieces.slice(1, alongFoot ? 3 : 2), 0.005)
+      const nearest = Math.min(...side.map((p) => Math.hypot(p[0] - c[0], p[1] - c[1])))
+      expect(nearest).toBeGreaterThan(rho - 1e-4)
+      expect(nearest).toBeLessThan(rho + 1e-3)
+      // The outline with fillets has more material at the root than the sharp one, and only there.
+      const area = (pts: Vec2[]) => pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + p[0] * q[1] - q[0] * p[1] }, 0) / 2
+      const added = area(sampleOutline(pieces, 0.002)) - area(sampleOutline(sharp, 0.002))
+      // Each of the 2 × teeth corners gains about (1 − π/4) ρ² — less, the corner being wider than square.
+      expect(added).toBeGreaterThan(0)
+      expect(added).toBeLessThan(2 * g.teeth * (1 - Math.PI / 4) * rho * rho * 1.05)
+    }
+    // None, and 0, are the sharp corner exactly.
+    expect(gearOutline({ ...spur, rootFillet: 0 }, 0.2)).toEqual(gearOutline(spur, 0.2))
+    // One too large for the gap is refused, with the largest that fits.
+    expect(gearProblem({ ...spur, rootFillet: 3 })).toMatch(/root fillet does not fit between the teeth: at most [\d.]+ modules/)
+    expect(gearProblem({ ...spur, rootFillet: -1 })).toMatch(/radius of 0 or more/)
+    expect(gearProblem({ ...helical, rootFillet: 0.33 * 2.3004 })).toBeNull()
+    expect(gearProblem({ ...helical, rootFillet: 0.34 * 2.3004 })).toMatch(/at most 0.334 modules/)
   })
 })
 

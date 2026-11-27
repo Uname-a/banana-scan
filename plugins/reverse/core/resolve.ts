@@ -306,7 +306,7 @@ export function resolveFeatures(
     }
     if (f.kind === 'gear') {
       // A gear is built as an extracted solid is: its own solid, then the op.
-      const spec: GearSpec = { teeth: f.teeth, module: f.module, pressureDeg: f.pressureDeg, helixDeg: f.helixDeg, shift: f.shift, tipDiameter: f.tipDiameter, rootDiameter: f.rootDiameter }
+      const spec: GearSpec = { teeth: f.teeth, module: f.module, pressureDeg: f.pressureDeg, helixDeg: f.helixDeg, shift: f.shift, tipDiameter: f.tipDiameter, rootDiameter: f.rootDiameter, ...(f.rootFillet ? { rootFillet: f.rootFillet } : {}) }
       const why = gearProblem(spec) ?? (!(f.to > f.from) ? 'The gear needs a face width: to beyond from.' : f.bore && !(f.bore > 0 && f.bore < f.rootDiameter) ? 'The bore has to lie inside the root circle.' : null)
       if (why) failed(f, why)
       else steps.push({ kind: 'extract', id: f.id, name: f.name, primitive: { kind: 'gear', spec, origin: f.origin, dir: f.dir, zeroDir: f.zeroDir, from: f.from, to: f.to, phaseDeg: f.phaseDeg, bore: f.bore ?? 0 }, op: f.op, target: f.target })
