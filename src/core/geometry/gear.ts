@@ -16,6 +16,9 @@
 // tip, each flank an involute from the tip down to the base circle (or the
 // root circle, where that lies outside it), a straight radial foot from
 // the base circle to the root, and an arc along the root to the next tooth.
+// A root fillet, where given, rounds each corner at the root: an arc tangent
+// to the root circle and to the flank (or to the radial foot, where the base
+// circle lies above the root), as a hob's rounded tip leaves it.
 // Each flank is a cubic B-spline through Hermite pieces of the involute,
 // within a few ten-thousandths of a millimetre of it.
 
@@ -34,6 +37,9 @@ export interface GearSpec {
   shift: number
   tipDiameter: number
   rootDiameter: number
+  /** The fillet at the root, its radius, mm: absent or 0 a sharp corner.
+   *  0.38 modules is the usual one (ISO 53, profile A). */
+  rootFillet?: number
 }
 
 export interface GearGeometry {
@@ -118,7 +124,80 @@ export function gearProblem(g: GearSpec): string | null {
   const foot = Math.max(geo.baseRadius, geo.rootRadius)
   const halfFoot = halfToothAt(geo, foot)
   if (halfFoot >= Math.PI / g.teeth - 1e-4) return 'The teeth meet each other at the root: the profile shift or the tooth count is too large for this module.'
+  const rho = g.rootFillet ?? 0
+  if (!Number.isFinite(rho) || rho < 0) return 'The root fillet is a radius of 0 or more.'
+  if (rho > 0 && !rootCorner(geo, g.teeth, rho)) return `The root fillet does not fit between the teeth: at most ${round3(largestRootFillet(geo, g.teeth) / g.module)} modules.`
   return null
+}
+
+/** A root corner rounded, for the flank on the counter-clockwise side of a
+ *  tooth whose middle is at angle 0: the fillet's ends — `onFlank` on the
+ *  flank (or the radial foot), at radius `flankFrom`; `onRoot` on the root
+ *  circle at angle `rootAngle` — and a point `mid` on its arc between them.
+ *  `alongFoot` says the fillet meets the radial foot, not the involute.
+ *  Null where a fillet of radius rho does not fit: it would run past the
+ *  foot onto the involute where the foot is radial, past the tip, or past
+ *  the middle of the gap. */
+export function rootCorner(geo: GearGeometry, teeth: number, rho: number): { onFlank: Vec2; onRoot: Vec2; mid: Vec2; flankFrom: number; rootAngle: number; alongFoot: boolean } | null {
+  const rf = geo.rootRadius
+  const rb = geo.baseRadius
+  const R = rf + rho
+  const gapMiddle = Math.PI / teeth
+  const arcMid = (c: Vec2, a: Vec2, b: Vec2): Vec2 => {
+    const u = [(a[0] - c[0]) / rho + (b[0] - c[0]) / rho, (a[1] - c[1]) / rho + (b[1] - c[1]) / rho]
+    const l = Math.hypot(u[0], u[1])
+    return [c[0] + (rho * u[0]) / l, c[1] + (rho * u[1]) / l]
+  }
+  if (rb > rf) {
+    // The radial foot at the foot's angle, from the root up to the base circle.
+    const phi = halfToothAt(geo, rb)
+    const turn = Math.asin(rho / R)
+    const up = Math.sqrt(R * R - rho * rho)
+    if (up > rb || phi + turn >= gapMiddle) return null
+    const c = polar(R, phi + turn)
+    const onFlank = polar(up, phi)
+    const onRoot = polar(rf, phi + turn)
+    return { onFlank, onRoot, mid: arcMid(c, onFlank, onRoot), flankFrom: up, rootAngle: phi + turn, alongFoot: true }
+  }
+  // The involute itself meets the root: the fillet's centre a rho off the
+  // flank on the gap's side, rho + rf from the gear's axis.
+  const half0 = halfToothAt(geo, rb)
+  const point = (t: number) => {
+    const r = rb * Math.sqrt(1 + t * t)
+    const th = half0 - (t - Math.atan(t))
+    // The involute's normal is tangent to the base circle; on the gap's side
+    // it leans back towards the tooth's middle by the pressure angle.
+    const a = Math.atan(t)
+    const n: Vec2 = [Math.cos(th + Math.PI / 2 - a), Math.sin(th + Math.PI / 2 - a)]
+    const p = polar(r, th)
+    return { p, c: [p[0] + rho * n[0], p[1] + rho * n[1]] as Vec2, r }
+  }
+  const gap = (t: number) => Math.hypot(...point(t).c) - R
+  let lo = Math.sqrt(Math.max(0, (rf / rb) ** 2 - 1))
+  let hi = Math.sqrt((geo.tipRadius / rb) ** 2 - 1)
+  if (!(gap(lo) < 0) || !(gap(hi) > 0)) return null
+  for (let i = 0; i < 80; i++) {
+    const m = (lo + hi) / 2
+    if (gap(m) < 0) lo = m
+    else hi = m
+  }
+  const { p, c, r } = point((lo + hi) / 2)
+  const rootAngle = Math.atan2(c[1], c[0])
+  if (rootAngle >= gapMiddle) return null
+  const onRoot = polar(rf, rootAngle)
+  return { onFlank: p, onRoot, mid: arcMid(c, p, onRoot), flankFrom: r, rootAngle, alongFoot: false }
+}
+
+/** The largest root fillet that fits, mm. */
+function largestRootFillet(geo: GearGeometry, teeth: number): number {
+  let lo = 0
+  let hi = geo.tipRadius - geo.rootRadius
+  for (let i = 0; i < 50; i++) {
+    const m = (lo + hi) / 2
+    if (rootCorner(geo, teeth, m)) lo = m
+    else hi = m
+  }
+  return lo
 }
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000
@@ -205,6 +284,32 @@ export function gearOutline(g: GearSpec, phase: number): GearPiece[] {
   const halfTip = geo.halfToothAtTip
   const halfFoot = halfToothAt(geo, foot)
   const out: GearPiece[] = []
+  const corner = (g.rootFillet ?? 0) > 0 ? rootCorner(geo, g.teeth, g.rootFillet as number) : null
+  if (corner) {
+    // Turned to a tooth's middle; the clockwise side its mirror image.
+    const at = (p: Vec2, mid: number, side: 1 | -1): Vec2 => {
+      const a = Math.atan2(side * p[1], p[0]) + mid
+      const r = Math.hypot(p[0], p[1])
+      return polar(r, a)
+    }
+    const from = corner.flankFrom
+    for (let k = 0; k < g.teeth; k++) {
+      const mid = phase + k * pitch
+      // Counter-clockwise: round the root corner up the clockwise flank, over
+      // the tip, down the counter-clockwise flank and round its corner, along
+      // the root to the next tooth.
+      out.push({ kind: 'arc', a: at(corner.onRoot, mid, -1), m: at(corner.mid, mid, -1), b: at(corner.onFlank, mid, -1) })
+      if (corner.alongFoot) out.push({ kind: 'line', a: at(corner.onFlank, mid, -1), b: polar(foot, mid - halfFoot) })
+      out.push(flank(geo, mid, -1, corner.alongFoot ? foot : from, ra))
+      out.push({ kind: 'arc', a: polar(ra, mid - halfTip), m: polar(ra, mid), b: polar(ra, mid + halfTip) })
+      out.push(reversed(flank(geo, mid, 1, corner.alongFoot ? foot : from, ra)))
+      if (corner.alongFoot) out.push({ kind: 'line', a: polar(foot, mid + halfFoot), b: at(corner.onFlank, mid, 1) })
+      out.push({ kind: 'arc', a: at(corner.onFlank, mid, 1), m: at(corner.mid, mid, 1), b: at(corner.onRoot, mid, 1) })
+      const next = mid + pitch
+      out.push({ kind: 'arc', a: polar(rf, mid + corner.rootAngle), m: polar(rf, mid + pitch / 2), b: polar(rf, next - corner.rootAngle) })
+    }
+    return out
+  }
   for (let k = 0; k < g.teeth; k++) {
     const mid = phase + k * pitch
     // Counter-clockwise: up the clockwise flank, over the tip, down the

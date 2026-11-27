@@ -144,6 +144,20 @@ describe('the gear feature', () => {
     expect(Math.abs(turned.volume - straight.volume) / straight.volume).toBeLessThan(0.001)
   })
 
+  it('rounds each tooth’s root with the fillet given, its outline’s material and no more', async () => {
+    const g = { teeth: 20, module: 2, pressureDeg: 20, helixDeg: 0, shift: 0, tipDiameter: 44, rootDiameter: 35 }
+    const outline = area(sampleOutline(gearOutline({ ...g, rootFillet: 0.5 }, 0), 0.01))
+    const sharp = area(sampleOutline(gearOutline(g, 0), 0.01))
+    expect(outline).toBeGreaterThan(sharp)
+    const made = await run<Added>('reverse.feature.add', { feature: spur({ name: 'Rounded', rootFillet: 0.5, origin: [0, 100, 30] }) })
+    expect(made.result?.status, made.result?.message).toBe('ok')
+    const body = await bodyOf(made)
+    expect(body.closed).toBe(true)
+    expect(Math.abs(body.volume - outline * 10) / (outline * 10)).toBeLessThan(0.002)
+    // One too large for the gap between the teeth is refused, saying the largest that fits.
+    expect((await refused('reverse.feature.add', { feature: spur({ name: 'Too round', rootFillet: 3 }) })).message).toMatch(/root fillet does not fit/)
+  })
+
   it('follows a parameter on its tooth count', async () => {
     await run('reverse.parameter.add', { name: 'z', expression: '20', kind: 'integer' })
     const made = await run<Added>('reverse.feature.add', { feature: spur({ exprs: { teeth: 'z', tipDiameter: '(z + 2) * 2 mm', rootDiameter: '(z - 2.5) * 2 mm' } }) })

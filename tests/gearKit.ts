@@ -10,6 +10,15 @@ function bezier(p: Vec2[], t: number): Vec2 {
   return [w.reduce((s, x, i) => s + x * p[i][0], 0), w.reduce((s, x, i) => s + x * p[i][1], 0)]
 }
 
+/** The centre of the circle through three points. */
+export function circumcentre(a: Vec2, b: Vec2, c: Vec2): Vec2 {
+  const d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]))
+  const a2 = a[0] * a[0] + a[1] * a[1]
+  const b2 = b[0] * b[0] + b[1] * b[1]
+  const c2 = c[0] * c[0] + c[1] * c[1]
+  return [(a2 * (b[1] - c[1]) + b2 * (c[1] - a[1]) + c2 * (a[1] - b[1])) / d, (a2 * (c[0] - b[0]) + b2 * (a[0] - c[0]) + c2 * (b[0] - a[0])) / d]
+}
+
 /** An outline's pieces as points about `step` mm apart. */
 export function sampleOutline(pieces: GearPiece[], step = 0.05): Vec2[] {
   const out: Vec2[] = []
@@ -18,13 +27,17 @@ export function sampleOutline(pieces: GearPiece[], step = 0.05): Vec2[] {
       const k = Math.max(1, Math.ceil(Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]) / step))
       for (let i = 0; i < k; i++) out.push([p.a[0] + ((p.b[0] - p.a[0]) * i) / k, p.a[1] + ((p.b[1] - p.a[1]) * i) / k])
     } else if (p.kind === 'arc') {
-      // The arc through a, m, b about its centre.
-      const r = Math.hypot(p.a[0], p.a[1])
-      const a0 = Math.atan2(p.a[1], p.a[0])
-      let a1 = Math.atan2(p.b[1], p.b[0])
-      while (a1 < a0) a1 += 2 * Math.PI
-      const k = Math.max(1, Math.ceil((r * (a1 - a0)) / step))
-      for (let i = 0; i < k; i++) out.push([r * Math.cos(a0 + ((a1 - a0) * i) / k), r * Math.sin(a0 + ((a1 - a0) * i) / k)])
+      // The arc from a through m to b about its centre — the gear's axis for
+      // the tip and the root, a root fillet's own.
+      const c = circumcentre(p.a, p.m, p.b)
+      const r = Math.hypot(p.a[0] - c[0], p.a[1] - c[1])
+      const ang = (q: Vec2) => Math.atan2(q[1] - c[1], q[0] - c[0])
+      const a0 = ang(p.a)
+      const ccw = (x: number) => (((x - a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+      // Counter-clockwise when m comes before b going that way, else clockwise.
+      const sweep = ccw(ang(p.m)) < ccw(ang(p.b)) ? ccw(ang(p.b)) : ccw(ang(p.b)) - 2 * Math.PI
+      const k = Math.max(1, Math.ceil((r * Math.abs(sweep)) / step))
+      for (let i = 0; i < k; i++) out.push([c[0] + r * Math.cos(a0 + (sweep * i) / k), c[1] + r * Math.sin(a0 + (sweep * i) / k)])
     } else {
       for (let s = 0; s + 3 < p.poles.length; s += 3) {
         const seg = p.poles.slice(s, s + 4)

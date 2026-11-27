@@ -317,6 +317,7 @@ export function slotsOf<T extends Slotted>(x: T, kind: string | undefined = x.ki
         field('to', 'To', 'length'),
         field('phaseDeg', 'Phase', 'angle'),
         field('bore', 'Bore Ø', 'length', positive),
+        field('rootFillet', 'Root fillet', 'length'),
       ]
     case 'wrap':
       return [field('depth', 'Depth', 'length', positive)]

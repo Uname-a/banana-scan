@@ -243,7 +243,7 @@ function boxFields(s: ReverseSession, kind: FeatureDraftKind, input: Json, box: 
       break
     }
     case 'gear': {
-      for (const k of ['teeth', 'module', 'pressureDeg', 'helixDeg', 'shift', 'tipDiameter', 'rootDiameter', 'from', 'to', 'phaseDeg', 'bore', 'op', 'origin', 'dir', 'zeroDir']) if (has(k)) out[k] = input[k]
+      for (const k of ['teeth', 'module', 'pressureDeg', 'helixDeg', 'shift', 'tipDiameter', 'rootDiameter', 'rootFillet', 'from', 'to', 'phaseDeg', 'bore', 'op', 'origin', 'dir', 'zeroDir']) if (has(k)) out[k] = input[k]
       // A body named to join it to joins it, unless told to cut.
       if (has('target') && input.target !== null && !has('op')) out.op = 'join'
       break

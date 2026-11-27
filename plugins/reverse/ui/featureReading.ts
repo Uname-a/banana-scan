@@ -124,7 +124,7 @@ export function bodyFeatureReading(f: Exclude<Feature, { kind: 'sketch' | 'extru
       const shift = Math.abs(f.shift) > 1e-4 ? `, shift ${f.shift.toFixed(3)}` : ''
       return {
         text: `${op} · z ${f.teeth} · m ${+f.module.toFixed(4)} · ${+f.pressureDeg.toFixed(2)}°${f.helixDeg ? ` · β ${f.helixDeg.toFixed(2)}°` : ''}`,
-        title: `An involute ${f.helixDeg ? 'helical' : 'spur'} gear: ${f.teeth} teeth, module ${+f.module.toFixed(4)}, pressure angle ${+f.pressureDeg.toFixed(2)}°${hand}${shift}; tip Ø${len(f.tipDiameter)}, root Ø${len(f.rootDiameter)}, ${len(f.to - f.from)} wide${f.bore ? `, bore Ø${len(f.bore)}` : ''}`,
+        title: `An involute ${f.helixDeg ? 'helical' : 'spur'} gear: ${f.teeth} teeth, module ${+f.module.toFixed(4)}, pressure angle ${+f.pressureDeg.toFixed(2)}°${hand}${shift}; tip Ø${len(f.tipDiameter)}, root Ø${len(f.rootDiameter)}, ${len(f.to - f.from)} wide${f.bore ? `, bore Ø${len(f.bore)}` : ''}${f.rootFillet ? `, root fillet R${len(f.rootFillet)}` : ''}`,
       }
     }
     case 'cutPlane':

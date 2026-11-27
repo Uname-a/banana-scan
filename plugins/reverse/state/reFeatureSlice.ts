@@ -105,7 +105,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
         case 'gear':
           // A spur gear of 20 teeth, module 2, on Z: numbers to type over,
           // or the ones scan.gear reads off the scan.
-          draft = { kind, origin: [0, 0, 0], dir: [0, 0, 1], zeroDir: [1, 0, 0], from: 0, to: 10, phaseDeg: 0, teeth: 20, module: 2, pressureDeg: 20, helixDeg: 0, shift: 0, tipDiameter: 44, rootDiameter: 35, bore: 0, op: 'new' }
+          draft = { kind, origin: [0, 0, 0], dir: [0, 0, 1], zeroDir: [1, 0, 0], from: 0, to: 10, phaseDeg: 0, teeth: 20, module: 2, pressureDeg: 20, helixDeg: 0, shift: 0, tipDiameter: 44, rootDiameter: 35, bore: 0, rootFillet: 0, op: 'new' }
           break
         case 'cutPlane':
           draft = { kind, body, plane: null, keep: 1 }
@@ -244,6 +244,7 @@ export const featureSlice = (set: StoreSet, get: StoreGet): Pick<ReState, 'featu
             tipDiameter: f.tipDiameter,
             rootDiameter: f.rootDiameter,
             bore: f.bore ?? 0,
+            rootFillet: f.rootFillet ?? 0,
             op: f.op,
             ...(f.target !== undefined ? { target: f.target } : {}),
           }
